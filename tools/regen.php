@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
-/**
- * Удаляет все созданные варианты картинок (папка media/) и, по желанию, сразу создаёт основные заново.
- *   php tools/regen.php            — только очистить: варианты пересоздадутся при первом просмотре
- *   php tools/regen.php --warm     — очистить и сразу создать все размеры (JPEG + WebP + AVIF, если включён)
- * Полезно после смены качества JPEG/WebP/AVIF в настройках. Оригиналы в storage/originals не трогаются.
- */
+
+
+
+
+
+
 if (PHP_SAPI !== 'cli') {
     exit('Только из командной строки.');
 }

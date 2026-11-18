@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */
-/* Видео (1.9.48): ролик из видеотеки (раздел «Видео» в админке). Пропорции плеера —
-   от обложки (CSS-переменная --ar), без обложки — 16:9. Разметка VideoObject для этого
-   же ролика собирается в jsonld_section_blocks() (app/seo.php). */
+<?php
+
+
+
 $v = (int)($d['video_id'] ?? 0) > 0 ? video_get((int)$d['video_id']) : null;
 if (!$v || trim((string)$v['file']) === '') { return; }
 $poster = (int)($v['poster_image_id'] ?? 0) > 0 ? image_get((int)$v['poster_image_id']) : null;

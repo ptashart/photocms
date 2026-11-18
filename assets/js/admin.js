@@ -2,7 +2,7 @@
  * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
-/* Админка: вкладки, визуальный редактор, выбор/загрузка фото, галереи с перетаскиванием, SEO-подсказки. */
+
 (function () {
   'use strict';
   var A = window.ADMIN || {};
@@ -14,15 +14,15 @@
     var fd = data instanceof FormData ? data : (function () { var f = new FormData(); Object.keys(data).forEach(function (k) { f.append(k, data[k]); }); return f; })();
     return fetch(url, { method: 'POST', body: fd, headers: { 'X-CSRF-Token': A.csrf }, credentials: 'same-origin' })
       .then(function (r) {
-        /* сервер на просроченную сессию/CSRF отвечает 403 со страницей (csrf_check), раньше тут ждали 419 — ветка была мёртвой */
+
         if (r.status === 419 || r.status === 403) return { ok: false, error: 'Сессия устарела — откройте админку в новой вкладке, войдите заново и повторите.' };
         return r.json().catch(function () { return { ok: false, error: 'Ошибка сервера (' + r.status + ')' }; });
       })
-      /* полный обрыв сети/таймаут: раньше промис отклонялся молча, и alt «не сохранялся» без слов */
+
       .catch(function () { return { ok: false, error: 'Нет соединения с сервером — проверьте интернет и повторите.' }; });
   }
 
-  /* ---------- мобильное меню (бургер) ---------- */
+
   var anavBtn = $('.anav-btn');
   if (anavBtn) {
     function anavClose() {
@@ -42,7 +42,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') anavClose(); });
   }
 
-  /* ---------- вкладки ---------- */
+
   $$('[data-tab]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var t = btn.dataset.tab;
@@ -52,9 +52,8 @@
     });
   });
 
-  /* ---------- заготовки JSON-LD ---------- */
-  /* Выбранная заготовка добавляется в textarea[name=jsonld_extra] той же формы:
-     пустое поле → просто объект; уже заполненное (объект или массив) → дополняем массив. */
+
+
   $$('select[data-jsonld-preset]').forEach(function (sel) {
     sel.addEventListener('change', function () {
       var box = sel.closest('.f');
@@ -76,7 +75,7 @@
           arr.push(preset);
           ta.value = JSON.stringify(arr, null, 2);
         } catch (err) {
-          ta.value = JSON.stringify(preset, null, 2); // текущее не парсится — заменяем заготовкой
+          ta.value = JSON.stringify(preset, null, 2);
         }
       }
       ta.focus();
@@ -84,7 +83,7 @@
     });
   });
 
-  /* ---------- подтверждения ---------- */
+
   document.addEventListener('submit', function (e) {
     var m = e.target.getAttribute && e.target.getAttribute('data-confirm');
     if (m && !window.confirm(m)) { e.preventDefault(); return; }
@@ -95,18 +94,17 @@
     if (b && !window.confirm(b.getAttribute('data-confirm-btn'))) e.preventDefault();
   });
 
-  /* ---------- визуальный редактор ---------- */
+
   function syncRte(w) {
     var ed = $('.rte', w), src = $('.rte-src', w);
-    if (!src.hidden) { return; }          /* режим HTML — значение уже в textarea */
+    if (!src.hidden) { return; }
     src.value = ed.innerHTML;
   }
   $$('[data-rte]').forEach(function (w) {
     var ed = $('.rte', w), src = $('.rte-src', w);
-    /* редактор приходит пустым: наполняем из скрытой textarea. В HTML админки содержимое
-       не вставляется — битый фрагмент не сломает саму страницу редактирования (ревизия 1.9.34, п.18) */
+
     ed.innerHTML = src.value;
-    /* Enter делает <p>, а не <div>/<br> — иначе вёрстка заметок «разъезжается» между браузерами */
+
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (err) {}
     w.addEventListener('mousedown', function (e) { if (e.target.closest('[data-cmd]')) e.preventDefault(); });
     w.addEventListener('click', function (e) {
@@ -127,7 +125,7 @@
         var u = window.prompt('Адрес ссылки (https://…, tel:…, mailto:…):', 'https://');
         if (!u) return;
         if (!sel || sel.isCollapsed || !String(sel)) {
-          /* раньше без выделения ссылка молча не создавалась — спросим её текст */
+
           var lt = window.prompt('Текст ссылки:', '');
           if (!lt) return;
           document.execCommand('insertHTML', false, '<a href="' + esc(u) + '">' + esc(lt) + '</a>');
@@ -141,8 +139,7 @@
     ed.addEventListener('paste', function (e) {
       e.preventDefault();
       var t = (e.clipboardData || window.clipboardData).getData('text/plain');
-      /* многострочный текст из Word/Google Docs разбиваем по пустым строкам на <p>,
-         иначе браузер клеит <div>/<br>, и абзацы на сайте сливаются */
+
       var paras = t.replace(/\r\n?/g, '\n').split(/\n{2,}/).filter(function (p) { return p.trim() !== ''; });
       if (paras.length > 1) {
         document.execCommand('insertHTML', false, paras.map(function (p) { return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>'; }).join(''));
@@ -152,20 +149,19 @@
     });
   });
 
-  /* ---------- загрузка файлов ---------- */
-  /* активные загрузки считаем несохранённой работой: «Сохранить»/уход со страницы обрывал их молча */
+
+
   var uploadsActive = 0;
-  /* файл, брошенный мимо drop-зоны, браузер открывал бы во вкладке — уход из админки с потерей формы */
+
   document.addEventListener('dragover', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0) e.preventDefault(); });
   document.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) e.preventDefault(); });
-  /* onStatus(html, финал?, числоОшибок) — по числу ошибок вызывающий решает, обновлять ли страницу */
+
   function uploadFiles(files, onEach, onStatus) {
     files = Array.prototype.slice.call(files).filter(function (f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name); });
     var done = 0, failed = [], notes = [], started = 0;
     if (!files.length) { onStatus && onStatus('Нет подходящих изображений (JPG, PNG, WebP, GIF).', true, 0); return Promise.resolve(); }
     uploadsActive++;
-    /* пул из 3 параллельных запросов: строго последовательная загрузка 20+ фото занимала
-       в разы больше времени (аудит 1.9.15); 3 — комфортно и для слабого шаред-хостинга */
+
     var PAR = 3;
     function finish() {
       var msg = failed.length ? 'Загружено ' + done + ' из ' + files.length + '. Ошибки:<br>' + failed.map(function (x) { return '<span class="bad">' + esc(x) + '</span>'; }).join('<br>') : 'Готово: ' + done + ' фото';
@@ -188,25 +184,23 @@
     return p;
   }
 
-  /* ---------- окно выбора фото ---------- */
+
   var pk = null;
   function pickerOpen(opts) {
     if (!pk) buildPicker();
     pk.multi = !!opts.multi; pk.cb = opts.cb; pk.sel = []; pk.next = 0;
     pk.req = (pk.req || 0) + 1; pk.busy = false;
     pk.used = opts.used || [];
-    pk.input.multiple = pk.multi; /* в режиме одной картинки выбор файла — строго одиночный */
+    pk.input.multiple = pk.multi;
     pk.grid.innerHTML = ''; pk.status.textContent = ''; pk.more.hidden = true;
-    if (pk.q) { pk.q.value = ''; } /* поиск из прошлого открытия не должен прятать свежий список */
-    /* альбом НЕ сбрасываем: при пакетной вставке фото из одной съёмки было бы мучением
-       выбирать её заново на каждое окно (1.9.56) */
+    if (pk.q) { pk.q.value = ''; }
+
     if (pk.albSel) { pk.albSel.value = String(pk.album || 0); }
     pk.done.hidden = !pk.multi; updateDone();
     pk.el.hidden = false; modalLock();
     loadMore();
   }
-  /* счётчик открытых диалогов: body overflow сбрасываем, только когда закрыты ВСЕ
-     (выбор фото открывает диалог настроек вставки поверх себя) */
+
   var modalsOpen = 0;
   function modalLock() { modalsOpen++; document.body.style.overflow = 'hidden'; }
   function modalUnlock() { modalsOpen = Math.max(0, modalsOpen - 1); if (!modalsOpen) document.body.style.overflow = ''; }
@@ -215,10 +209,10 @@
   function updateDone() { pk.done.textContent = 'Добавить выбранные (' + pk.sel.length + ')'; pk.done.disabled = !pk.sel.length; }
   function addItem(img, prepend, select) {
     var d = document.createElement('div'); d.className = 'pk-item'; d.dataset.id = img.id;
-    d.dataset.search = ((img.name || '') + ' ' + (img.alt || '')).toLowerCase(); /* для строки поиска в шапке пикера */
+    d.dataset.search = ((img.name || '') + ' ' + (img.alt || '')).toLowerCase();
     d.tabIndex = 0; d.setAttribute('role', 'button');
     if (pk.used && pk.used.indexOf(img.id) >= 0) { d.classList.add('used'); d.title = 'Уже добавлено'; }
-    /* плитка могла быть выбрана в другом режиме списка (другой альбом) — отрисовываем её состояние */
+
     if (pk.sel && pk.sel.some(function (s) { return s.id === img.id; })) { d.classList.add('on'); }
     d.innerHTML = '<img src="' + esc(img.thumb) + '" alt="" loading="lazy">'; d._img = img;
     if (prepend) pk.grid.insertBefore(d, pk.grid.firstChild); else pk.grid.appendChild(d);
@@ -236,7 +230,7 @@
     pk.busy = true;
     pk.status.textContent = '';
     var album = pk.album, req = pk.req = (pk.req || 0) + 1;
-    /* режим альбома: сервер пагинирует OFFSET'ом (альбомы невелики), общая лента — keyset'ом по id */
+
     var url = album ? A.mediaUrl + '&album=' + album + '&off=' + pk.next
                     : A.mediaUrl + '&before=' + pk.next;
     fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
@@ -246,7 +240,7 @@
       if (!r.total) pk.status.textContent = album ? 'В этом альбоме пока нет фото.' : 'В медиатеке пока пусто — загрузите фото.';
     }).catch(function () {
       if (req !== pk.req || album !== pk.album) return;
-      /* сбой сети не должен выглядеть как «фото кончились» */
+
       pk.status.innerHTML = 'Не удалось загрузить список фото. <button type="button" class="btn sm" data-retry>Повторить</button>';
     }).then(function () {
       if (req === pk.req) pk.busy = false;
@@ -263,7 +257,7 @@
       '<div class="pk-foot"><span style="flex:1"></span><button type="button" class="btn primary" data-done>Добавить</button></div></div>';
     document.body.appendChild(el);
     pk = { el: el, grid: $('.pk-grid', el), status: $('.upl-status', el), more: $('[data-more]', el), done: $('[data-done]', el), input: $('input[type=file]', el), q: $('.pk-q', el), used: [], album: 0 };
-    /* список альбомов из window.ADMIN (1.9.56): при сотне съёмок искать фото в общей ленте долго */
+
     pk.albSel = $('.pk-alb', el);
     var albums = A.albums || [];
     if (albums.length) {
@@ -273,11 +267,11 @@
       pk.albSel.addEventListener('change', function () {
         pk.album = parseInt(pk.albSel.value, 10) || 0;
         pk.req = (pk.req || 0) + 1; pk.busy = false;
-        pk.next = 0; pk.grid.innerHTML = ''; /* выбранные в другом альбоме плитки остаются в pk.sel — счётчик в кнопке это покажет */
+        pk.next = 0; pk.grid.innerHTML = '';
         loadMore();
       });
     } else {
-      pk.albSel.hidden = true; // альбомов нет — селект только путает
+      pk.albSel.hidden = true;
     }
     el.addEventListener('click', function (e) {
       if (e.target === el || e.target.closest('[data-x]')) pickerClose();
@@ -287,12 +281,12 @@
       else if (e.target.closest('[data-done]')) { var s = pk.sel.slice(); pickerClose(); pk.cb(s); }
       else { var it = e.target.closest('.pk-item'); if (it) toggle(it); }
     });
-    /* выбор с клавиатуры: Enter/Space на плитке */
+
     el.addEventListener('keydown', function (e) {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('pk-item')) { e.preventDefault(); toggle(e.target); }
     });
     pk.input.addEventListener('change', function () {
-      /* в режиме одной картинки берём только первый файл — иначе цикл загрузки перезаписывал выбор последним */
+
       var files = pk.multi ? pk.input.files : Array.prototype.slice.call(pk.input.files).slice(0, 1);
       uploadFiles(files, function (img) { addItem(img, true, true); }, function (t) { pk.status.innerHTML = t; });
       pk.input.value = '';
@@ -300,9 +294,8 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !pk.el.hidden) pickerClose(); });
   }
 
-  /* ---------- поля «одна картинка» ---------- */
-  /* биндинг вынесен в функцию: строки «Пакетов и цен» добавляются на лету (1.9.69),
-     им imgpick подключается после вставки */
+
+
   function bindImgPick(box) {
     var input = $('input[type=hidden]', box), prev = $('.imgpick-prev', box);
     $('[data-pick]', box).addEventListener('click', function () {
@@ -312,8 +305,8 @@
   }
   $$('.imgpick').forEach(bindImgPick);
 
-  /* ---------- галереи ---------- */
-  /* уборка фото с возможностью отмены: плитка прячется на 6 секунд, «Отменить» возвращает её на место */
+
+
   var undoState = null;
   function undoRemove(gi, grid, refresh) {
     if (undoState) { clearTimeout(undoState.t); undoState.toast.remove(); undoState = null; }
@@ -350,7 +343,7 @@
     }
     refresh();
     $('[data-add-photos]', ed).addEventListener('click', function () {
-      /* уже добавленные фото помечаем и не даём выбрать повторно — иначе дубли молча игнорировались */
+
       var usedIds = $$('.gi', grid).map(function (gi) { return parseInt(gi.dataset.id, 10) || 0; });
       pickerOpen({ multi: true, used: usedIds, cb: function (imgs) { imgs.forEach(add); refresh(); } });
     });
@@ -374,7 +367,7 @@
     });
     grid.addEventListener('dragstart', function (e) {
       var gi = e.target.closest && e.target.closest('.gi'); if (!gi) return;
-      drag = gi; gi.classList.add('drag'); grid.classList.add('dnd'); /* пунктирная рамка показывает, куда упадёт фото */
+      drag = gi; gi.classList.add('drag'); grid.classList.add('dnd');
       e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
     });
     grid.addEventListener('dragend', function () { if (drag) { drag.classList.remove('drag'); markDirty(); } grid.classList.remove('dnd'); drag = null; });
@@ -387,7 +380,7 @@
       }
       if (after) grid.insertBefore(drag, after); else grid.appendChild(drag);
     });
-    /* перетаскивание файлов с компьютера прямо на галерею */
+
     ed.addEventListener('dragover', function (e) { if (!drag && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0) { e.preventDefault(); ed.classList.add('over'); } });
     ed.addEventListener('dragleave', function (e) { if (e.target === ed) ed.classList.remove('over'); });
     ed.addEventListener('drop', function (e) {
@@ -396,8 +389,7 @@
     });
   });
 
-  /* перед отправкой формы порядок фото каждой галереи уходит одним JSON-полем gal_json[ключ]:
-     сотни скрытых gal[…][] упирались бы в max_input_vars и молча обрезались */
+
   $$('form').forEach(function (f) {
     if (!f.querySelector('.galed')) return;
     f.addEventListener('submit', function () {
@@ -416,7 +408,7 @@
     });
   });
 
-  /* ---------- раздел «Список страниц»: прячем поля, не относящиеся к выбранному режиму ---------- */
+
   $$('select[name$="[mode]"]').forEach(function (sel) {
     var card = sel.closest('.sec-card');
     if (!card) return;
@@ -430,7 +422,7 @@
     apply();
   });
 
-  /* ---------- раздел «Галерея»: настройки ленты и слайдшоу видны только при своём виде (1.9.45, 1.9.46) ---------- */
+
   $$('select[name$="[layout]"]').forEach(function (sel) {
     var card = sel.closest('.sec-card');
     if (!card) return;
@@ -444,7 +436,7 @@
     apply();
   });
 
-  /* ---------- меню: ↑↓ вместо ручной нумерации, подтверждение удаления родителя, фокус в новый пункт ---------- */
+
   var menuTbl = $('.menu-tbl');
   if (menuTbl) {
     menuTbl.addEventListener('click', function (e) {
@@ -453,7 +445,7 @@
       var tr = b.closest('tr');
       var sib = b.dataset.mv === '-1' ? tr.previousElementSibling : tr.nextElementSibling;
       if (!sib) return;
-      /* строки отсортированы по «№»: двигаем строку и меняемся с соседом номером */
+
       var pa = $('input[name$="[position]"]', tr), pb = $('input[name$="[position]"]', sib);
       if (pa && pb) { var tv = pa.value; pa.value = pb.value; pb.value = tv; }
       if (b.dataset.mv === '-1') tr.parentNode.insertBefore(tr, sib); else tr.parentNode.insertBefore(sib, tr);
@@ -468,7 +460,7 @@
         }
       }
     });
-    /* после «+ Пункт» — прокрутка к новой строке и фокус в «Название» */
+
     var newRow = $('tr.new-row', menuTbl);
     if (newRow) {
       newRow.scrollIntoView({ block: 'center' });
@@ -477,12 +469,12 @@
     }
   }
 
-  /* ---------- кнопки в разделе «Кнопки» ---------- */
+
   document.addEventListener('click', function (e) {
     var add = e.target.closest('[data-add-btn]');
     if (add) {
       var rows = $('.btnrows', add.closest('.card')), pfx = rows.dataset.prefix, n = pfx + '[btn][n' + Date.now() + ']';
-      var icons; try { icons = JSON.parse(rows.dataset.icons); } catch (err) { icons = {}; } // битый data-icons не должен ронять весь обработчик кликов (аудит 1.9.48, п.14)
+      var icons; try { icons = JSON.parse(rows.dataset.icons); } catch (err) { icons = {}; }
       var opts = Object.keys(icons).map(function (k) { return '<option value="' + esc(k) + '">' + esc(icons[k]) + '</option>'; }).join('');
       var d = document.createElement('div'); d.className = 'btnrow';
       d.innerHTML = '<input name="' + n + '[label]" placeholder="Текст кнопки"><input name="' + n + '[url]" placeholder="Ссылка: https://… или tel:+7…">' +
@@ -495,9 +487,7 @@
     if (del) { del.closest('.btnrow').remove(); markDirty(); }
   });
 
-  /* ---------- раздел «Вопросы и ответы»: добавление/удаление/перестановка (1.9.48) ----------
-     Порядок на сервере — как в DOM (индексы qa[…] лишь различают строки), поэтому
-     стрелки просто переставляют строки, как у data-add-btn выше. */
+
   document.addEventListener('click', function (e) {
     var add = e.target.closest('[data-add-faq]');
     if (add) {
@@ -526,7 +516,7 @@
     }
   });
 
-  /* ---------- раздел «Пакеты и цены»: добавление/удаление/перестановка (1.9.63) — как у FAQ выше ---------- */
+
   document.addEventListener('click', function (e) {
     var add = e.target.closest('[data-add-price]');
     if (add) {
@@ -541,7 +531,7 @@
         '<button type="button" class="ico danger" data-del-price title="Убрать">✕</button></div>' +
         '<textarea name="' + n + '[desc]" rows="2" placeholder="Что входит: часы, число фото, сроки…" maxlength="600" style="width:100%"></textarea>' +
         '<input name="' + n + '[url]" placeholder="Ссылка карточки (необязательно): /contacts или https://…" maxlength="500" style="width:100%">' +
-        /* разметка imgpick — как в pricing_row() (admin/pages.php), держать синхронно */
+
         '<div class="f"><span class="fl">Фото карточки (необязательно)</span><div class="imgpick">' +
         '<input type="hidden" name="' + n + '[image_id]" value="">' +
         '<div class="imgpick-prev"><span>нет</span></div>' +
@@ -567,10 +557,10 @@
     }
   });
 
-  /* ---------- SEO: счётчики и превью выдачи ---------- */
+
   $$('[data-count]').forEach(function (inp) {
     var max = parseInt(inp.dataset.count, 10), c = document.createElement('span'); c.className = 'counter';
-    var cmin = parseInt(inp.dataset.countMin || '0', 10); // рекомендуемый минимум (SEO-аудит 1.9.26): только подсказка, не блокирует
+    var cmin = parseInt(inp.dataset.countMin || '0', 10);
     inp.parentNode.insertBefore(c, inp);
     function upd() { var n = inp.value.length; c.textContent = cmin ? n + ' / ' + cmin + '–' + max : n + ' / ' + max;
       c.classList.toggle('over', n > max); c.classList.toggle('low', cmin > 0 && n > 0 && n < cmin); }
@@ -578,14 +568,14 @@
   });
   var serpT = $('#serpTitle'), serpD = $('#serpDesc'), defs = $('#serpDefaults');
   if (serpT && defs) {
-    var D; try { D = JSON.parse(defs.textContent); } catch (err) { D = {}; } // см. строку с post(): JSON.parse — только в try (аудит 1.9.48, п.14)
+    var D; try { D = JSON.parse(defs.textContent); } catch (err) { D = {}; }
     var it = $('[name=seo_title]'), id = $('[name=seo_description]');
     function cut(s, n) { return s.length > n ? s.slice(0, n - 1).replace(/[\s,.;:-]+$/, '') + '…' : s; }
     function serp() { serpT.textContent = cut(it.value.trim() || D.title || D.pageTitle, 62); serpD.textContent = cut(id.value.trim() || D.desc || 'Описание не задано — поисковик возьмёт случайный фрагмент страницы.', 165); }
     it.addEventListener('input', serp); id.addEventListener('input', serp); serp();
   }
 
-  /* ---------- медиатека ---------- */
+
   var lib = $('#mediaGrid');
   if (lib) {
     var drop = $('#libDrop'), status = $('#uplStatus'), fileInput = document.createElement('input');
@@ -595,11 +585,11 @@
         status.innerHTML = t;
         if (!fin) return;
         if (failedCount > 0) {
-          /* при ошибках страницу НЕ перезагружаем — список сбоев должен остаться на экране */
+
           var a = document.createElement('a');
           a.className = 'btn';
           a.style.marginLeft = '8px';
-          a.href = location.pathname + location.search; /* сохраняем q/noalt — не выкидываем владельца из результатов поиска */
+          a.href = location.pathname + location.search;
           a.textContent = 'Обновить список';
           status.appendChild(a);
         } else {
@@ -619,7 +609,7 @@
       post(A.altUrl, { id: mi.dataset.id, alt: inp.value }).then(function (r) {
         inp.style.outline = r.ok ? '2px solid #2a8a3e' : '2px solid #c0392b';
         if (r.ok) { setTimeout(function () { inp.style.outline = ''; }, 900); return; }
-        /* причину показываем текстом — иначе alt «молча не сохранялся» (419, сеть) */
+
         var d = document.createElement('div'); d.className = 'mi-err';
         d.textContent = 'Alt не сохранён: ' + (r.error || 'ошибка') + ' Исправьте поле ещё раз — отправится повторно.';
         mi.appendChild(d);
@@ -629,7 +619,7 @@
       var b = e.target.closest('[data-del]'); if (!b) return;
       var mi = b.closest('.mi'), uses = parseInt(mi.dataset.uses, 10);
       if (!window.confirm(uses ? 'Фото используется на сайте (мест: ' + uses + ': галереи, страницы, заметки). После удаления оно пропадёт отовсюду. Удалить безвозвратно?' : 'Удалить фото безвозвратно?')) return;
-      /* Сервер сам проверяет, используется ли фото, и без force=1 откажет — защита не держится на одном confirm в браузере. */
+
       (function del(force) {
         var d = { id: mi.dataset.id };
         if (force) d.force = '1';
@@ -637,7 +627,7 @@
           if (r.ok) {
             var hadAlt = $('.mi-alt', mi) && $('.mi-alt', mi).value.trim() !== '';
             mi.remove();
-            /* счётчики в шапке приводим к факту, а не ждём перезагрузки */
+
             var tot = $('#mediaTotal');
             if (tot) { var n = parseInt(tot.textContent.replace(/\D/g, ''), 10) - 1; tot.textContent = '(' + Math.max(0, n) + ')'; }
             var nal = $('#noaltLink');
@@ -656,8 +646,7 @@
       })(uses > 0);
     });
 
-    /* ---------- фокусная точка кадра (1.9.25): клик по фото в модалке — точка, вокруг которой
-       кадрируются обложки и миниатюры; сохраняется сразу, без отдельной кнопки ---------- */
+
     var fxModal = null;
     function fxClose() {
       if (fxModal) { fxModal.remove(); fxModal = null; }
@@ -691,7 +680,7 @@
           if (r.ok) {
             status.textContent = 'Сохранено: ' + Math.round(fx * 100) + '%, ' + Math.round(fy * 100) + '%';
             mi.dataset.fx = fx; mi.dataset.fy = fy;
-            /* миниатюра в сетке сразу показывает новое кадрирование */
+
             var th = $('img', mi);
             var op = (Math.abs(fx - 0.5) < 0.004 && Math.abs(fy - 0.5) < 0.004) ? '' :
               'object-position:' + (Math.round(fx * 1000) / 10) + '% ' + (Math.round(fy * 1000) / 10) + '%';
@@ -715,7 +704,7 @@
     });
   }
 
-  /* ---------- защита от потери правок: предупреждение при уходе, Ctrl/Cmd+S, черновик в браузере ---------- */
+
   var editForms = $$('form').filter(function (f) { return f.querySelector('.bar.sticky'); });
   var dirty = false, submitting = false;
   editForms.forEach(function (f) {
@@ -728,8 +717,7 @@
   window.addEventListener('beforeunload', function (e) {
     if ((dirty || uploadsActive > 0) && !submitting) { e.preventDefault(); e.returnValue = ''; }
   });
-  /* Программные изменения (добавление/удаление/перестановка фото в галерее, выбор картинки,
-     вставка блоков в текст) не генерируют событий input/change — отмечаем «грязным» вручную. */
+
   function markDirty() { dirty = true; }
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') && editForms[0]) {
@@ -742,22 +730,20 @@
     }
   });
 
-  /* ---------- черновики редакторов в localStorage: текст заметки, описание альбома, текстовые секции ----------
-     Сравнение идёт по нормализованному тексту (\r\n → \n, без крайних пробелов): переводы строк отличаются
-     между Windows и сервером, и без нормализации черновик предлагался бы снова после каждого сохранения. */
+
   function normDraft(s) { return String(s == null ? '' : s).replace(/\r\n/g, '\n').trim(); }
   function setupDraft(el, read, write, after) {
     var key = 'draft:' + el.dataset.draftKey;
-    var serverUpd = el.dataset.draftUpdated || ''; /* updated_at записи на момент открытия формы */
+    var serverUpd = el.dataset.draftUpdated || '';
     var store = {
       get: function () { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } },
       set: function (v) { try { localStorage.setItem(key, JSON.stringify({ v: v, t: Date.now(), u: serverUpd })); } catch (e) {} },
       del: function () { try { localStorage.removeItem(key); } catch (e) {} }
     };
     var saved = store.get();
-    if (saved && normDraft(saved.v) === normDraft(read())) { store.del(); saved = null; }   /* уже сохранено на сервере */
+    if (saved && normDraft(saved.v) === normDraft(read())) { store.del(); saved = null; }
     if (saved && saved.v) {
-      /* черновик с другого устройства/вкладки: запись после него уже сохраняли — честно предупреждаем */
+
       var stale = serverUpd && saved.u && String(saved.u) !== String(serverUpd);
       var bar = document.createElement('div'); bar.className = 'flash draft';
       var when = new Date(saved.t).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -774,12 +760,12 @@
     return function () { clearTimeout(tmr); tmr = setTimeout(function () { store.set(read()); }, 700); };
   }
 
-  /* редакторы с data-draft-key: текст заметки, описание альбома, текстовые секции (визуальные) */
+
   $$('textarea[data-draft-key]').forEach(function (ta) {
     var wrapRte = ta.closest('[data-rte]');
     if (wrapRte) {
       var ed = $('.rte', wrapRte);
-      /* в визуальном режиме актуальный текст живёт в contenteditable, а не в textarea */
+
       var readRte = function () { return ta.hidden ? ed.innerHTML : ta.value; };
       var writeRte = function (v) { ed.innerHTML = v; ta.value = v; };
       var saveRte = setupDraft(ta, readRte, writeRte);
@@ -791,7 +777,7 @@
     }
   });
 
-  /* ---------- ping сессии: предупреждаем об истечении до того, как форма улетит в 419 ---------- */
+
   if (A.pingUrl) {
     var sessWarned = false;
     setInterval(function () {
@@ -804,11 +790,11 @@
           bar.innerHTML = '<b>Сессия истекла.</b> <a href="' + A.base + '?p=login" target="_blank" rel="noopener">Войдите в новой вкладке</a>, затем вернитесь сюда и отправьте форму ещё раз — черновики текстов сохранены в браузере.';
           var wrapEl = $('main.wrap'); if (wrapEl) wrapEl.insertBefore(bar, wrapEl.firstChild);
         }
-      }).catch(function () { /* сеть молчит — не мешаем работе */ });
+      }).catch(function () {   });
     }, 5 * 60 * 1000);
   }
 
-  /* чекбокс «Опубликована» продублирован в sticky-панели — держим обе копии в синхроне */
+
   var pubBoxes = $$('input[name=is_published]');
   if (pubBoxes.length > 1) {
     pubBoxes.forEach(function (p) {
@@ -818,7 +804,7 @@
     });
   }
 
-  /* «Что улучшить для поиска»: показываем первые 5, остальные — по кнопке */
+
   var todoBtn = $('[data-todo-toggle]');
   if (todoBtn) {
     var todoLabel = todoBtn.textContent;
@@ -830,7 +816,7 @@
     });
   }
 
-  /* сообщения «Сохранено» гаснут сами (8 секунд, на наведении — пауза), ошибки остаются */
+
   $$('.flash.ok').forEach(function (f) {
     var fade = function () { f.classList.add('fade'); setTimeout(function () { f.remove(); }, 600); };
     var t = setTimeout(fade, 8000);
@@ -838,13 +824,11 @@
     f.addEventListener('mouseleave', function () { t = setTimeout(fade, 3000); });
   });
 
-  /* ---------- прокрутка к разделу после действия ---------- */
+
   var form = $('form[data-scroll]');
   if (form && form.dataset.scroll) { var t = document.getElementById(form.dataset.scroll); if (t) t.scrollIntoView({ block: 'center' }); }
 
-  /* ---------- быстрый фильтр списков: data-filter="css-селектор строк/плиток" ----------
-     Плитки пикера не содержат текста — у них фильтр идёт по data-search (имя файла + alt).
-     Обработчик делегированный: пикер строится лениво при первом открытии, после DOMContentLoaded. */
+
   document.addEventListener('input', function (e) {
     var inp = e.target && e.target.closest ? e.target.closest('[data-filter]') : null;
     if (!inp) return;
@@ -855,7 +839,7 @@
     });
   });
 
-  /* ---------- кнопка «Показать» у полей пароля (аккаунт и др.; на странице входа — свой inline-обработчик) ---------- */
+
   $$('input[type=password]').forEach(function (inp) {
     if (inp.dataset.passWired) return;
     inp.dataset.passWired = '1';
@@ -874,9 +858,7 @@
     wrap.appendChild(b);
   });
 
-  /* ---------- предпросмотр страницы/заметки: вся форма редактора уходит в новую вкладку ----------
-     requestSubmit (а не submit): срабатывают обработчики submit, которые синхронизируют
-     RTE-текст и порядок фото галереи в скрытые поля, — предпросмотр видит актуальное состояние */
+
   var pvFormBtn = $('[data-preview-form]');
   if (pvFormBtn) {
     pvFormBtn.addEventListener('click', function () {
@@ -886,16 +868,15 @@
       f.setAttribute('action', pvFormBtn.dataset.preview);
       f.setAttribute('target', '_blank');
       if (f.requestSubmit) { f.requestSubmit(); } else { f.submit(); }
-      /* сабмит ушёл в _blank, страница редактора осталась: возвращаем защиту beforeunload,
-         которую общий submit-обработчик только что выставил в submitting = true */
+
       submitting = false;
-      /* возвращаем исходные action/target: следующее «Сохранить» должно работать как обычно */
+
       if (oldAction === null) { f.removeAttribute('action'); } else { f.setAttribute('action', oldAction); }
       if (oldTarget === null) { f.removeAttribute('target'); } else { f.setAttribute('target', oldTarget); }
     });
   }
 
-  /* ---------- медиатека: выбор плиток и массовое удаление ---------- */
+
   var mediaGrid = $('#mediaGrid');
   if (mediaGrid) {
     var delSelBtn = $('#delSel');
@@ -917,7 +898,7 @@
         if (!window.confirm(msg)) return;
         delSelBtn.disabled = true;
         var okN = 0, errs = [];
-        /* последовательно, чтобы не упереться в блокировку SQLite на слабом хостинге */
+
         (function next(i) {
           if (i >= boxes.length) {
             delSelBtn.disabled = false; syncDelSel();
@@ -939,7 +920,7 @@
     }
   }
 
-  /* ---------- прогрев миниатюр (Панель → Кэш, 1.9.48) ---------- */
+
   var warmBtn = $('[data-warm-thumbs]');
   if (warmBtn) {
     warmBtn.addEventListener('click', function () {
@@ -960,8 +941,7 @@
             if (st) st.textContent = ' Готово: ' + r.processed + ' из ' + r.total + (errs ? ' (с ошибками: ' + errs + ' — см. журнал)' : '') + '.';
             return;
           }
-          /* защита от застревания: сервер обязан продвигать offset, иначе цикл ушёл бы
-             в бесконечные POST без всякого прогресса (аудит 1.9.48, п.14) */
+
           if (!(r.processed > offset)) {
             warmBtn.disabled = false;
             if (st) st.textContent = ' Остановлено: сервер вернул ответ без сдвига (' + r.processed + ').';

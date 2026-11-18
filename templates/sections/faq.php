@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */
-/* Вопросы и ответы (1.9.48): ответы раскрываются по щелчку (<details>); те же пары
-   попадают в JSON-LD FAQPage — см. jsonld_section_blocks() в app/seo.php. */
+<?php
+
+
 $items = array_filter((array)$d['items'], static fn($it) => is_array($it)
     && trim((string)($it['q'] ?? '')) !== '' && trim((string)($it['a'] ?? '')) !== '');
 if (!$items) { return; }

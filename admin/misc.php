@@ -5,14 +5,14 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
 
-/** Размеры кэшей для карточки «Кэш» на Панели (1.9.29):
-    XML-кэш — плоские файлы в storage/cache (sitemap.xml, feed.xml);
-    миниатюры — всё содержимое media/{id}/ (варианты + метки .fail), оригиналы лежат отдельно. */
+
+
+
 function admin_cache_stats(bool $fresh = false): array
 {
     $st = ['xml_files' => 0, 'xml_bytes' => 0, 'media_files' => 0, 'media_bytes' => 0];
@@ -23,10 +23,10 @@ function admin_cache_stats(bool $fresh = false): array
             $st['xml_bytes'] += (int)@filesize($f);
         }
     }
-    /* Обход всех миниатюр RecursiveIterator'ом на большой медиатеке занимал секунды при КАЖДОМ
-       открытии Панели (ревизия 1.9.34, п.8). Подсчёт media/ кэшируем на сутки в storage/cache-stats.json;
-       принудительный пересчёт — кнопка «Пересчитать» рядом с цифрами (приходит $fresh=true).
-       XML-часть считается живьём: там плоская папка, glob дешёвый. */
+
+
+
+
     $cf = ROOT . '/storage/cache-stats.json';
     if (!$fresh && is_file($cf) && time() - (int)@filemtime($cf) < 86400) {
         $c = json_decode((string)@file_get_contents($cf), true);
@@ -41,7 +41,7 @@ function admin_cache_stats(bool $fresh = false): array
     $idDirs = scandir($media) ?: [];
     foreach ($idDirs as $idDir) {
         if (!preg_match('~^\d+$~', $idDir) || !is_dir($media . '/' . $idDir)) {
-            continue; // .htaccess и .keep — не трогаем
+            continue;
         }
         $it = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($media . '/' . $idDir, FilesystemIterator::SKIP_DOTS)
@@ -58,9 +58,9 @@ function admin_cache_stats(bool $fresh = false): array
     return $st;
 }
 
-/** Очистка кэша страниц: XML (sitemap/feed пересоберутся при следующем обращении) и готовый
-    HTML для анонимов (storage/cache/pages/, 1.9.48 — перегенерируется при следующем хите).
-    Возвращает число удалённых файлов. */
+
+
+
 function admin_cache_clear_xml(): int
 {
     $n = 0;
@@ -70,7 +70,7 @@ function admin_cache_clear_xml(): int
             $n++;
         }
     }
-    foreach (glob(ROOT . '/storage/cache/pages/*') ?: [] as $f) { // HTML-кэш — в подкаталоге pages/
+    foreach (glob(ROOT . '/storage/cache/pages/*') ?: [] as $f) {
         if (is_file($f) && @unlink($f)) {
             $n++;
         }
@@ -78,12 +78,12 @@ function admin_cache_clear_xml(): int
     return $n;
 }
 
-/** Сброс готовых миниатюр: удаляем media/{id}/ целиком (варианты + метки .fail негативного кэша).
-    .htaccess и .keep в корне media/ остаются; оригиналы в storage/originals/ не затрагиваются.
-    Каждый вариант перегенерируется img.php при первом запросе. Возвращает число удалённых файлов. */
+
+
+
 function admin_cache_clear_media(): int
 {
-    $st = admin_cache_stats(true); // точное «сколько удалено» — считаем живьём, а не по суточному кэшу
+    $st = admin_cache_stats(true);
     $media = media_dir();
     $idDirs = scandir($media) ?: [];
     foreach ($idDirs as $idDir) {
@@ -91,24 +91,24 @@ function admin_cache_clear_media(): int
             rrmdir($media . '/' . $idDir);
         }
     }
-    /* после сброса кэш подсчёта протух: удаляем — следующий заход на Панель пересчитает
-       (media/ почти пуста, обход мгновенный) */
+
+
     @unlink(ROOT . '/storage/cache-stats.json');
     return $st['media_files'];
 }
 
-/** Прогрев миниатюр пачками из карточки «Кэш» (1.9.48): после «Сбросить миниатюры» первый
-    посетитель большого альбома упирался в лимит генераций img.php (300/час на подсеть),
-    и часть кадров получала 503 (аудит 1.9.40, п.20). Здесь генерирует сама админка —
-    мимо публичного лимита, тем же набором размеров/форматов, что прегенерация при загрузке.
-    JS вызывает пачками по 3 фото: запрос не упирается в max_execution_time шаред-хостинга. */
+
+
+
+
+
 function admin_thumbs_warm(): void
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { // как у соседних AJAX-эндпоинтов: GET не должен ничего делать (аудит 1.9.48, п.12)
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_out(['ok' => false], 405);
     }
     csrf_check();
-    session_write_close(); // прогрев длинный — не держим блокировку сессии, как у backup/upload
+    session_write_close();
     header('Content-Type: application/json; charset=utf-8');
     $offset = max(0, (int)($_POST['offset'] ?? 0));
     $limit = 3;
@@ -119,9 +119,9 @@ function admin_thumbs_warm(): void
     $errors = 0;
     foreach ($rows as $img) {
         try {
-            foreach ([1240, 440] as $w) { // 1240 первым: мелкие варианты Imagick делает из него (1.9.40, п.10)
-                /* false = вариант не записался (диск/права): считаем ошибкой, иначе
-                   прогрев отвечал errors:0 при фактически отсутствующих файлах (аудит 1.9.94) */
+            foreach ([1240, 440] as $w) {
+
+
                 if (!image_make_variant($img, $w, 'jpg')) {
                     $errors++;
                     app_log_error('thumbs_warm image #' . (int)$img['id'] . ": jpg $w not written");
@@ -147,12 +147,12 @@ function admin_thumbs_warm(): void
 
 function admin_dashboard(): void
 {
-    // самовосстановление .htaccess: файл часто теряется при загрузке по FTP, и без него 404-ят блог/альбомы/sitemap
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fix_htaccess') {
         csrf_check();
-        /* вкладка могла устареть: .htaccess уже появился и актуален (например, его загрузили
-           по FTP) — не затираем его эталоном. А вот если он устарел для текущего admin_path
-           (1.9.27) — перезапись и нужна. */
+
+
+
         if (!htaccess_missing() && !htaccess_needs_update()) {
             flash('Файл .htaccess уже на месте — ничего менять не нужно.');
             redirect(a_url('dashboard'));
@@ -165,7 +165,7 @@ function admin_dashboard(): void
         }
         redirect(a_url('dashboard'));
     }
-    // отключение инсталлятора из админки: install.php больше не нужен и не должен оставаться публичным
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'disable_install') {
         csrf_check();
         $inst = ROOT . '/install.php';
@@ -181,36 +181,36 @@ function admin_dashboard(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'backup') {
         csrf_check();
         session_write_close();
-        admin_send_backup(); // отдаёт файл и завершает скрипт
+        admin_send_backup();
     }
-    // скачивание автоматической копии из storage/backups/ (только чтение — поэтому GET)
-    if (isset($_GET['dlbackup']) && is_string($_GET['dlbackup'])) { // ?dlbackup[]=x — иначе «Array to string conversion» в журнал
+
+    if (isset($_GET['dlbackup']) && is_string($_GET['dlbackup'])) {
         session_write_close();
-        admin_send_autobackup($_GET['dlbackup']); // отдаёт файл или редиректит с ошибкой
+        admin_send_autobackup($_GET['dlbackup']);
     }
-    // проверка целостности базы по кнопке («Здоровье базы»)
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'dbcheck') {
         csrf_check();
-        admin_db_check(); // флешит результат
+        admin_db_check();
         redirect(a_url('dashboard'));
     }
-    // очистка кэшей по кнопке («Кэш», 1.9.29)
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear_cache') {
         csrf_check();
         $whatRaw = $_POST['what'] ?? '';
-        $what = is_string($whatRaw) ? $whatRaw : ''; // ?what[]=x — иначе warning в журнал
+        $what = is_string($whatRaw) ? $whatRaw : '';
         if ($what === 'xml') {
             flash('Кэш страниц очищен (' . admin_cache_clear_xml() . ' файлов). sitemap.xml, feed.xml и готовый HTML пересоберутся при следующем обращении.');
         } elseif ($what === 'media') {
             $n = admin_cache_clear_media();
-            site_touch(); // URL вариантов получают ?v=filemtime: HTML-кэш должен перечитать их (аудит 1.9.94)
+            site_touch();
             flash('Миниатюры сброшены (' . $n . ' файлов). Нажмите «Прогреть миниатюры» — CMS создаст основные размеры заранее; иначе первые просмотры страниц будут медленными, а у большого альбома часть кадров упиралась бы в лимит генераций (аудит 1.9.40, п.20).');
         } else {
             flash('Не указано, что очищать.', 'err');
         }
         redirect(a_url('dashboard'));
     }
-    // принудительный пересчёт размера media/ для карточки «Кэш» (суточный кэш подсчёта, 1.9.35)
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cache_stats_refresh') {
         csrf_check();
         $st = admin_cache_stats(true);
@@ -225,12 +225,12 @@ function admin_dashboard(): void
     $nPostsPub = (int)db_val('SELECT COUNT(*) FROM posts WHERE is_published = 1');
     $nImgs = (int)db_val('SELECT COUNT(*) FROM images');
     $noAlt = (int)db_val("SELECT COUNT(*) FROM images WHERE alt = ''");
-    // флагаем только страницы, у которых описание не соберётся автоматически (как seo_description())
+
     $noDesc = [];
     $noDescPages = db_all("SELECT id, type, title, body_html FROM pages WHERE is_published = 1 AND noindex = 0 AND seo_description = '' AND short_text = '' ORDER BY position, id");
-    /* первый НЕПУСТОЙ текстовый блок для всех кандидатов — ОДНИМ запросом: раньше
-       first_text_excerpt() на каждую страницу делала page_sections() с отдельным SELECT
-       (ревизия 1.9.34, п.8). Пустые блоки пропускаем — точь-в-точь как first_text_excerpt(). */
+
+
+
     $firstText = [];
     foreach (db_all("SELECT page_id, data FROM sections WHERE owner_type = 'page' AND type = 'text' ORDER BY position, id") as $s) {
         $pid = (int)$s['page_id'];
@@ -274,10 +274,10 @@ function admin_dashboard(): void
     if ($noAlt > 0) {
         $todo[] = [$noAlt . ' фото без alt-текста.', a_url('media', ['noalt' => 1])];
     }
-    // разделы заметок с публикациями, на которые нет ссылки из меню: посетитель и поисковик их не найдут
+
     $menuUrls = array_map(static fn($r) => rtrim((string)$r['url'], '/'), db_all("SELECT url FROM menu_items WHERE url <> ''"));
-    /* одним GROUP BY вместо COUNT на каждый раздел: при паре десятков разделов дашборд
-       делал столько же лишних запросов (аудит 1.9.26) */
+
+
     $secCounts = [];
     foreach (db_all('SELECT section, COUNT(*) AS c FROM posts WHERE is_published = 1 GROUP BY section') as $r) {
         $secCounts[(string)$r['section']] = (int)$r['c'];
@@ -288,8 +288,8 @@ function admin_dashboard(): void
             $todo[] = ['Раздел «' . section_title($s) . '» (' . section_base($s) . ') не добавлен в меню сайта — добавьте пункт с этим адресом.', a_url('menu')];
         }
     }
-    /* с 1.9.54 тексты заметок живут в секциях: отбираем кандидатов без description,
-       подгружаем их секции одним запросом и считаем слова по текстовым секциям */
+
+
     $thinPosts = db_all("SELECT id, title FROM posts WHERE is_published = 1 AND noindex = 0 AND seo_description = '' ORDER BY id");
     if ($thinPosts) {
         sections_prime('post', array_map(static fn($r) => (int)$r['id'], $thinPosts));
@@ -303,9 +303,9 @@ function admin_dashboard(): void
         $todo[] = ['У страницы «' . $p['title'] . '» нет описания (description).', a_url('page_edit', ['id' => $p['id'], 'tab' => 'seo'])];
     }
 
-    /* раз в сутки при первом заходе в админку — автоматический снимок базы (см. карточку
-       «Здоровье базы»). Заодно — уборка временных файлов-«сирот» загрузок/генераций
-       (img_tmp_gc, ревизия 1.9.34, п.16). Ошибки не должны ломать панель: только пишем в журнал */
+
+
+
     try {
         admin_db_autobackup();
         $gcStamp = ROOT . '/storage/locks/tmp-gc.last';
@@ -320,7 +320,7 @@ function admin_dashboard(): void
     $dbSize = is_file(db_path()) ? (int)filesize(db_path()) : 0;
     $walSize = is_file(db_path() . '-wal') ? (int)filesize(db_path() . '-wal') : 0;
     $autoCopies = admin_db_autobackup_list();
-    $cacheStat = admin_cache_stats(); // карточка «Кэш» (1.9.29)
+    $cacheStat = admin_cache_stats();
 
     admin_header('Панель', 'dashboard');
     ?>
@@ -427,8 +427,8 @@ function admin_dashboard(): void
     <input type="hidden" name="action" value="clear_cache"><input type="hidden" name="what" value="xml">
     <button class="btn">Очистить кэш страниц</button>
   </form>
-  <?php /* data-confirm вместо инлайн-onsubmit: CSP админки запрещает инлайн-обработчики,
-           и подтверждение молча не срабатывало (ревизия 1.9.34, п.3) */ ?>
+  <?php
+ ?>
   <form method="post" style="display:inline" data-confirm="Удалить все готовые миниатюры? Они создадутся заново при показе — первые просмотры страниц будут медленнее."><?= csrf_field() ?>
     <input type="hidden" name="action" value="clear_cache"><input type="hidden" name="what" value="media">
     <button class="btn danger">Сбросить миниатюры</button>
@@ -437,9 +437,9 @@ function admin_dashboard(): void
     <input type="hidden" name="action" value="cache_stats_refresh">
     <button class="btn sm" title="Подсчёт размера media/ кэшируется на сутки — обновить цифры сейчас">Пересчитать</button>
   </form>
-  <?php /* прогрев (1.9.48): основные размеры создаются заранее пачками через AJAX (admin.js),
-           а не в момент показа посетителю — после сброса миниатюр большие альбомы не упираются
-           в лимит генераций img.php */ ?>
+  <?php
+
+ ?>
   <p style="margin-top:10px">
     <button class="btn" type="button" data-warm-thumbs>Прогреть миниатюры</button>
     <span class="muted" data-warm-status></span>
@@ -469,23 +469,23 @@ function admin_dashboard(): void
     admin_footer();
 }
 
-/** Согласованная копия SQLite для скачивания (учитывает WAL). Завершает скрипт. */
+
 function admin_send_backup(): void
 {
     $tmp = ROOT . '/storage/backup-' . bin2hex(random_bytes(6)) . '.sqlite';
-    /* страховка от «зависших» копий базы: при фатале/обрыве после создания файла удалим его при завершении запроса */
+
     register_shutdown_function(static function () use ($tmp): void {
         @unlink($tmp);
     });
-    // сам снимок с 1.9.11 делает db_snapshot_to() — та же логика у автоматических копий
+
     if (!db_snapshot_to($tmp)) {
         flash('Не удалось создать копию: нет прав на запись в storage/ или база занята.', 'err');
         redirect(a_url('dashboard'));
     }
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="site-' . date('Ymd-His') . '.sqlite"');
-    /* filesize() теоретически может вернуть false (файл удалился между созданием и отдачей) —
-       false конкатенировался бы в пустой заголовок молча (аудит 1.9.12, находка 9) */
+
+
     if (($sz = @filesize($tmp)) !== false) {
         header('Content-Length: ' . $sz);
     }
@@ -494,28 +494,28 @@ function admin_send_backup(): void
     exit;
 }
 
-/** Каталог автоматических копий базы (внутри storage/ — уже закрыт от веба своим .htaccess). */
+
 function admin_db_backup_dir(): string
 {
     return ROOT . '/storage/backups';
 }
 
-/** Список автоматических копий, свежие первыми: [['name'=>…, 'date'=>…, 'size'=>…], …] */
+
 function admin_db_autobackup_list(): array
 {
     $out = [];
     foreach (glob(admin_db_backup_dir() . '/site-????-??-??.sqlite') ?: [] as $f) {
         $out[] = ['name' => basename($f), 'date' => substr(basename($f), 5, 10), 'size' => (int)filesize($f)];
     }
-    usort($out, static fn($a, $b) => strcmp($b['name'], $a['name'])); // дата в имени — сортировка строкой = по дате
+    usort($out, static fn($a, $b) => strcmp($b['name'], $a['name']));
     return $out;
 }
 
-/**
- * Раз в сутки (при первом заходе в админку) снимает согласованную копию базы в
- * storage/backups/ и оставляет 7 последних. «Сегодня уже есть» определяем по дате в имени,
- * а не по mtime — перенос файлов по FTP не будет провоцировать лишние копии.
- */
+
+
+
+
+
 function admin_db_autobackup(): void
 {
     $dir = admin_db_backup_dir();
@@ -545,7 +545,7 @@ function admin_db_autobackup(): void
         if (db_snapshot_to($dest)) {
             @chmod($dest, 0600);
         }
-        // ротация: семь свежих, остальные в корзину (перечитываем список — сегодняшняя уже в нём)
+
         foreach (array_slice(admin_db_autobackup_list(), 7) as $old) {
             @unlink($dir . '/' . $old['name']);
         }
@@ -555,15 +555,15 @@ function admin_db_autobackup(): void
     }
 }
 
-/** Проверка целостности базы по кнопке: PRAGMA integrity_check читает базу целиком. */
+
 function admin_db_check(): void
 {
-    session_write_close(); // на большой базе проверка идёт не мгновенно — не держим блокировку сессии
+    session_write_close();
     $t0 = microtime(true);
     $errors = [];
     try {
-        /* строк соответствия в выдаче нет: при здоровой базе возвращается одна строка «ok»;
-           число строк с ошибками SQLite ограничивает сам (умолчательно до 100) */
+
+
         foreach (db()->query('PRAGMA integrity_check') as $row) {
             $line = trim((string)($row['integrity_check'] ?? ''));
             if ($line !== '' && strtolower($line) !== 'ok') {
@@ -584,18 +584,18 @@ function admin_db_check(): void
         . '. Ничего не записывайте в базу и замените site.sqlite копией из storage/backups/ или скачанной кнопкой выше.', 'err');
 }
 
-/** Отдаёт автоматическую копию из storage/backups/. Имя проверяется строго — иначе path traversal. */
+
 function admin_send_autobackup(string $name): void
 {
     $file = admin_db_backup_dir() . '/' . $name;
-    /* модификатор D: без него «$» пропускал бы имя с переводом строки на конце (ревизия 1.9.34, п.21) */
+
     if (!preg_match('~^site-\d{4}-\d{2}-\d{2}\.sqlite$~D', $name) || !is_file($file)) {
         flash('Такой копии нет (возможно, её съела ротация — хранятся 7 последних).', 'err');
         redirect(a_url('dashboard'));
     }
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="' . $name . '"');
-    if (($sz = @filesize($file)) !== false) { // см. примечание у admin_send_backup (аудит 1.9.12, находка 9)
+    if (($sz = @filesize($file)) !== false) {
         header('Content-Length: ' . $sz);
     }
     readfile($file);
@@ -607,11 +607,11 @@ function admin_menu(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         $aRaw = $_POST['action'] ?? 'save';
-        $a = is_string($aRaw) ? $aRaw : 'save'; // ?action[]=x — иначе warning в журнал
+        $a = is_string($aRaw) ? $aRaw : 'save';
         $notNested = false;
         $newId = 0;
-        /* Вся запись — одной транзакцией (аудит 1.9.40, п.12): десятки UPDATE подряд без неё
-           давали частично сохранённое меню при сбое посередине и лишние fsync на слабом хостинге */
+
+
         db_tx(function () use ($a, &$notNested, &$newId): void {
         if ($a === 'add') {
             $pos = (int)db_val('SELECT COALESCE(MAX(position), 0) + 10 FROM menu_items');
@@ -631,7 +631,7 @@ function admin_menu(): void
             if ($parent === $id || !db_val('SELECT id FROM menu_items WHERE id = ? AND parent_id IS NULL', [$parent])) {
                 $parent = null;
             }
-            /* вложенность — два уровня: пункт, у которого уже есть подпункты, вкладывать нельзя (его дети пропали бы из меню) */
+
             if ($parent !== null && db_val('SELECT id FROM menu_items WHERE parent_id = ?', [$id])) {
                 $parent = null;
                 $notNested = true;
@@ -641,11 +641,11 @@ function admin_menu(): void
             $url = trim((string)($f['url'] ?? ''));
             if ($url !== '' && !preg_match('~^(https?://|mailto:|tel:|/|#)~i', $url)) {
                 if (preg_match('~^[a-z][a-z0-9+.\-]*:~i', $url)) {
-                    $url = ''; // javascript:, data: …
+                    $url = '';
                 } elseif (preg_match('~^[\w\-]+(\.[\w\-]+)+(/|$)~u', $url)) {
-                    $url = 'https://' . $url; // site.ru → https://site.ru
+                    $url = 'https://' . $url;
                 } else {
-                    $url = '/' . ltrim($url, '/'); // blog → /blog
+                    $url = '/' . ltrim($url, '/');
                 }
             }
             db_run(
@@ -653,21 +653,21 @@ function admin_menu(): void
                 [trim((string)($f['title'] ?? '')) ?: 'Пункт', $parent, $pageId, $pageId ? '' : $url, empty($f['new_tab']) ? 0 : 1, (int)($f['position'] ?? 0), $id]
             );
         }
-        }); // конец db_tx: меню записано целиком или не записано вовсе
-        /* меню есть на каждой странице, а updated_at страниц оно не трогает — без отметки
-           поисковик по Last-Modified держал бы старый HTML (ревизия 1.9.34, п.1) */
+        });
+
+
         site_touch();
         flash($a === 'add' ? 'Пункт добавлен.' : 'Меню сохранено.');
         if ($notNested) {
             flash('Часть пунктов не вложена: у них уже есть подпункты, а вложенность — два уровня.', 'err');
         }
-        /* после «+ Пункт» прокрутим к новой строке и поставим фокус в «Название» */
+
         redirect(a_url('menu', $newId ? ['new' => $newId] : []));
     }
 
     $items = db_all('SELECT * FROM menu_items ORDER BY position, id');
     $tops = [0 => '— верхний уровень —'];
-    $childCount = []; // для подтверждения удаления родителя: его подпункты поднимутся наверх
+    $childCount = [];
     foreach ($items as $it) {
         if ($it['parent_id'] === null) {
             $tops[(int)$it['id']] = 'внутри: ' . $it['title'];
@@ -682,7 +682,7 @@ function admin_menu(): void
     ?>
 <form method="post">
 <?= csrf_field() ?>
-<?php /* Enter в любом поле формы отправляет ПЕРВУЮ кнопку в DOM — без этой невидимой «Сохранить» Enter добавлял пункт вместо сохранения */ ?>
+<?php  ?>
 <button type="submit" name="action" value="save" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none">Сохранить</button>
 <div class="bar sticky"><h1>Меню</h1><span class="grow"></span>
   <button class="btn" name="action" value="add">+ Пункт</button>
@@ -733,7 +733,7 @@ function admin_redirects(): void
             if ($from === '/' || $to === '') {
                 flash('Укажите старый путь (например /old-page) и новый адрес (/new-page или https://…).', 'err');
             } elseif (path_has_content($from)) {
-                /* редирект с адреса живой страницы никогда не сработает — страница открывается раньше */
+
                 flash('По адресу ' . $from . ' уже открывается страница сайта, редирект с него не сработает. Сначала смените адрес страницы или удалите её.', 'err');
             } else {
                 $err = redirect_add($from, $to, $code);
@@ -834,8 +834,8 @@ function admin_account(): void
         $action = post_str('action') ?: 'password';
         $curRaw = $_POST['current'] ?? '';
         $cur = is_string($curRaw) ? $curRaw : '';
-        /* Счётчик привязан к конкретной admin-сессии, чтобы захваченная сессия не могла
-           заблокировать восстановление пароля владельцем в другой сессии. */
+
+
         $failKey = 'pwchange:' . $uid . ':' . hash('sha256', session_id());
         if (!$u || !password_verify($cur, (string)$u['pass_hash'])) {
             if (!account_attempt_reserve($failKey)) {
@@ -846,9 +846,9 @@ function admin_account(): void
             redirect(a_url('account'));
         }
         if ($action === 'login') {
-            /* смена логина (с 1.9.11). Только ASCII: кириллические логины — рассадник
-               опечаток и гомоглифов («а» русская/латинская). Регистр при входе не важен
-               (COLLATE NOCASE), поэтому и сравнения ниже без учёта регистра. */
+
+
+
             $newLogin = post_str('new_login');
             if (!preg_match('~^[A-Za-z0-9_.\-]{3,32}$~', $newLogin)) {
                 flash('Логин: 3–32 символа — латиница, цифры, точка, дефис, подчёркивание.', 'err');
@@ -858,7 +858,7 @@ function admin_account(): void
                 flash('Такой логин уже занят другим пользователем.', 'err');
             } else {
                 db_run('UPDATE users SET login = ? WHERE id = ?', [$newLogin, $uid]);
-                db_run('DELETE FROM login_log WHERE login = ?', [$failKey]); // успех — счётчик троттлинга обнуляем
+                db_run('DELETE FROM login_log WHERE login = ?', [$failKey]);
                 flash('Логин изменён на «' . $newLogin . '». При следующем входе используйте его (пароль прежний).');
             }
             redirect(a_url('account'));
@@ -870,7 +870,7 @@ function admin_account(): void
         if (mb_strlen($new) < 8) {
             flash('Новый пароль должен быть не короче 8 символов.', 'err');
         } elseif (strlen($new) > 72) {
-            /* bcrypt молча обрезает пароль по 72 байта — лучше честный отказ, чем усечённый пароль */
+
             flash('Новый пароль длиннее 72 байт — bcrypt такой не поддерживает. Задайте более короткий.', 'err');
         } elseif ($new !== $new2) {
             flash('Новый пароль и повтор не совпадают.', 'err');
@@ -878,11 +878,11 @@ function admin_account(): void
             $newHash = password_hash($new, PASSWORD_DEFAULT);
             db_run('UPDATE users SET pass_hash = ? WHERE id = ?', [$newHash, $uid]);
             session_regenerate_id(true);
-            /* новый «отпечаток» пароля только у этой сессии: все остальные открытые входы перестают действовать */
+
             $_SESSION['pwv'] = pass_version($newHash);
             admin_session_ok(true);
-            is_admin(true); // кэш is_admin() — тоже (аудит 1.9.40, п.11)
-            db_run('DELETE FROM login_log WHERE login = ?', [$failKey]); // успех — счётчик троттлинга обнуляем
+            is_admin(true);
+            db_run('DELETE FROM login_log WHERE login = ?', [$failKey]);
             flash('Пароль изменён. Остальные открытые сеансы завершены.');
         }
         redirect(a_url('account'));

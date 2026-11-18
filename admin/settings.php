@@ -5,7 +5,7 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
@@ -133,12 +133,12 @@ function admin_settings(): void
     $spec = settings_spec();
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
-        /* счётчик отклонённых валидацией полей объявляем ДО транзакции и захватываем по ссылке:
-           раньше он жил только внутри замыкания, и снаружи empty($rejected) был всегда true —
-           вместе с ошибкой «поле не сохранено» показывалось врущее «Настройки сохранены»
-           (аудит 1.9.12, находка 4) */
+
+
+
+
         $rejected = 0;
-        /* ~60 записей настроек — одной транзакцией: один fsync вместо шестидесяти и никаких «наполовину сохранённых» настроек при сбое */
+
         db_tx(static function () use ($spec, &$rejected): void {
         foreach ($spec as $fields) {
             foreach ($fields as $key => $def) {
@@ -170,10 +170,10 @@ function admin_settings(): void
                         $v = trim($v);
                 }
                 if (strpos($key, 'social_') === 0) {
-                    $v = normalize_url($v); // «t.me/name» → https://t.me/name; javascript: и подобное отбрасывается
+                    $v = normalize_url($v);
                 }
                 if ($key === 'business_inn' || $key === 'business_ogrnip') {
-                    $v = preg_replace('~\D~', '', $v); // реквизиты — только цифры
+                    $v = preg_replace('~\D~', '', $v);
                 }
                 if ($key === 'lang') {
                     $v = preg_match('~^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$~', $v) ? $v : 'ru';
@@ -183,10 +183,10 @@ function admin_settings(): void
                 }
                 if ($key === 'base_url') {
                     $v = rtrim($v, '/');
-                    /* очистку уже заполненного адреса запрещаем (аудит 1.9.22, п. 10): пустой
-                       base_url молча ломает canonical, sitemap и 301-склейку зеркал (www/алиасы
-                       начинают отдавать дубли страниц). Вернуть «пусто» можно только на чистой
-                       установке, где адрес ещё ни разу не задан. */
+
+
+
+
                     if ($v === '' && trim((string)setting('base_url')) !== '') {
                         $_SESSION['old']['setting_' . $key] = trim((string)setting('base_url'));
                         $rejected++;
@@ -194,20 +194,20 @@ function admin_settings(): void
                         continue;
                     }
                     if ($v !== '' && !preg_match('~^https?://~i', $v)) {
-                        $v = 'https://' . $v; // «example.ru» → https://example.ru
+                        $v = 'https://' . $v;
                     }
-                    /* parse_url вместо голого регэкспа: «^https?://[^\s/]+$» пропускал
-                       https://host?x, https://u@host и https://host#frag — такой base_url потом
-                       молча ломал canonical/sitemap (ревизия 1.9.34, п.21). Разрешены только
-                       схема + хост (+ порт для стендов), без пути/запроса/фрагмента/юзера.
-                       Пустое значение сюда доходит лишь на чистой установке — его пропускаем. */
+
+
+
+
+
                     $pu = $v === '' ? false : parse_url($v);
                     $badUrl = $v !== '' && ($pu === false || empty($pu['host'])
                         || !in_array(strtolower((string)($pu['scheme'] ?? '')), ['http', 'https'], true)
                         || isset($pu['path']) || isset($pu['query']) || isset($pu['fragment'])
                         || isset($pu['user']) || isset($pu['pass']));
                     if ($badUrl) {
-                        $_SESSION['old']['setting_' . $key] = $v; // набранное вернётся в поле после редиректа
+                        $_SESSION['old']['setting_' . $key] = $v;
                         $rejected++;
                         flash('Адрес сайта должен быть вида https://example.ru (без пути, слэша в конце и прочих добавок). Поле не сохранено.', 'err');
                         continue;
@@ -218,8 +218,8 @@ function admin_settings(): void
                     $v = preg_match('~^[A-Za-z0-9_]{1,15}$~', $v) ? $v : '';
                 }
                 if ($key === 'geo_lat' || $key === 'geo_lng') {
-                    /* координаты из карт часто копируют с запятой («55,75») — нормализуем;
-                       вне допустимого диапазона значение отбрасываем, а не храним мусор (1.9.43) */
+
+
                     $v = str_replace(',', '.', trim($v));
                     if ($v !== '') {
                         $lim = $key === 'geo_lat' ? 90 : 180;
@@ -227,16 +227,16 @@ function admin_settings(): void
                     }
                 }
                 if ($key === 'jpg_quality' || $key === 'webp_quality') {
-                    $v = (string)max(IMG_QUALITY_MIN, min(IMG_QUALITY_MAX, (int)$v)); // тот же коридор, что при генерации вариантов
+                    $v = (string)max(IMG_QUALITY_MIN, min(IMG_QUALITY_MAX, (int)$v));
                 }
                 if ($key === 'avif_quality') {
-                    $v = (string)max(30, min(80, (int)$v)); // AVIF жмёт сильнее — коридор ниже, чем у JPEG/WebP
+                    $v = (string)max(30, min(80, (int)$v));
                 }
                 if ($key === 'sharpen') {
-                    $v = (string)max(0, min(100, (int)$v)); // тот же коридор, что в gd_sharpen_amount()
+                    $v = (string)max(0, min(100, (int)$v));
                 }
                 if ($type !== 'textarea_code' && mb_strlen($v) > 2000) {
-                    $v = mb_substr($v, 0, 2000); // серверный предел длины для обычных полей (код вставок — без обрезки)
+                    $v = mb_substr($v, 0, 2000);
                 }
                 if ($key === 'sidebar_width') {
                     $v = (string)max(160, min(360, (int)$v));
@@ -250,7 +250,7 @@ function admin_settings(): void
                 }
                 if ($key === 'font_scale_heading' || $key === 'font_scale_body'
                     || $key === 'font_scale_heading_mobile' || $key === 'font_scale_body_mobile') {
-                    $v = (string)max(50, min(150, (int)$v)); // тот же коридор, что в theme_css()
+                    $v = (string)max(50, min(150, (int)$v));
                 }
                 set_setting($key, $v);
             }
@@ -276,7 +276,7 @@ function admin_settings(): void
 <?= csrf_field() ?><input type="hidden" name="tab" value="<?= e($active) ?>" id="tabField">
 <div class="bar sticky"><h1>Настройки</h1><span class="grow"></span><button class="btn primary">Сохранить</button></div>
     <?php
-    /* короткие подсказки под названиями групп: по ним видно, что внутри, не открывая вкладку (1.9.21) */
+
     $groupHints = [
         'Основное' => 'Название, адрес сайта, логотип, язык',
         'SEO' => 'Шаблоны title, описания, верификация, robots',
@@ -304,9 +304,9 @@ function admin_settings(): void
   <div class="card cols2">
         <?php foreach ($fields as $key => $def):
             [$type, $label] = $def;
-            $help = $def[2] ?? ''; // у heading/note справки нет
-            /* служебные элементы вкладки (1.9.95): подзаголовки и пояснения между группами
-               полей. Это не настройки: setting() не читаем, POST их не содержит. */
+            $help = $def[2] ?? '';
+
+
             if ($type === 'heading') {
                 echo '<h3 class="setsub">' . e($label) . '</h3>';
                 continue;
@@ -316,7 +316,7 @@ function admin_settings(): void
                 continue;
             }
             $val = setting($key);
-            /* значение, отклонённое валидацией при прошлом сохранении, возвращаем в поле */
+
             if (isset($_SESSION['old']['setting_' . $key]) && is_string($_SESSION['old']['setting_' . $key])) {
                 $val = $_SESSION['old']['setting_' . $key];
             }
@@ -324,7 +324,7 @@ function admin_settings(): void
             if ($type === 'text') {
                 echo f_input($key, $label, $val, ['help' => $help]);
             } elseif ($type === 'number') {
-                /* границы подсказываем браузеру — сервер всё равно обрезает значение в коридор */
+
                 $ranges = ['sidebar_width' => [160, 360], 'gallery_gap' => [0, 40], 'related_limit' => [2, 6], 'jpg_quality' => [60, 95], 'webp_quality' => [60, 95], 'logo_height' => [24, 80], 'sharpen' => [0, 100], 'font_scale_heading' => [50, 150], 'font_scale_body' => [50, 150], 'font_scale_heading_mobile' => [50, 150], 'font_scale_body_mobile' => [50, 150]];
                 $numOpts = ['type' => 'number', 'help' => $help];
                 if (isset($ranges[$key])) {
@@ -350,9 +350,9 @@ function admin_settings(): void
   </div>
 </section>
     <?php endforeach; ?>
-  </div><?php /* /.setmain */ ?>
-</div><?php /* /.setlay */ ?>
-    <?php unset($_SESSION['old']); // отклонённые значения уже подставлены в поля ?>
+  </div><?php  ?>
+</div><?php  ?>
+    <?php unset($_SESSION['old']); ?>
 </form>
     <?php
     admin_footer();

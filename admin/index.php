@@ -19,8 +19,8 @@ if (!is_installed()) {
 migrate();
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
-/* CSP только для админки (на публичной части в «Своём коде» могут быть счётчики и виджеты): скрипты — свои и с nonce,
-   чужие домены и вставленные в текст <script> не выполнятся даже при пропущенной XSS. */
+
+
 $previewRequest = in_array($_GET['p'] ?? '', ['page_preview', 'post_preview'], true);
 if (!$previewRequest) {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . admin_csp_nonce() . "'; "
@@ -36,9 +36,9 @@ if ($p === 'login') {
     admin_login();
     exit;
 }
-/* лёгкий ping для предупреждения об истечении сессии: без CSRF и рендера страницы.
-   touch=false: сам по себе ping не «активность» — иначе открытая вкладка с JS-пингом
-   вечно продлевала бы простой, и таймер SESSION_IDLE терял смысл (ревизия 1.9.34, п.10) */
+
+
+
 if ($p === 'ping') {
     $ok = admin_session_ok(false, false);
     http_response_code($ok ? 200 : 401);
@@ -46,9 +46,9 @@ if ($p === 'ping') {
     echo json_encode(['ok' => $ok]);
     exit;
 }
-/* вход действителен: пользователь есть, пароль не менялся, не вышли срок жизни и простой */
+
 if (!admin_session_ok()) {
-    /* вернём человека туда, где он был: принимаем только внутренний путь админки */
+
     $back = '';
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $uri = (string)($_SERVER['REQUEST_URI'] ?? '');

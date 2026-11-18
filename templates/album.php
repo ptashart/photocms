@@ -3,20 +3,20 @@
  * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
-/** @var array $page */
+
 $photos = gallery_images('page', (int)$page['id']);
 $cols = (int)$page['album_columns'] > 0 ? (int)$page['album_columns'] : (int)setting('gallery_columns');
 $colsM = (int)setting('gallery_columns_mobile');
 $h1 = trim((string)$page['h1']) !== '' ? (string)$page['h1'] : (string)$page['title'];
-/* Разделы под галереей (1.9.52): текст, кнопки, FAQ, форма и т.п. is_first не даём —
-   первым медиа и так считается сама галерея альбома (eager/preload у её первых кадров). */
+
+
 $sections = page_sections((int)$page['id']);
-/* свой текст LED-штампа альбома (1.9.89): заменяет дату на всех кадрах страницы —
-   и в основной галерее, и в разделах ниже; ставим до любого вывода фото,
-   даже если основная галерея пуста (1.9.93) */
+
+
+
 fx_stamp_text(trim((string)($page['stamp_text'] ?? '')));
-/* Если в описании альбома или в разделах уже есть свой <h1>, автоматический не добавляем —
-   H1 на странице должен быть один */
+
+
 $hasH1 = (bool)preg_match('~<h1(?:\s|>)~i', (string)$page['body_html']);
 if (!$hasH1) {
     foreach ($sections as $s) {
@@ -32,7 +32,7 @@ $related = album_related_pages($page);
 <article class="album">
   <?php
   $hasBody = trim(strip_tags((string)$page['body_html'])) !== '';
-  /* Описание альбома центрировано (700px) — заголовок, крошки и счётчик выравниваем по той же оси */
+
   $axis = $hasBody ? ' t-axis' : '';
   ?>
   <?= page_crumbs_html($page, $hasBody ? 't-axis' : '') ?>
@@ -51,10 +51,10 @@ $related = album_related_pages($page);
   <?php endif; ?>
   <?php if ($photos): ?>
     <?php
-    /* Раскладка альбома (1.9.76): masonry по умолчанию; grid и lineup — теми же
-       рендерерами, что у раздела «Галерея» на секционных страницах;
-       1.9.86 — contactsheet (контактный лист: плотная сетка в рамках плёнки);
-       1.9.96 — hung (развеска: три формата и сдвиги из фиксированного набора) */
+
+
+
+
     $layout = in_array($page['album_layout'] ?? '', ['masonry', 'grid', 'lineup', 'contactsheet', 'hung'], true) ? (string)$page['album_layout'] : 'masonry';
     $lb = setting('lightbox') === '1';
     ?>
@@ -65,15 +65,15 @@ $related = album_related_pages($page);
     <?php else: ?>
       <?php
       if ($layout === 'contactsheet') {
-          /* контактные листы плотные: добавляем пару колонок к обычной сетке */
+
           $colsD = max(3, min(8, $cols + 2));
           $colsMc = max(2, min(3, $colsM + 1));
       } else {
           $colsD = max(1, min(6, $cols));
           $colsMc = max(1, min(3, $colsM));
       }
-      /* sizes — от тех же колонок, что у разметки ($colsD/$colsMc): у контактного листа
-         их больше, иначе браузер грузил кадры на ~40% крупнее нужного (1.9.93) */
+
+
       $sizes = gallery_sizes($layout === 'contactsheet' ? 'grid' : $layout, $colsD, $colsMc);
       $cls = $layout === 'grid' ? 'grid-gallery' : ($layout === 'contactsheet' ? 'contactsheet' : 'lineup');
       ?>

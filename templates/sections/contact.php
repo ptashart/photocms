@@ -3,7 +3,7 @@
  * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
-/** @var array $sec @var array $d @var array $page */
+
 $back = page_url($page) . '#s' . (int)$sec['id'];
 $btn = trim((string)$d['button']) !== '' ? trim((string)$d['button']) : 'Отправить';
 $old = contact_old_read();

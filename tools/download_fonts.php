@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
-/**
- * Скачивает шрифты Google Fonts на ваш сервер, чтобы они тоже грузились с вашего домена.
- *   php tools/download_fonts.php "Tenor Sans:400" "Golos Text:400,500,600"
- * Без аргументов — Tenor Sans 400 и Golos Text 400/500/600 (шрифты из комплекта;
- * 600 добавлен в 1.9.36 — ревизия 1.9.35, п.6).
- * Создаёт assets/fonts/*.woff2 и assets/fonts/fonts.css (подключается автоматически).
- */
+
+
+
+
+
+
+
 if (PHP_SAPI !== 'cli') {
     exit('Только из командной строки.');
 }
@@ -22,16 +22,16 @@ function fetch(string $url): ?string
 {
     $ctx = stream_context_create(['http' => [
         'timeout' => 60,
-        // современный User-Agent, чтобы Google отдал woff2
+
         'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36\r\n",
     ]]);
     $b = @file_get_contents($url, false, $ctx);
     return $b === false ? null : $b;
 }
 
-/* Раньше fonts.css собирался заново и ПЕРЕЗАПИСЫВАЛСЯ: запуск для одного нового шрифта стирал @font-face
-   встроенных Tenor Sans и Golos Text (файлы остаются, а правил в CSS уже нет). Теперь читаем существующие блоки,
-   новые добавляем, одноимённые (семейство + начертание + набор символов) заменяем, остальные не трогаем. */
+
+
+
 $errors = 0;
 $blocks = [];
 $existing = is_file("$dir/fonts.css") ? (string)file_get_contents("$dir/fonts.css") : '';
@@ -51,9 +51,9 @@ foreach ($specs as $spec) {
         fwrite(STDERR, "Не удалось получить CSS для $family (нет интернета или неверное имя).\n");
         continue;
     }
-    // блоки вида: /* cyrillic */ @font-face { ... }
-    // ВАЖНО: совпадения складываем в $m, а не в $blocks — иначе preg_match_all затирает
-    // уже накопленные блоки, а implode() по числовым строкам PREG_SET_ORDER даёт «Array» в fonts.css
+
+
+
     preg_match_all('~/\*\s*([a-z\-]+)\s*\*/\s*(@font-face\s*\{.*?\})~s', $src, $m, PREG_SET_ORDER);
     foreach ($m as $b) {
         $subset = $b[1];

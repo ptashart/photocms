@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */
+<?php
 $items = array_filter((array)$d['items'], static fn($b) => is_array($b) && trim((string)($b['label'] ?? '')) !== '');
 if (!$items) { return; }
 $style = $d['style'] === 'solid' ? 'btn-solid' : 'btn-outline';

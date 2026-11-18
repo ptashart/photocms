@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d @var array $page */
+<?php
 $pages = listing_pages($d, $page);
 if (!$pages) { return; }
 $fmt = in_array($d['format'], ['portrait', 'landscape', 'square', 'original'], true) ? $d['format'] : 'portrait';
-/* Карточки первой секции — кандидат в LCP: первую грузим сразу и с высоким приоритетом */
+
 $first = !empty($sec['is_first']);
 ?>
 <section class="<?= sec_classes($sec, 'sec-listing') ?>" id="s<?= (int)$sec['id'] ?>">

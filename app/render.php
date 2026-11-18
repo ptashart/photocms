@@ -32,26 +32,26 @@ function button_icons(): array
     return ['' => 'Без иконки', 'phone' => 'Телефон', 'telegram' => 'Telegram', 'whatsapp' => 'WhatsApp', 'mail' => 'Почта', 'instagram' => 'Instagram', 'youtube' => 'YouTube', 'link' => 'Ссылка'];
 }
 
-/** <picture> с AVIF/WebP и JPEG, srcset из собственных вариантов (домен сайта).
- *  $eager — грузить сразу (без loading="lazy"); $highPriority — ещё и fetchpriority="high"
- *  (только для единственного LCP-кадра страницы: несколько «high» конкурируют между собой). */
+
+
+
 function img_html(array $img, string $sizes, string $alt = '', bool $eager = false, int $maxW = 2520, bool $highPriority = false): string
 {
     $alt = $alt !== '' ? $alt : (string)$img['alt'];
     $widths = image_widths($img, $maxW);
     $src = image_url($img, image_pick_width($widths, 1240), 'jpg');
-    /* источники avif (если включён, 1.9.48) + webp с гвардом движка (1.9.30) — внутри хелпера */
+
     $html = '<picture>' . picture_sources_html($img, $sizes, $widths);
-    /* фокусная точка (1.9.25): для картинок с object-fit:cover (обложки, миниатюры галерей)
-       кадрирование идёт вокруг заданной в медиатеке точки; у полноразмерных вставок object-fit
-       нет — object-position безвреден, а в центре (0.5/0.5) стиль не выводится вовсе */
+
+
+
     $focus = image_focus_style($img);
     $html .= '<img src="' . e($src) . '" srcset="' . e(image_srcset($img, 'jpg', $widths)) . '" sizes="' . e($sizes) . '"'
         . ' width="' . (int)$img['w'] . '" height="' . (int)$img['h'] . '" alt="' . e($alt) . '"'
         . ($focus !== '' ? ' style="' . $focus . '"' : '')
         . ($eager ? ($highPriority ? ' fetchpriority="high"' : '') : ' loading="lazy"') . ' decoding="async">';
-        /* fade-in поверх цветного placeholder'а — чистый CSS (animation: imgfade в site.css,
-           с 1.9.28 без JS): комментарий про site.js устарел (ревизия 1.9.35, п.15) */
+
+
     return $html . '</picture>';
 }
 
@@ -60,8 +60,8 @@ function theme_is_apple_family(): bool
     return (string)setting('theme') === 'apple';
 }
 
-/** Ширина контентной колонки на десктопе — для sizes у srcset (ревизия 1.9.35, п.3).
-    Классика: вьюпорт минус сайдбар. «Яблочная»: сайдбара нет, контент — min(1124px, 100vw − 56px). */
+
+
 function content_width_expr(): string
 {
     if (theme_is_apple_family()) {
@@ -71,30 +71,30 @@ function content_width_expr(): string
     return 'calc(100vw - ' . $sb . 'px)';
 }
 
-/**
- * Строка sizes для галерей/альбомов — ЕДИНАЯ точка (аудит 1.9.40, п.9): раньше одна и та же
- * формула собиралась в четырёх местах (masonry_html, templates/sections/gallery.php,
- * page_first_media_preload, preload альбома в render_page) и уже расходилась раз —
- * preload грузил вариант не того размера (ревизия 1.9.35, п.3).
- * Телефон — мобильные колонки; планшет 701–900 px — десктопные колонки на всю ширину
- * (сайдбар уже свёрнут в планку); десктоп — контентная колонка по теме.
- */
+
+
+
+
+
+
+
+
 function gallery_sizes(string $layout, int $cols, int $colsM, ?array $img = null): string
 {
-    /* до 8: контактный лист передаёт уже увеличенные колонки ($cols+2), остальные
-       раскладки ограничивают себя сами (masonry/grid — 6) */
+
+
     $colsD = max(1, min(8, $cols));
     $colsMc = max(1, min(3, $colsM));
     if ($layout === 'slides') {
-        /* полноэкранное слайдшоу (1.9.46): кадр всегда на всю ширину окна */
+
         return '100vw';
     }
     if ($layout === 'strip') {
         if (!$img) {
             return '100vw';
         }
-        /* Ширина ленты — высота кадра × его пропорции. Формулы min/clamp те же, что в site.css;
-           коэффициенты заранее умножаем на пропорцию, поэтому calc() с умножением не нужен. */
+
+
         $r = max(1, (int)($img['w'] ?? 0)) / max(1, (int)($img['h'] ?? 0));
         $n = static fn(float $v): string => rtrim(rtrim(number_format($v, 6, '.', ''), '0'), '.');
         return '(max-width: 700px) min(' . $n(56 * $r) . 'vh, ' . $n(460 * $r) . 'px)'
@@ -103,7 +103,7 @@ function gallery_sizes(string $layout, int $cols, int $colsM, ?array $img = null
     if ($layout === 'lineup') {
         return '(max-width: 900px) 100vw, ' . content_width_expr();
     }
-    /* grid и masonry: одинаковые колонки (у grid ещё фиксированный aspect-ratio, на sizes не влияет) */
+
     return '(max-width: 700px) ' . (int)round(100 / $colsMc) . 'vw'
         . ', (max-width: 900px) ' . (int)round(100 / $colsD) . 'vw'
         . ', calc((' . content_width_expr() . ') / ' . $colsD . ')';
@@ -114,7 +114,7 @@ function safe_color(string $c, string $fallback = '#cccccc'): string
     return preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $c) ? $c : $fallback;
 }
 
-/** rgba() из #rgb/#rrggbb — для производных оттенков темы (--muted, --line). */
+
 function rgba_css(string $c, float $alpha, string $fallback): string
 {
     if (preg_match('/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})/', safe_color($c, ''), $m)) {
@@ -126,10 +126,10 @@ function rgba_css(string $c, float $alpha, string $fallback): string
     return $fallback;
 }
 
-/**
- * Свой текст LED-штампа для текущей страницы (1.9.89): шаблон альбома/галереи
- * выставляет перед рендером, photo_html() подставляет вместо даты. Пусто — дата.
- */
+
+
+
+
 function fx_stamp_text(?string $set = null): string
 {
     static $v = '';
@@ -139,26 +139,26 @@ function fx_stamp_text(?string $set = null): string
     return $v;
 }
 
-/**
- * $link — ['url' => …, 'new_tab' => bool]: клик ведёт по своей ссылке вместо лайтбокса (1.9.52).
- * Ссылка сильнее лайтбокса: если задана, лайтбокс-разметка не выводится вовсе.
- */
+
+
+
+
 function photo_html(array $img, int $index, string $sizes, bool $lightbox, string $fallbackAlt, bool $eager = false, bool $highPriority = false, string $caption = '', ?array $link = null): string
 {
     $alt = trim((string)$img['alt']) !== '' ? (string)$img['alt'] : $fallbackAlt;
-    /* --r — числовая пропорция (ширина/высота): лента ей ограничивает высоту кадра
-       шириной контейнера, а lineup — высотой окна (ревизия 1.9.35, пп. 4 и 8) */
+
+
     $style = '--ar:' . max(1, (int)$img['w']) . ' / ' . max(1, (int)$img['h'])
         . ';--r:' . round(max(1, (int)$img['w']) / max(1, (int)$img['h']), 4)
         . ';--c:' . safe_color((string)$img['color']);
-    /* переменные из стабильного seed — нужны скотчу (позиция/флаг --tape, наклон --jr) */
+
     if (!empty($img['id']) && setting('fx_tape') === '1') {
         $style .= ';' . fx_vars((int)$img['id']);
     }
-    /* LED-штамп даты (1.9.86, регуляторы 1.9.87): как у плёночных камер с датой.
-       С 1.9.95 — только ЧЕСТНАЯ дата съёмки из EXIF оригинала; раньше подставлялась
-       дата загрузки файла, то есть штамп мог врать. Нет EXIF-даты — штампа нет;
-       на странице можно задать свой текст (ниже). С 1.9.97 работает на любой теме. */
+
+
+
+
     $stamp = '';
     if (setting('fx_datestamp') === '1') {
         $ts = image_shot_at($img);
@@ -173,7 +173,7 @@ function photo_html(array $img, int $index, string $sizes, bool $lightbox, strin
             $stamp = '<span class="ph-date" aria-hidden="true">' . e($text) . '</span>';
         }
     }
-    /* свой текст штампа у страницы (1.9.89): заменяет дату, работает и при выключенной дате */
+
     $customStamp = fx_stamp_text();
     if ($customStamp !== '') {
         $stamp = '<span class="ph-date" aria-hidden="true">' . e($customStamp) . '</span>';
@@ -184,9 +184,9 @@ function photo_html(array $img, int $index, string $sizes, bool $lightbox, strin
         return '<a class="ph ph-link" href="' . e((string)$link['url']) . '"' . $ext . ' style="' . $style . '">' . $pic . $stamp . '</a>';
     }
     if ($lightbox) {
-        /* data-caption — авторская подпись в лайтбоксе (у одиночного фото это figcaption
-           владельца). SEO-alt в подпись не попадает: он для поисковика, а не для зрителя
-           (ревизия 1.9.35 п.7, ужесточено в 1.9.62 — в лайтбоксе остаётся только счётчик). */
+
+
+
         return '<a class="ph js-lb" data-i="' . $index . '" href="' . e(image_large_url($img)) . '"'
             . ' data-srcset="' . e(image_srcset($img, 'jpg', image_widths($img))) . '" data-alt="' . e($alt) . '"'
             . (trim($caption) !== '' ? ' data-caption="' . e(trim($caption)) . '"' : '')
@@ -195,9 +195,9 @@ function photo_html(array $img, int $index, string $sizes, bool $lightbox, strin
     return '<div class="ph" data-i="' . $index . '" style="' . $style . '">' . $pic . $stamp . '</div>';
 }
 
-/* ---------- одиночное фото: единые настройки для блога и страниц ---------- */
 
-/** Готовые варианты размещения фото (единые для блога и раздела «Фото» на страницах). */
+
+
 function photo_size_presets(): array
 {
     return [
@@ -209,7 +209,7 @@ function photo_size_presets(): array
     ];
 }
 
-/** Целевая ширина картинки под srcset для каждого варианта. */
+
 function photo_size_width(string $size, int $base): int
 {
     return match ($size) {
@@ -220,17 +220,17 @@ function photo_size_width(string $size, int $base): int
     };
 }
 
-/** Разбор «как в настройках / да / нет» для клика по фото. '' → null (общая настройка). */
+
 function lb_opt($v): ?bool
 {
     return $v === '' || $v === null ? null : (string)$v === '1';
 }
 
-/**
- * Одиночное фото с выбранным размещением и поведением по щелчку.
- * $lb = null — как в общих настройках сайта. $base — ширина текста/контейнера (блог 700, страницы шире).
- * $link — своя ссылка по клику (1.9.52); задана — лайтбокс не используется.
- */
+
+
+
+
+
 function single_photo_html(array $img, string $size, ?bool $lb, string $fallbackAlt, int $base = 700, string $caption = '', bool $eager = false, bool $highPriority = false, ?array $link = null): string
 {
     if (!array_key_exists($size, photo_size_presets())) {
@@ -250,26 +250,26 @@ function single_photo_html(array $img, string $size, ?bool $lb, string $fallback
     return '<figure class="pp pp--' . $size . ' js-gallery">' . $html . "</figure>\n";
 }
 
-/** Раскладка «кирпичиком» на сервере: элементы идут слева направо, каждый — в самую низкую колонку. */
+
 function masonry_html(array $items, int $cols, int $colsMobile, string $fallbackAlt, bool $lightbox, bool $firstSection = false): string
 {
     $cols = max(1, min(6, $cols));
     $colsMobile = max(1, min(3, $colsMobile));
     $heights = array_fill(0, $cols, 0.0);
     $columns = array_fill(0, $cols, '');
-    /* sizes — из единой точки gallery_sizes() (аудит 1.9.40, п.9): раньше формула собиралась
-       здесь отдельно и расходилась с шаблоном галереи/preload */
+
+
     $sizes = gallery_sizes('masonry', $cols, $colsMobile);
-    /* eager/fetchpriority="high" — только у первой секции страницы: раньше первое фото
-       КАЖДОЙ галереи получало high, и при нескольких галереях приоритет «размазывался»
-       на элементы за пределами первого экрана (Lighthouse: «fetchpriority=high should be
-       applied to the LCP image only») */
+
+
+
+
     foreach ($items as $i => $img) {
         $ar = (int)$img['w'] > 0 ? (int)$img['h'] / (int)$img['w'] : 1.0;
         $k = (int)array_search(min($heights), $heights, true);
         $heights[$k] += $ar;
-        /* fallback-alt без технического суффикса «— фото N» (аудит 1.9.28): скринридеру
-           полезнее осмысленное название альбома/страницы, чем «Название — фото 17» */
+
+
         $columns[$k] .= photo_html($img, $i, $sizes, $lightbox, $fallbackAlt, $firstSection && $i < $cols, $firstSection && $i === 0);
     }
     $html = '<div class="masonry js-gallery" data-cols="' . $cols . '" data-cols-m="' . $colsMobile . '">';
@@ -279,8 +279,8 @@ function masonry_html(array $items, int $cols, int $colsMobile, string $fallback
     return $html . '</div>';
 }
 
-/** «Развеска» (1.9.96): размер кадра по порядку и пропорциям — портрет M, пейзаж L,
-   каждый пятый кадр S (детерминированно). Возвращает [размер, колонок из 12]. */
+
+
 function hung_item_span(int $idx, array $img): array
 {
     if ($idx % 5 === 4) {
@@ -289,8 +289,8 @@ function hung_item_span(int $idx, array $img): array
     return (int)$img['w'] >= (int)$img['h'] ? ['L', 5] : ['M', 3];
 }
 
-/** sizes по реальной ширине кадра: доля 12-колоночной сетки на десктопе/планшете,
-   на телефоне L во всю ширину, S и M — по половине. */
+
+
 function hung_item_sizes(string $size, int $span): string
 {
     return '(max-width: 700px) ' . ($size === 'L' ? '100vw' : '50vw')
@@ -298,9 +298,9 @@ function hung_item_sizes(string $size, int $span): string
         . ', calc((' . content_width_expr() . ') * ' . number_format($span / 12, 4, '.', '') . ')';
 }
 
-/** Развеска: следующий кадр идёт после предыдущего плюс пропуск {0,1,2} колонок по seed;
-   не помещается — новая строка. Вертикальные сдвиги только {0,32,64} px.
-   Без наклонов, ленты и зерна: дефект — в композиции, а не в текстуре. */
+
+
+
 function hung_html(array $items, string $fallbackAlt, bool $lightbox): string
 {
     $rows = [];
@@ -330,7 +330,7 @@ function hung_html(array $items, string $fallbackAlt, bool $lightbox): string
         $html .= '<div class="hung-row">';
         foreach ($row as $it) {
             $img = $it['img'];
-            $dy = abs(crc32((int)$img['id'] . ':dy')) % 3; // 0,1,2 → 0,32,64 px
+            $dy = abs(crc32((int)$img['id'] . ':dy')) % 3;
             $html .= '<figure class="hung-item hung-' . $it['size'] . '" style="grid-column:' . $it['start'] . ' / span ' . $it['span'] . ';--dy:' . $dy . '">'
                 . photo_html($img, $i, hung_item_sizes($it['size'], $it['span']), $lightbox, $fallbackAlt, $i < 2, $i === 0)
                 . '<figcaption class="hung-num">' . sprintf('%02d', $i + 1) . ' / ' . $total . '</figcaption>'
@@ -342,7 +342,7 @@ function hung_html(array $items, string $fallbackAlt, bool $lightbox): string
     return '<div class="hung js-gallery">' . $html . '</div>';
 }
 
-/** Режим «несовершенства» (1.9.82). Старое значение '1' (чекбокс 1.9.81) = лёгкий режим. */
+
 function fx_lofi_level(): string
 {
     $v = (string)setting('fx_lofi');
@@ -350,7 +350,7 @@ function fx_lofi_level(): string
     return in_array($v, ['soft', 'print'], true) ? $v : 'off';
 }
 
-/** Режим фактуры бумаги (1.9.83). Старое '1' (чекбокс 1.9.81) и 'film' (1.9.82) = «бумага». */
+
 function fx_grain_mode(): string
 {
     $v = (string)setting('fx_grain');
@@ -358,19 +358,19 @@ function fx_grain_mode(): string
     return in_array($v, ['paper', 'film'], true) ? 'paper' : 'off';
 }
 
-/** Стабильные варианты полей отпечатков из ID карточки. */
+
 function fx_vars(int $id): string
 {
-    $n = static fn(int $k): float => (abs(crc32($id . ':' . $k)) % 10000) / 10000; // 0…1
+    $n = static fn(int $k): float => (abs(crc32($id . ':' . $k)) % 10000) / 10000;
     $tilt = 0.0;
     $shift = 0;
     switch ((string)setting('fx_fields')) {
         case 'even': $lo = 8; $hi = 8; $blo = 32; $bhi = 32; break;
         case 'wild': $lo = 5; $hi = 18; $blo = 26; $bhi = 44; break;
-        default:     $lo = 7; $hi = 12; $blo = 30; $bhi = 36; // uneven
+        default:     $lo = 7; $hi = 12; $blo = 30; $bhi = 36;
     }
-    /* Решения из малого фиксированного набора (1.9.96): у людей несовершенство —
-       выбор из нескольких вариантов, а не непрерывный «процедурный» шум */
+
+
     $pick = static fn(int $k, array $set) => $set[(int)floor($n($k) * count($set))];
     $f = static fn($v): string => number_format((float)$v, 1, '.', '');
     $mid = static fn(float $a, float $b): float => ($a + $b) / 2;
@@ -379,20 +379,20 @@ function fx_vars(int $id): string
         . ';--pt:' . $f($pick(3, [$lo, $mid($lo, $hi), $hi])) . 'px'
         . ';--pr:' . $f($pick(4, [$lo, $mid($lo, $hi), $hi])) . 'px'
         . ';--pl:' . $f($pick(5, [$lo, $mid($lo, $hi), $hi])) . 'px'
-        . ';--pb:' . $f($pick(6, [$blo, $mid($blo, $bhi), $bhi])) . 'px' // нижнее поле под номер
-        . ';--tape:' . ($n(7) < .22 ? 1 : 0)               // скотч примерно у каждого пятого
-        . ';--leak:' . ($n(8) < .20 ? 1 : 0);              // засветка примерно у каждого пятого
+        . ';--pb:' . $f($pick(6, [$blo, $mid($blo, $bhi), $bhi])) . 'px'
+        . ';--tape:' . ($n(7) < .22 ? 1 : 0)
+        . ';--leak:' . ($n(8) < .20 ? 1 : 0);
 }
 
 function listing_html(array $pages, string $format, int $cols, bool $firstSection = false): string
 {
     $cols = max(1, min(5, $cols));
     $fixed = ['portrait' => '2 / 3', 'landscape' => '3 / 2', 'square' => '1 / 1'];
-    /* обложки всех карточек — пакетно (3 запроса на весь список), иначе N+1 */
+
     $covers = pages_covers($pages);
-    /* счётчики фото для альбомов — тоже одним пакетным запросом */
+
     $counts = pages_photo_counts(array_map(static fn($p) => (int)$p['id'], $pages));
-    $fxOn = setting('fx_tape') === '1'; // переменные карточек нужны скотчу (1.9.97)
+    $fxOn = setting('fx_tape') === '1';
     $html = '<div class="listing" style="--cols:' . $cols . '">';
     foreach ($pages as $i => $p) {
         $pid = (int)$p['id'];
@@ -401,28 +401,28 @@ function listing_html(array $pages, string $format, int $cols, bool $firstSectio
         if ($cover && $ar === null) {
             $ar = max(1, (int)$cover['w']) . ' / ' . max(1, (int)$cover['h']);
         }
-        /* первая карточка первой секции — кандидат в LCP: грузим сразу и с высоким приоритетом */
+
         $eager = $firstSection && $i === 0;
-        /* без обложки карточке нужен класс li-empty: белый заголовок поверх серой
-           заглушки не читался — стили-замена в site.css (аудит Safari 1.9.60) */
-        /* «несовершенство» (1.9.82): стабильные CSS-переменные карточки — на <a>, чтобы
-           их видели и резка/зерно (.li-media), и скотч со счётчиком кадра (.li::after/::before) */
+
+
+
+
         $fx = $fxOn ? ' style="' . fx_vars($pid) . '"' : '';
         $html .= '<a class="li' . ($cover ? '' : ' li-empty') . '" href="' . e(page_url($p)) . '"' . $fx . '>';
         $html .= '<span class="li-media" style="--ar:' . ($ar ?? '2 / 3') . ';--c:' . ($cover ? safe_color((string)$cover['color']) : '#ddd') . '">';
         if ($cover) {
-            /* ревизия 1.9.35, п.3: на ≤480 px список в одну колонку (нужно ~100vw, раньше
-               браузер брал кандидата ~вдвое мельче — обложки были мягкими), на ≤900 px — две */
+
+
             $sizes = '(max-width: 480px) 100vw, (max-width: 900px) 50vw'
                 . ', calc((' . content_width_expr() . ') / ' . $cols . ')';
             $html .= img_html($cover, $sizes, (string)$p['title'], $eager, 1240, $eager);
         }
-        /* бейдж страницы (1.9.77): цветная плашка в углу обложки — «35 мм плёнка», «новое» */
+
         $badge = trim((string)($p['badge'] ?? ''));
         if ($badge !== '') {
             $html .= '<span class="li-badge">' . e($badge) . '</span>';
         }
-        /* «фото» несклоняемо, поэтому плюрализация не нужна: 1 фото, 5 фото */
+
         if (($p['type'] ?? '') === 'album' && !empty($counts[$pid])) {
             $html .= '<span class="li-count">' . $counts[$pid] . ' фото</span>';
         }
@@ -449,18 +449,18 @@ function album_related_pages(array $page): array
             $sib[] = $s;
         }
     }
-    /* ближайшие по порядку в разделе, а показываем в обычном порядке позиций */
+
     usort($sib, static fn($a, $b) => (abs((int)$a['position'] - $myPos) <=> abs((int)$b['position'] - $myPos)) ?: ((int)$a['id'] <=> (int)$b['id']));
     $related = array_slice($sib, 0, $limit);
     usort($related, static fn($a, $b) => ((int)$a['position'] <=> (int)$b['position']) ?: ((int)$a['id'] <=> (int)$b['id']));
     return $related;
 }
 
-/**
- * «Другие работы» внизу альбома: компактная полоса горизонтальных карточек (3:2),
- * заголовок ПОД фото, без градиента поверх снимка. Нарочно отличается от основного
- * портретного списка портфолио: блок вторичен и не должен «перекрикивать» сам альбом.
- */
+
+
+
+
+
 function related_html(array $pages): string
 {
     if (!$pages) {
@@ -472,8 +472,8 @@ function related_html(array $pages): string
     foreach ($pages as $p) {
         $pid = (int)$p['id'];
         $cover = $covers[$pid] ?? null;
-        /* fx-vars «Другим работам» не выводим: стилей отпечатков для .rel нет,
-           атрибут style был мёртвым грузом (ревизия 1.9.93) */
+
+
         $html .= '<a class="rel" href="' . e(page_url($p)) . '">';
         $html .= '<span class="rel-media" style="--c:' . ($cover ? safe_color((string)$cover['color']) : '#ddd') . '">';
         if ($cover) {
@@ -493,8 +493,8 @@ function related_html(array $pages): string
     return $html . '</div>';
 }
 
-/** Кнопки «Поделиться» (1.9.77, настройка share_buttons): чистые share-ссылки —
-    никаких сторонних SDK соцсетей, трекеров и лишнего веса. */
+
+
 function share_html(string $url, string $title): string
 {
     $u = rawurlencode(abs_url($url));
@@ -507,11 +507,11 @@ function share_html(string $url, string $title): string
         . '</div>';
 }
 
-/** Видимые хлебные крошки для вложенных страниц и альбомов (совпадают с разметкой BreadcrumbList). */
+
 function page_crumbs_html(array $page, string $class = ''): string
 {
-    /* Родитель больше не обязателен: BreadcrumbList в JSON-LD выводится и для страниц верхнего
-       уровня («Главная → Страница») — видимые крошки должны совпадать с разметкой */
+
+
     if (!empty($page['is_home'])) {
         return '';
     }
@@ -570,8 +570,8 @@ function menu_html(array $nodes, int $level = 0): string
             $cur = !empty($n['active']) ? (!empty($n['exact']) ? ' aria-current="page"' : ' aria-current="true"') : '';
             $html .= '<a href="' . e($n['href']) . '"' . $ext . $cur . '>' . e($n['title']) . '</a>';
         } else {
-            /* рубрика без ссылки: в apple-теме подменю открывается по :focus-within —
-               tabindex даёт точку фокуса, иначе клавиатура/скринридер в подразделы не попадают */
+
+
             $tab = theme_is_apple_family() ? ' tabindex="0"' : '';
             $html .= '<span class="cat"' . $tab . '>' . e($n['title']) . '</span>';
         }
@@ -591,12 +591,12 @@ function font_stack(string $name, string $generic): string
 
 function theme_css(): string
 {
-    /* Тема «Яблочная»: если цвета/шрифты не переопределены владельцем (стоят классические
-       умолчания), подставляем свои — тёплый графит #1d1d1f и системный шрифт в духе
-       SF Pro для текста. Стоит владельцу задать свои значения в «Оформлении» — они
-       побеждают в обеих темах. Заголовки с 1.9.33 остаются на Tenor Sans: редакционный
-       облик темы (тонкая крупная антиква) важнее сходства с apple.com, а SF Pro в роли
-       display-шрифта вне Apple-устройств недоступен и подменялся чем попало. */
+
+
+
+
+
+
     $apple = theme_is_apple_family();
     $text = safe_color(setting('color_text'), $apple ? '#1d1d1f' : '#252525');
     if ($apple && strcasecmp($text, '#252525') === 0) {
@@ -605,38 +605,38 @@ function theme_css(): string
     $fontHead = setting('font_heading');
     $fontBody = setting('font_body');
     if ($apple) {
-        /* тело — системный стек в духе SF Pro (свой шрифт из настроек важнее);
-           заголовки больше не трогаем — Tenor Sans остаётся по умолчанию */
+
+
         if (strcasecmp($fontBody, 'Golos Text') === 0) {
             $fontBody = '';
         }
     }
     $appleStack = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif';
-    /* запасной у Tenor Sans — гротеск: при font-display:swap антиква Georgia перерисовывала
-       заголовки другой гарнитурой с заметным сдвигом (ревизия 1.9.35, п.13) */
+
+
     $headStack = $fontHead !== '' ? font_stack($fontHead, 'sans-serif') : '"Tenor Sans", "Helvetica Neue", Arial, sans-serif';
     $bodyStack = $fontBody !== '' ? font_stack($fontBody, 'sans-serif') : ($apple ? $appleStack : '"Golos Text", system-ui, sans-serif');
     return ':root{'
         . '--bg:' . safe_color(setting('color_bg'), '#ffffff') . ';'
         . '--text:' . $text . ';'
-        /* приглушённый и линии считаем от цвета текста — иначе при смене темы
-           в админке они теряли контраст и переставали гармонировать.
-           alpha .75 у --muted (1.9.78): .65 на белом давал ~4.0:1 — ниже WCAG AA
-           для мелкого текста (4.5:1), .75 даёт запас */
+
+
+
+
         . '--muted:' . rgba_css($text, 0.75, 'rgba(37,37,37,.75)') . ';'
         . '--line:' . rgba_css($text, 0.18, 'rgba(37,37,37,.18)') . ';'
         . '--font-head:' . $headStack . ';'
         . '--font-body:' . $bodyStack . ';'
-        /* масштаб заголовков и текста из «Оформления» (1.9.79): множители к базовым
-           размерам в site.css (h1–h4, .bp-title, body, .post-body). Коридоры те же,
-           что зажимает admin/settings.php, — здесь страховка на случай правки БД мимо админки.
-           1.9.80: коридор расширен до 50–150 и добавлены отдельные значения для экранов
-           ≤900px — переопределяем переменные мобильным медиа-запросом здесь же, в инлайн-стиле
-           после файлов CSS, поэтому он побеждает десктопные значения из :root выше */
+
+
+
+
+
+
         . '--h-scale:' . (max(50, min(150, (int)setting('font_scale_heading'))) / 100) . ';'
         . '--t-scale:' . (max(50, min(150, (int)setting('font_scale_body'))) / 100) . ';'
         . '--sidebar:' . max(160, min(360, (int)setting('sidebar_width'))) . 'px;'
-        /* цвет карандаша «Экспериментов» (1.9.86): кружок контурных кнопок, подчёркивание ссылок */
+
         . '--fx-pencil:' . (['red' => '#c4402a', 'sepia' => '#8a5a2b', 'graphite' => '#3c3c3c', 'blue' => '#2b4f9e'][(string)setting('fx_pencil_color')] ?? '#c4402a') . ';'
         . '--gap:' . max(0, min(40, (int)setting('gallery_gap'))) . 'px}'
         . '@media (max-width:900px){:root{'
@@ -666,7 +666,7 @@ function section_display_image(array $sec, array $page): ?array
     return null;
 }
 
-/** Первая секция с реально выводимым изображением; её кадр получает preload/eager. */
+
 function sections_first_media(array $sections, array $page): ?array
 {
     static $cache = [];
@@ -704,7 +704,7 @@ function page_preload_image(array $img, array $widths, int $width, string $sizes
     return $out;
 }
 
-/** sizes/srcset обязаны совпадать с разметкой первой найденной медиа-секции. */
+
 function page_first_media_preload(array $page): ?array
 {
     $found = sections_first_media(page_sections((int)$page['id']), $page);
@@ -745,11 +745,11 @@ function render_page(array $page): string
 {
     $template = $page['type'] === 'album' ? 'album' : 'page';
     $meta = page_meta($page);
-    content_lastmod((int)$page['updated_at']); // для Last-Modified (правка alt у фото бампает updated_at владельцев)
-    /* Last-Modified страницы-витрины отражает свежесть ВЫВЕДЕННОГО на ней контента: главная
-       и страницы с секциями «Список» фактически меняются при правке дочерних работ и заметок,
-       хотя их собственный updated_at стоит на месте — со старым Last-Modified Яндекс реже
-       переобходит самые посещаемые адреса сайта (SEO-аудит 1.9.17, находка 3) */
+    content_lastmod((int)$page['updated_at']);
+
+
+
+
     if (!empty($page['is_home'])) {
         content_lastmod((int)db_val('SELECT COALESCE(MAX(updated_at), 0) FROM pages WHERE is_published = 1'));
         content_lastmod((int)db_val('SELECT COALESCE(MAX(updated_at), 0) FROM posts WHERE is_published = 1'));
@@ -768,23 +768,23 @@ function render_page(array $page): string
             }
         }
     }
-    /* Первое фото альбома — почти всегда LCP-элемент страницы: отдаём его preload,
-       чтобы браузер начал загрузку до разбора <body> (в разметке оно идёт с fetchpriority="high") */
+
+
     if ($page['type'] === 'album') {
         $first = gallery_images('page', (int)$page['id'])[0] ?? null;
         if ($first) {
             $widths = image_widths($first);
-            /* sizes — из единой точки gallery_sizes(): гарантированно совпадает с masonry_html
-               (аудит 1.9.40, п.9; раньше preload без деления на число колонок грузил вариант
-               крупнее нужного — ревизия 1.9.35, п.3) */
+
+
+
             $cols = (int)$page['album_columns'] > 0 ? (int)$page['album_columns'] : (int)setting('gallery_columns');
             $colsM = (int)setting('gallery_columns_mobile');
-            /* раскладка альбома (1.9.76): sizes preload должны совпадать с разметкой —
-               у lineup кадр на всю контентную ширину, у grid/masonry — доля колонки;
-               у контактного листа колонок больше — считаем их как в шаблоне (1.9.93) */
+
+
+
             $albumLayout = in_array($page['album_layout'] ?? '', ['masonry', 'grid', 'lineup', 'contactsheet', 'hung'], true) ? (string)$page['album_layout'] : 'masonry';
             if ($albumLayout === 'hung') {
-                /* развеска: sizes preload считается по тому же правилу, что в hung_html */
+
                 [$hs, $hspan] = hung_item_span(0, $first);
                 $albumSizes = hung_item_sizes($hs, $hspan);
             } elseif ($albumLayout === 'contactsheet') {
@@ -795,7 +795,7 @@ function render_page(array $page): string
             $meta['preload_image'] = page_preload_image($first, $widths, 1240, $albumSizes);
         }
     } else {
-        /* секционная страница: preload первой реально отображаемой медиа-секции */
+
         $pm = page_first_media_preload($page);
         if ($pm) {
             $meta['preload_image'] = $pm;
@@ -807,7 +807,7 @@ function render_page(array $page): string
     return render_layout($meta, $content, $page);
 }
 
-/** Адрес не найден: сначала смотрим ручные редиректы (старые адреса), иначе отдаём 404. Живой контент имеет приоритет над редиректом. */
+
 function serve_not_found(string $path): void
 {
     $rd = db_one('SELECT to_url, code FROM redirects WHERE from_path = ?', [$path]);
@@ -842,22 +842,22 @@ function render_layout(array $meta, string $content, array $page): string
 {
     $menu = menu_tree(request_path());
     $bodyClass = 'type-' . ($page['type'] ?? 'page') . (!empty($page['is_home']) ? ' is-home' : '');
-    /* тема оформления — классом на <body>: «Яблочная» подключает свой stylesheet и
-       переопределения работают только под ним, классика не тронута (1.9.19) */
+
+
     if (theme_is_apple_family()) {
         $bodyClass .= ' theme-apple';
     }
-    /* «Углы у фотографий» (1.9.70): square — прямые углы с тонкой рамкой на всех фото */
+
     if (setting('photo_corners') === 'square') {
         $bodyClass .= ' corners-square';
     }
-    /* Скотч и LED-штамп — самостоятельные настройки, работают на любой теме (1.9.97).
-       Остальные «плёночные» эксперименты удалены вместе с темой. */
+
+
     if (setting('fx_tape') === '1') {
         $bodyClass .= ' fx-tape';
     }
-    /* регуляторы штампа действуют и на свой текст штампа (stamp_text у страницы),
-       даже когда дата выключена — иначе кастомный штамп всегда дефолтный (1.9.93) */
+
+
     if (setting('fx_datestamp') === '1' || trim((string)($page['stamp_text'] ?? '')) !== '') {
         $bodyClass .= ' fx-ds';
         $dsp = (string)setting('fx_datestamp_pos');

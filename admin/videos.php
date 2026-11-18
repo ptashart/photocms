@@ -5,21 +5,21 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
 
-/* Видеотека (1.9.48): ролики MP4 для секции «Видео» на страницах. Файлы лежат в
-   media/video/<id>-<hex>.mp4 и отдаются веб-сервером как статика (как варианты фото). */
 
-/**
- * Приём MP4 из формы. Сначала INSERT с пустым file (получаем id), потом файл
- * в media/video/<id>-<hex>.mp4 и UPDATE: «сирот» в базе не остаётся.
- */
+
+
+
+
+
+
 function video_upload(): void
 {
-    session_write_close(); // приём файла долгий — не держим блокировку сессии (как в admin_upload)
+    session_write_close();
     $f = $_FILES['file'] ?? null;
     if (!is_array($f)) {
         flash('Файл не получен: вероятно, он больше post_max_size в настройках PHP сервера.', 'err');
@@ -41,33 +41,33 @@ function video_upload(): void
         flash('Некорректная загрузка.', 'err');
         return;
     }
-    /* серверный потолок: ini-лимиты хостинга могут быть шире, а многогигабайтный файл
-       съест диск ещё до всяких проверок */
+
+
     if ((int)$f['size'] > 1073741824) {
         flash('Файл больше 1 ГБ — сожмите видео (например, в H.264 с битрейтом ниже) и загрузите снова.', 'err');
         return;
     }
-    /* mp4-контейнер: ищем бокс ftyp, идя по структуре боксов — перед ним легитимно бывают
-       free/wide/skip (например, после прохода через некоторые конвертеры), и проверка строго
-       по смещению 4 отклоняла валидные файлы (аудит 1.9.48, п.10). Доверяем подписи,
-       а не имени и MIME от браузера. */
+
+
+
+
     $head = (string)@file_get_contents((string)$f['tmp_name'], false, null, 0, 4096);
     $fileSize = (int)@filesize((string)$f['tmp_name']);
     $isMp4 = false;
     $off = 0;
     $headLen = strlen($head);
     while ($off + 8 <= $headLen) {
-        $boxSize = (int)(unpack('N', substr($head, $off, 4)) ?: [1 => 0])[1]; // unpack нумерует с 1
+        $boxSize = (int)(unpack('N', substr($head, $off, 4)) ?: [1 => 0])[1];
         if ($boxSize < 8 || $boxSize > $fileSize - $off) {
             break;
         }
         if (substr($head, $off + 4, 4) === 'ftyp') {
-            /* major_brand и minor_version занимают 8 байт после заголовка; бренд — четыре печатных ASCII-символа */
+
             $isMp4 = $boxSize >= 16 && $off + 16 <= $headLen
                 && preg_match('/^[\x20-\x7E]{4}$/D', substr($head, $off + 8, 4)) === 1;
             break;
         }
-        if ($boxSize > $headLen - $off) { // следующий бокс уже за пределами прочитанного буфера
+        if ($boxSize > $headLen - $off) {
             break;
         }
         $off += $boxSize;
@@ -88,16 +88,16 @@ function video_upload(): void
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
-        /* случайный суффикс — как у slug фото: файл отдаётся напрямую веб-сервером,
-           предсказуемое имя делало бы ролик угадываемым перебором */
+
+
         $name = $id . '-' . bin2hex(random_bytes(16)) . '.mp4';
         if (!@move_uploaded_file((string)$f['tmp_name'], $dir . '/' . $name)) {
             throw new RuntimeException('move_uploaded_file не смог записать media/video/' . $name);
         }
         db_run('UPDATE videos SET file = ? WHERE id = ?', [$name, $id]);
     } catch (Throwable $e) {
-        /* ручной откат: при сбое между INSERT и UPDATE в базе оставалась строка с пустым
-           file, а на диске — файл-сирота, которого никто не чистит (аудит 1.9.48, п.10) */
+
+
         if ($id > 0) {
             try {
                 db_run('DELETE FROM videos WHERE id = ?', [$id]);
@@ -123,7 +123,7 @@ function video_save_meta(int $id): void
     }
     $poster = (int)($_POST['poster_image_id'] ?? 0);
     if ($poster > 0 && !image_get($poster)) {
-        $poster = 0; // чужой/несуществующий id не принимаем
+        $poster = 0;
     }
     db_run('UPDATE videos SET title = ?, description = ?, duration = ?, poster_image_id = ? WHERE id = ?', [
         post_str('title', 200),
@@ -132,7 +132,7 @@ function video_save_meta(int $id): void
         $poster > 0 ? $poster : null,
         $id,
     ]);
-    /* название/обложка видны на публичных страницах и в JSON-LD — а прямой db_run site_rev не бампает */
+
     site_touch();
     flash('Сохранено.');
 }
@@ -144,7 +144,7 @@ function video_delete(int $id): void
         return;
     }
     db_tx(static function () use ($id): void {
-        /* разделы «Видео», ссылавшиеся на ролик, обнуляем — как image_delete обнуляет фото-секции */
+
         foreach (db_all("SELECT id, data FROM sections WHERE type = 'video'") as $r) {
             $d = json_decode((string)$r['data'], true);
             if (is_array($d) && (int)($d['video_id'] ?? 0) === $id) {
@@ -154,12 +154,12 @@ function video_delete(int $id): void
         }
         db_run('DELETE FROM videos WHERE id = ?', [$id]);
     });
-    /* файл стираем только после того, как запись из базы действительно удалена */
+
     $f = basename((string)$v['file']);
     if ($f !== '') {
         @unlink(media_dir() . '/video/' . $f);
     }
-    page_sections_cache_flush(); // секции разных страниц — сбрасываем кэш целиком (как image_delete)
+    page_sections_cache_flush();
     site_touch();
     flash('Видео удалено.');
 }
@@ -169,7 +169,7 @@ function admin_videos(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         $aRaw = $_POST['action'] ?? '';
-        $a = is_string($aRaw) ? $aRaw : ''; // ?action[]=x — иначе «Array to string conversion» в журнал
+        $a = is_string($aRaw) ? $aRaw : '';
         if ($a === 'upload') {
             video_upload();
         } elseif ($a === 'save') {
@@ -181,7 +181,7 @@ function admin_videos(): void
     }
 
     $videos = db_all('SELECT * FROM videos ORDER BY id DESC');
-    /* лимит загрузки — меньший из ini-лимитов PHP; 0/мусор означают «не задано» */
+
     $limU = image_parse_size((string)ini_get('upload_max_filesize'));
     $limP = image_parse_size((string)ini_get('post_max_size'));
     $lim = min($limU > 0 ? $limU : PHP_INT_MAX, $limP > 0 ? $limP : PHP_INT_MAX);

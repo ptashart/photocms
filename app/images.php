@@ -5,13 +5,13 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-/** Ширины вариантов. Адрес варианта: /media/{id}/{ширина}/{slug}.{jpg|webp|avif|png} — это файл на вашем домене. */
+
 const IMG_WIDTHS = [48, 180, 280, 440, 600, 900, 1240, 1880, 2520];
 
-/** Движок обработки изображений (1.9.30): Imagick предпочтителен — при нехватке памяти он сам
-    уходит в дисковый кэш пикселей, а GD падает (на шаред-хостингах с ~120 МБ на процесс каскадное
-    уменьшение 24-Мп оригиналов не влезало в лимит и миниатюры не рождались вовсе). GD — запасной
-    путь. Принудительно выбрать движок: 'img_engine' => 'gd' (или 'imagick') в config.php. */
+
+
+
+
 function img_engine(): string
 {
     static $e = null;
@@ -25,7 +25,7 @@ function img_engine(): string
     return $e;
 }
 
-/** Размер вида «768M»/«1G»/«512» в байтах; 0, -1 или мусор — 0. */
+
 function image_parse_size(string $raw): int
 {
     $raw = trim($raw);
@@ -44,29 +44,29 @@ function image_parse_size(string $raw): int
             $n *= 1024;
             break;
     }
-    /* безумные значения вроде «99999999999G» (ошибка админа в ini) переполняют int64 при
-       умножении и превращаются во float, а при strict_types это TypeError на return
-       (аудит 1.9.48, п.11) — зажимаем в потолок */
+
+
+
     if ($n >= PHP_INT_MAX) {
         return PHP_INT_MAX;
     }
     return $n > 0 ? (int)$n : 0;
 }
 
-/** Действующий memory_limit в байтах; 0 — без ограничения. */
+
 function image_memory_limit(): int
 {
     return image_parse_size((string)ini_get('memory_limit'));
 }
 
-/**
- * Лимит памяти, от которого считается допустимое разрешение фото. По умолчанию равен
- * реальному memory_limit PHP. Владелец может осознанно поднять его в config.php:
- *   'img_memory_limit' => '512M'
- * Автоматически лимит НЕ поднимаем: раньше код молча ставил 768M, и на хостинге со 128–256 МБ
- * допускались фото до ~90 Мп — несколько одновременных генераций съедали гигабайты RAM
- * и роняли PHP-FPM (img.php — публичная точка входа).
- */
+
+
+
+
+
+
+
+
 function image_memory_limit_work(): int
 {
     $cur = image_memory_limit();
@@ -74,7 +74,7 @@ function image_memory_limit_work(): int
     return ($want > 0 && ($cur === 0 || $want > $cur)) ? $want : $cur;
 }
 
-/** Поднимает memory_limit до рабочего — только если владелец явно задал img_memory_limit в config.php. */
+
 function image_raise_memory(): void
 {
     $eff = image_memory_limit_work();
@@ -84,15 +84,15 @@ function image_raise_memory(): void
     }
 }
 
-/**
- * Предел разрешения оригинала (пикселей). GD держит картинку в памяти целиком: 4 байта на пиксель,
- * а при повороте по EXIF одновременно живут две копии (≈8 Б/px) + запас на сам PHP и декодер.
- * Поэтому предел считаем от рабочего memory_limit, а не берём константой.
- */
+
+
+
+
+
 function image_max_pixels(): int
 {
-    /* 1.9.30: при движке Imagick память почти не ограничивает разрешение — при нехватке RAM
-       он сам переходит на дисковый кэш пикселей; оставляем только жёсткий потолок от абсурда */
+
+
     if (img_engine() === 'imagick') {
         return IMG_MAX_PIXELS_CAP;
     }
@@ -104,17 +104,17 @@ function image_max_pixels(): int
     return max(4000000, min(IMG_MAX_PIXELS_CAP, $px));
 }
 
-/** Можно ли отдавать вариант такой ширины: не плодим копии оригинала под разными URL. */
+
 function image_width_allowed(array $img, int $w): bool
 {
     if (!in_array($w, IMG_WIDTHS, true)) {
         return false;
     }
     $ow = (int)$img['w'];
-    if ($w <= $ow || in_array($w, [48, 180, 440], true)) { // 48/180 — favicon, 440 — миниатюры админки
+    if ($w <= $ow || in_array($w, [48, 180, 440], true)) {
         return true;
     }
-    foreach (IMG_WIDTHS as $step) { // у мелких фото разрешена ближайшая ступень вверх
+    foreach (IMG_WIDTHS as $step) {
         if ($step >= $ow) {
             return $w === $step;
         }
@@ -122,9 +122,9 @@ function image_width_allowed(array $img, int $w): bool
     return false;
 }
 
-/** Блокировка на «слот»: одновременно создаётся не больше IMG_LOCK_SLOTS вариантов — защита от лавины декодирований.
- *  $wait = false — слот занят: вернуть false сразу, не вставая в очередь (публичные запросы, висящие в flock,
- *  выкашивают пул PHP-воркеров). false и null для image_unlock() равнозначны. */
+
+
+
 function image_lock(int $id, bool $wait = true)
 {
     $dir = ROOT . '/storage/locks';
@@ -150,10 +150,10 @@ function image_unlock($h): void
     }
 }
 
-/**
- * Ждёт свободный слот генерации до $seconds секунд короткими попытками с паузой 200 мс.
- * Возвращает хендл лока; false — слот так и не освободился; null — файл лока недоступен (права на storage/).
- */
+
+
+
+
 function image_lock_wait(int $id, float $seconds)
 {
     $deadline = microtime(true) + $seconds;
@@ -162,7 +162,7 @@ function image_lock_wait(int $id, float $seconds)
         if ($h !== false && $h !== null) {
             return $h;
         }
-        if ($h === null) { // нет даже файла лока — повторять бессмысленно
+        if ($h === null) {
             return null;
         }
         usleep(200000);
@@ -170,11 +170,11 @@ function image_lock_wait(int $id, float $seconds)
     return false;
 }
 
-/**
- * Ближайший к $wantW уже сгенерированный вариант фото — запасной ответ, пока слот генерации занят.
- * Сначала ищем в запрошенном формате, потом в jpg (он есть у всех). Варианты мельче 280 px
- * в подмену не годятся: растянутые на весь экран они выглядят хуже, чем отказ.
- */
+
+
+
+
+
 function image_existing_variant(array $img, string $fmt, int $wantW): ?string
 {
     $widths = array_values(array_filter(IMG_WIDTHS, static fn($w) => $w >= 280));
@@ -190,13 +190,13 @@ function image_existing_variant(array $img, string $fmt, int $wantW): ?string
     return null;
 }
 
-/* Троттлинг генерации вариантов по IP (с 1.9.13 — в app/images.php: раньше жил в img.php,
-   и favicon-эндпоинт index.php не мог им пользоваться). Хранилище — json-файлы в
-   storage/locks/: img-fails.json (неудачи) и img-gen.json (успешные). */
 
-/** Лимит НЕУДАЧНЫХ генераций на IP: fail-маркер останавливает повторную попытку того же
-   варианта, но злоумышленник может перебирать РАЗНЫЕ несуществующие комбинации — каждая
-   до маркера декодирует оригинал. Сверх лимита — быстрый 404 без декодирования. */
+
+
+
+
+
+
 function img_throttle_allow(string $ip): bool
 {
     $count = img_throttle_count(ROOT . '/storage/locks/img-fails.json', $ip);
@@ -208,29 +208,29 @@ function img_throttle_hit(string $ip): bool
     return img_throttle_bump(ROOT . '/storage/locks/img-fails.json', $ip) > 0;
 }
 
-/**
- * Ключ троттлинга: вместо точного IP — его подсеть (IPv4 /24, IPv6 /48). Ботнет из адресов
- * одного блока перебором последнего октета обходил лимиты генерации — каждый новый IP начинал
- * с чистого счётчика (ревизия 1.9.34, п.17). Побочный эффект принят: легитимные посетители
- * за общим NAT (офис, мобильный оператор) делят один счётчик — лимиты (300 генераций/час)
- * для обычного просмотра готовых миниатюр недостижимы, генерация нужна только на новых файлах.
- */
+
+
+
+
+
+
+
 function img_throttle_key(string $ip): string
 {
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
         $bin = @inet_pton($ip);
-        /* /48, а не /64: у клиента провайдера обычно целый /48 (65 тысяч подсетей /64),
-           и перебор /64-префиксов обходил лимит, раздувая json-счётчиков (аудит 1.9.40, п.13) */
+
+
         return $bin === false ? $ip : 'v6:' . bin2hex(substr($bin, 0, 6));
     }
     $p = explode('.', $ip);
     return count($p) === 4 ? $p[0] . '.' . $p[1] . '.' . $p[2] . '.0/24' : $ip;
 }
 
-/**
- * Счётчик событий по IP в json-файле (скользящее окно час): добавляет событие
- * и возвращает, сколько их теперь за окно. Общий для fail- и gen-троттлинга.
- */
+
+
+
+
 function img_throttle_bump(string $f, string $ip): int
 {
     if (!img_throttle_reserve($f, $ip, PHP_INT_MAX)) {
@@ -239,7 +239,7 @@ function img_throttle_bump(string $f, string $ip): int
     return (int)img_throttle_count($f, $ip);
 }
 
-/** Атомарная проверка и резервирование одного события. При ошибке хранилища работа запрещается. */
+
 function img_throttle_reserve(string $f, string $ip, int $max, bool $exactIp = false): bool
 {
     $ip = $exactIp ? $ip : img_throttle_key($ip);
@@ -289,7 +289,7 @@ function img_throttle_reserve(string $f, string $ip, int $max, bool $exactIp = f
     }
 }
 
-/** Сколько событий IP уже имеет за скользящий час; null означает ошибку хранилища. */
+
 function img_throttle_count(string $f, string $ip): ?int
 {
     $ip = img_throttle_key($ip);
@@ -339,10 +339,10 @@ function webp_supported(): bool
     return function_exists('imagewebp') && function_exists('imagecreatefromwebp');
 }
 
-/** Умеет ли ВЫБРАННЫЙ движок писать AVIF (1.9.48). Imagick: формат должен быть в queryFormats
-    (сборки ImageMagick без libheif/libaom AVIF не кодируют). GD: imageavif() появилась в
-    PHP 8.1 и требует GD, собранного с libavif. Результат кэшируем: опрос на каждую картинку
-    страницы был бы лишней работой. */
+
+
+
+
 function avif_supported(): bool
 {
     static $ok = null;
@@ -354,15 +354,15 @@ function avif_supported(): bool
     return $ok;
 }
 
-/** AVIF включён настройкой И поддержан движком — единая проверка для генерации вариантов,
-    разметки <picture> (img_html в app/render.php) и публичной точки img.php (1.9.48). */
+
+
 function avif_enabled(): bool
 {
     return setting('avif') === '1' && avif_supported();
 }
 
-/** Качество AVIF: настройка «Качество AVIF», коридор 30–80 (по умолчанию 50).
-    Пустое/мусорное значение из базы → 50, как в setting_defaults(). */
+
+
 function avif_quality(): int
 {
     $q = (int)setting('avif_quality');
@@ -372,26 +372,26 @@ function avif_quality(): int
     return max(30, min(80, $q));
 }
 
-/**
- * Теги <source> для <picture> (1.9.48): AVIF первым (на 20–30 % легче WebP при том же
- * качестве — браузер берёт первый поддерживаемый формат), затем WebP; сам <img> с
- * JPEG-вариантами добавляет img_html() в app/render.php. Гварды те же, что там:
- * у AVIF — настройка + поддержка движком, у WebP — поддержка выбранным движком.
- */
+
+
+
+
+
+
 function picture_sources_html(array $img, string $sizes, array $widths): string
 {
     $html = '';
     if (avif_enabled()) {
         $html .= '<source type="image/avif" srcset="' . e(image_srcset($img, 'avif', $widths)) . '" sizes="' . e($sizes) . '">';
     }
-    /* webp-гвард по движку (1.9.30): при Imagick решает его поддержка формата, а не GD */
+
     if (img_engine() === 'imagick' ? imagick_webp_supported() : webp_supported()) {
         $html .= '<source type="image/webp" srcset="' . e(image_srcset($img, 'webp', $widths)) . '" sizes="' . e($sizes) . '">';
     }
     return $html;
 }
 
-/** Кэш строк images на время запроса (общий для image_get и images_prime). */
+
 function &image_cache(): array
 {
     static $cache = [];
@@ -410,10 +410,10 @@ function image_get(int $id): ?array
     return $cache[$id];
 }
 
-/**
- * Пакетная загрузка изображений в кэш image_get() одним запросом — для списков
- * (заметки, галереи, RSS), где иначе на каждый элемент уходит по SELECT'у.
- */
+
+
+
+
 function images_prime(array $ids): void
 {
     $cache = &image_cache();
@@ -431,7 +431,7 @@ function images_prime(array $ids): void
     }
 }
 
-/** Сброс кэша: вызывается при любой записи в images (alt, удаление), чтобы не отдать старое. */
+
 function image_cache_flush(): void
 {
     $cache = &image_cache();
@@ -463,9 +463,9 @@ function image_original_path(array $img): string
     return originals_dir() . '/' . (int)$img['id'] . '.' . $img['ext'];
 }
 
-/** Дата съёмки из EXIF оригинала (DateTimeOriginal, запасно DateTimeDigitized/IFD0 DateTime).
-    0 — метаданных нет. Дата ЗАГРУЗКИ файла сознательно не используется: она не дата съёмки.
-    Читается только когда включён LED-штамп «Плёночной» темы; кэш — на запрос, по id. */
+
+
+
 function image_shot_at(array $img): int
 {
     static $cache = [];
@@ -481,7 +481,7 @@ function image_shot_at(array $img): int
         $raw = $ex['EXIF']['DateTimeOriginal'] ?? $ex['EXIF']['DateTimeDigitized'] ?? $ex['IFD0']['DateTime'] ?? '';
         if (is_string($raw) && preg_match('/^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})/', $raw, $m)) {
             $candidate = strtotime("$m[1]-$m[2]-$m[3] $m[4]:$m[5]:$m[6]");
-            /* год 0000/1970 и даты из будущего EXIF не принимаем */
+
             if ($candidate !== false && $candidate > 946684800 && $candidate <= time() + 86400) {
                 $ts = $candidate;
             }
@@ -495,7 +495,7 @@ function image_variant_path(array $img, int $w, string $ext): string
     return media_dir() . '/' . (int)$img['id'] . '/' . $w . '/' . $img['slug'] . '.' . $ext;
 }
 
-/** Ширины для srcset: не больше оригинала (без апскейла). */
+
 function image_widths(array $img, int $max = 2520): array
 {
     $ow = (int)$img['w'];
@@ -503,8 +503,8 @@ function image_widths(array $img, int $max = 2520): array
     if ($list) {
         return $list;
     }
-    /* Фото уже 280 px (логотипы, иконки): отдаём ближайшую ступень вверх — именно её разрешает
-       image_width_allowed(). Жёсткий [280] раньше давал 404 на всех src/srcset таких картинок. */
+
+
     foreach (IMG_WIDTHS as $step) {
         if ($step >= $ow) {
             return [$step];
@@ -532,11 +532,11 @@ function image_srcset(array $img, string $ext, array $widths): string
     return implode(', ', $parts);
 }
 
-/**
- * Фокусная точка кадра (1.9.25, идея из Koken CMS): inline-стиль object-position для картинок
- * с object-fit:cover (обложки, миниатюры) — кадрирование идёт вокруг выбранной точки, а не центра.
- * Точка по умолчанию — центр (0.5/0.5): тогда стиль не нужен, возвращаем пустую строку.
- */
+
+
+
+
+
 function image_focus_style(array $img): string
 {
     $fx = (float)($img['focus_x'] ?? 0.5);
@@ -544,23 +544,23 @@ function image_focus_style(array $img): string
     if (abs($fx - 0.5) < 0.004 && abs($fy - 0.5) < 0.004) {
         return '';
     }
-    /* клампим в 0..1: в базу значения попадают через валидацию, но не строим CSS на слепой вере */
+
     $fx = max(0.0, min(1.0, $fx));
     $fy = max(0.0, min(1.0, $fy));
     return 'object-position:' . round($fx * 100, 1) . '% ' . round($fy * 100, 1) . '%';
 }
 
-/** Самый большой доступный вариант (для лайтбокса и og:image). */
+
 function image_large_url(array $img, int $max = 2520, string $ext = 'jpg'): string
 {
     $w = (int)max(image_widths($img, $max));
     return image_url($img, $w, $ext);
 }
 
-/* ---------- GD ---------- */
 
-/** С PHP 8.5 imagedestroy() объявлена deprecated (изображения — объекты, память отпускает сборщик);
-    на 8.0–8.4 вызов безвреден, на 7.x реально освобождал память. Единая обёртка — чтобы не спамить лог. */
+
+
+
 function gd_free($im): void
 {
     if (PHP_VERSION_ID < 80500 && $im instanceof \GdImage) {
@@ -594,11 +594,11 @@ function gd_load(string $path)
     if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
         $ex = @exif_read_data($path);
         $o = (int)($ex['Orientation'] ?? 1);
-        /* Зеркальные ориентации (2, 4, 5, 7) сначала отзеркаливаем, затем поворачиваем:
-           5 (transpose) = flip H + 90° CCW, 7 (transverse) = flip H + 90° CW.
-           GD крутит ПРОТИВ часовой (imagerotate положителен в CCW), поэтому знаки такие.
-           До 1.9.35 углы для 5 и 7 были перепутаны местами — зеркальные портреты с телефона
-           поворачивались не туда (ревизия 1.9.34, п.5). */
+
+
+
+
+
         $flips = [2 => IMG_FLIP_HORIZONTAL, 4 => IMG_FLIP_VERTICAL, 5 => IMG_FLIP_HORIZONTAL, 7 => IMG_FLIP_HORIZONTAL];
         if (isset($flips[$o]) && function_exists('imageflip')) {
             @imageflip($im, $flips[$o]);
@@ -607,7 +607,7 @@ function gd_load(string $path)
         if (isset($angles[$o])) {
             $rot = imagerotate($im, $angles[$o], 0);
             if ($rot) {
-                gd_free($im); // оригинал больше не нужен: не держим две копии многомегапиксельного кадра
+                gd_free($im);
                 $im = $rot;
             }
         }
@@ -618,18 +618,18 @@ function gd_load(string $path)
     return $im;
 }
 
-/**
- * Сила поднятия резкости после уменьшения (1.9.25): настройка «Резкость превью, %» (0–100,
- * по умолчанию 50). 50 соответствует прежнему зашитому ядру (−0.25/2.0), 0 — отключает полностью.
- * Даунскейл в GD всегда слегка мылит; ядро с суммой 1 возвращает «звон» без сдвига яркости.
- */
+
+
+
+
+
 function gd_sharpen_amount(): float
 {
     $pct = max(0, min(100, (int)setting('sharpen')));
-    return $pct > 0 ? 0.005 * $pct : 0.0; // 50 % → 0.25, как было зашито до настройки
+    return $pct > 0 ? 0.005 * $pct : 0.0;
 }
 
-/** Применяет к $out ядро резкости силой $k (0 — ничего не делает). */
+
 function gd_sharpen($out, float $k): void
 {
     if ($k > 0 && function_exists('imageconvolution')) {
@@ -637,9 +637,9 @@ function gd_sharpen($out, float $k): void
     }
 }
 
-/** Атомарное перемещение tmp → dest. rename() не работает между разными файловыми системами
-    (storage/tmp и media/ на разных маунтах — аудит 1.9.40, п.15): тогда copy во временный
-    файл в каталоге назначения, rename и unlink исходника. */
+
+
+
 function move_file_inplace(string $tmp, string $dest): bool
 {
     if (@rename($tmp, $dest)) {
@@ -665,7 +665,7 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
     }
     $tw = min($w, $sw);
     $th = max(1, (int)round($sh * $tw / $sw));
-    /* AVIF умеет альфу — для PNG-оригиналов прозрачность сохраняем, как у webp/png (1.9.48) */
+
     $keepAlpha = ($ext === 'png' || $ext === 'webp' || $ext === 'avif');
 
     if ($keepAlpha && $tw === $sw) {
@@ -673,9 +673,9 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
         imagealphablending($out, false);
         imagesavealpha($out, true);
     } else {
-        /* Один проход imagecopyresampled при сильном уменьшении (2520 → 280) даёт ступеньки и муар.
-           Уменьшаем вдвое, пока до цели не останется меньше двух раз, и только потом доводим до точного размера.
-           Промежуточные кадры уничтожаем сразу: на больших оригиналах каждый — десятки мегабайт памяти. */
+
+
+
         $cur = $im;
         $cw = $sw;
         $ch = $sh;
@@ -684,9 +684,9 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
             $nh = max(1, (int)round($ch * $nw / $cw));
             $next = gd_resample($cur, $nw, $nh, $keepAlpha);
             if ($next === false) {
-                /* 1.9.30: промежуточный кадр не влез в память (шаред-хостинг с ~120 МБ на процесс).
-                   Деградируем до одного прохода из исходника — крошечный целевой кадр почти всегда
-                   аллоцируется; качество чуть ниже (без каскада), но вариант родится. */
+
+
+
                 if ($cur !== $im) {
                     gd_free($cur);
                 }
@@ -705,11 +705,11 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
             gd_free($cur);
         }
         if ($out === false) {
-            return false; // памяти нет даже на целевой кадр — img.php поставит .fail и отдаст 404/503
+            return false;
         }
-        /* после заметного уменьшения слегка возвращаем резкость (ядро с суммой 1 — яркость не меняется).
-           С 1.9.25 — по настройке «Резкость превью» и не только для JPEG: webp-варианты JPG-оригиналов
-           раньше оставались мягкими, потому что ветка keepAlpha пропускала их мимо нерезкости */
+
+
+
         if ($allowSharpen && $sw >= $tw * 1.5) {
             gd_sharpen($out, gd_sharpen_amount());
         }
@@ -720,8 +720,8 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
         app_log_error('gd_save_variant: не удалось создать папку ' . $dir . ' (проверьте права на media/)');
         return false;
     }
-    /* Временный файл — вне публичной media/ (раньше лежал рядом с готовым вариантом и был
-       доступен из веба, пока идёт кодирование). storage/ закрыт корневым .htaccess. */
+
+
     $tmpDir = ROOT . '/storage/tmp';
     if (!is_dir($tmpDir)) {
         @mkdir($tmpDir, 0700, true);
@@ -733,8 +733,8 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
     } elseif ($ext === 'webp') {
         $ok = function_exists('imagewebp') && imagewebp($out, $tmp, max(IMG_QUALITY_MIN, min(IMG_QUALITY_MAX, (int)setting('webp_quality'))));
     } elseif ($ext === 'avif') {
-        /* imageavif() есть с PHP 8.1 при GD с libavif; коридор качества 30–80 (avif_quality),
-           у AVIF шкала плотнее JPEG — 50 уже близко к webp 80 по визуалу */
+
+
         $ok = function_exists('imageavif') && imageavif($out, $tmp, avif_quality());
     } else {
         $ok = imagepng($out, $tmp, 6);
@@ -746,15 +746,15 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
         app_log_error('gd_save_variant: не удалось записать ' . $dest . ' (место на диске / права)');
         @unlink($tmp);
     }
-    if ($out !== $im) { // ветка keepAlpha без ресайза отдаёт $out = $im — его освобождает вызывающий
+    if ($out !== $im) {
         gd_free($out);
     }
     return (bool)$ok;
 }
 
-/** Новое truecolor-изображение $tw×$th; для png/webp/avif сохраняет прозрачность, для jpg заливает белым.
-    При нехватке памяти imagecreatetruecolor возвращает false — отдаём false наверх (1.9.30: раньше
-    это превращалось в TypeError на imagefill, и вся генерация падала фатально). */
+
+
+
 function gd_resample($src, int $tw, int $th, bool $keepAlpha)
 {
     $out = imagecreatetruecolor($tw, $th);
@@ -772,38 +772,38 @@ function gd_resample($src, int $tw, int $th, bool $keepAlpha)
     return $out;
 }
 
-/** Все размеры создаются из оригинала, без повторного сжатия и повторного повышения резкости. */
+
 function image_source_for(array $img, int $w)
 {
     return gd_load(image_original_path($img));
 }
 
-/** EXIF-поворот для Imagick (1.9.30). autoOrientImage() есть не во всех сборках расширения
-    (в php-imagick под ImageMagick 7 его нет), поэтому поворачиваем вручную по коду ориентации —
-    та же логика, что у EXIF-обработки в gd_load: после применения код сбрасываем в 1,
-    чтобы следующий поворот не случился дважды. */
+
+
+
+
 function imagick_auto_orient(Imagick $im): void
 {
     $o = (int)$im->getImageOrientation();
-    /* Порядок — как в gd_load: зеркальные ориентации сначала отзеркаливаем, затем поворачиваем;
-       оба движка обязаны дать одинаковый кадр. rotateImage положителен ПО часовой (в отличие от
-       imagerotate): 5 (transpose) = flip H + 90° CCW → 270, 7 (transverse) = flip H + 90° CW → 90.
-       До 1.9.35 углы 5 и 7 были перепутаны местами (ревизия 1.9.34, п.5). */
+
+
+
+
     switch ($o) {
-        case 2: @$im->flopImage(); break;                                    // зеркало по горизонтали
-        case 3: @$im->rotateImage('#000000', 180); break;                    // 180°
-        case 4: @$im->flipImage(); break;                                    // зеркало по вертикали
-        case 5: @$im->flopImage(); @$im->rotateImage('#000000', 270); break; // flip H + 90° CCW
-        case 6: @$im->rotateImage('#000000', 90);  break;                    // 90° CW — портрет с телефона
-        case 7: @$im->flopImage(); @$im->rotateImage('#000000', 90);  break; // flip H + 90° CW
-        case 8: @$im->rotateImage('#000000', 270); break;                    // 90° CCW
+        case 2: @$im->flopImage(); break;
+        case 3: @$im->rotateImage('#000000', 180); break;
+        case 4: @$im->flipImage(); break;
+        case 5: @$im->flopImage(); @$im->rotateImage('#000000', 270); break;
+        case 6: @$im->rotateImage('#000000', 90);  break;
+        case 7: @$im->flopImage(); @$im->rotateImage('#000000', 90);  break;
+        case 8: @$im->rotateImage('#000000', 270); break;
     }
     if ($o > 1) {
-        @$im->setImageOrientation(1); // поворот применён — сбрасываем, чтобы не повернуть дважды
+        @$im->setImageOrientation(1);
     }
 }
 
-/** Есть ли у Imagick поддержка webp (1.9.30). */
+
 function imagick_webp_supported(): bool
 {
     static $ok = null;
@@ -813,10 +813,10 @@ function imagick_webp_supported(): bool
     return $ok;
 }
 
-/**
- * Бандлированный sRGB ICC-профиль (app/icc/srgb.icc) — цель конверсии для широкогамутных
- * оригиналов (Adobe RGB, Display P3). Свободно распространяемый профиль sRGB IEC 61966-2-1.
- */
+
+
+
+
 function imagick_srgb_profile(): ?string
 {
     static $p = null;
@@ -830,11 +830,11 @@ function imagick_srgb_profile(): ?string
     return $p;
 }
 
-/**
- * У JPEG есть ICC-профиль шире sRGB? Эвристика для GD-пути (GD ICC не применяет вообще):
- * маркер «ICC_PROFILE» в начале файла есть, а подписи «sRGB» в профиле нет (Adobe RGB,
- * Display P3). Нужна для предупреждения при загрузке (аудит 1.9.40, п.1).
- */
+
+
+
+
+
 function image_icc_wide_gamut(string $path): bool
 {
     $head = @file_get_contents($path, false, null, 0, 1048576);
@@ -844,10 +844,10 @@ function image_icc_wide_gamut(string $path): bool
     return stripos($head, 'sRGB') === false;
 }
 
-/** Вариант через Imagick (1.9.30): EXIF-поворот, уменьшение, мягкая резкость, запись во временный
-    файл с атомарным rename — те же договорённости, что у GD-пути. Imagick при нехватке памяти
-    сам переходит на дисковый кэш пикселей, поэтому 24-Мп оригиналы обрабатываются и на
-    шаред-хостингах с маленьким лимитом памяти на процесс. */
+
+
+
+
 function imagick_make_variant(array $img, int $w, string $ext): bool
 {
     if (!in_array($w, IMG_WIDTHS, true) || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
@@ -856,8 +856,8 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
     if ($ext === 'webp' && !imagick_webp_supported()) {
         return false;
     }
-    /* AVIF: настройка выключена или сборка ImageMagick без кодера — не генерируем вовсе,
-       иначе запросы с img.php ставили бы .fail-маркеры на заведомо нерабочий формат */
+
+
     if ($ext === 'avif' && !avif_enabled()) {
         return false;
     }
@@ -871,33 +871,33 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
     try {
         $src = image_original_path($img);
         $im = new Imagick();
-        /* Лимиты ресурсов декодера (аудит 1.9.40, п.4): у IM по умолчанию их нет, и «бомба
-           распаковки» (PNG/GIF сверхбольших размеров) могла надолго занять процесс. */
-        Imagick::setResourceLimit(Imagick::RESOURCETYPE_MEMORY, 268435456);  // 256 МБ
-        Imagick::setResourceLimit(Imagick::RESOURCETYPE_MAP, 536870912);     // 512 МБ
+
+
+        Imagick::setResourceLimit(Imagick::RESOURCETYPE_MEMORY, 268435456);
+        Imagick::setResourceLimit(Imagick::RESOURCETYPE_MAP, 536870912);
         Imagick::setResourceLimit(Imagick::RESOURCETYPE_TIME, 60);
-        /* jpeg:size — подсказка декодеру libjpeg прочитать сразу уменьшенный (DCT-масштабом
-           /2, /4, /8) кадр, когда цель заметно меньше оригинала: 24-Мп jpeg декодируется
-           как 6-Мп — в 4 раза меньше памяти и времени. Только для исходного jpeg: готовый
-           1240-й и так мал (там же). Просим двойной размер — запас под качественный Lanczos. */
+
+
+
+
         if ($src === image_original_path($img) && $w * 2 < max(1, (int)($img['w'] ?? 0))) {
             $im->setOption('jpeg:size', ($w * 2) . 'x' . ($w * 2));
         }
-        /* [0] — только первый кадр: у анимированного GIF берём первый, как и GD-путь.
-           Формат задаём явно по расширению оригинала (его тип проверен по содержимому при
-           загрузке): без префикса IM распознавал бы файл по своим делегатам, включая те,
-           что мы не проверяли (аудит 1.9.40, п.4). Готовый 1240-й вариант — всегда jpeg. */
+
+
+
+
         $decoder = $src === image_original_path($img)
             ? (['jpg' => 'jpeg', 'png' => 'png', 'gif' => 'gif', 'webp' => 'webp'][(string)$img['ext']] ?? null)
             : 'jpeg';
         $im->readImage(($decoder !== null ? $decoder . ':' : '') . $src . '[0]');
-        imagick_auto_orient($im); // EXIF-ориентация, как imagerotate в gd_load
-        /* Цветовой профиль: stripImage() ниже вырезает ICC — и без приведения к sRGB широкий
-           гамут (Adobe RGB, Display P3) после вырезания тускнел: браузер трактует голые
-           пиксели как sRGB. Конверсия — profileImage() с бандлированным sRGB-профилем:
-           transformImageColorspace() здесь менял лишь ТЕГ пространства, не применяя ICC,
-           и цвета съезжали (живой тест 1.9.40: P3-файл rgb(30,209,79) уходил в вариант
-           без конверсии вместо sRGB rgb(1,213,53)). Без файла профиля — как раньше. */
+        imagick_auto_orient($im);
+
+
+
+
+
+
         try {
             if (in_array('icc', $im->getImageProfiles('*', false), true)
                 && stripos((string)$im->getImageProfile('icc'), 'sRGB') === false) {
@@ -907,7 +907,7 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
                 }
             }
         } catch (Throwable $ignore) {
-            // профиль не читается/не применяется — считаем пиксели sRGB, как было до 1.9.35
+
         }
         $sw = $im->getImageWidth();
         $sh = $im->getImageHeight();
@@ -918,21 +918,21 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
         $tw = min($w, $sw);
         $th = max(1, (int)round($sh * $tw / $sw));
         if ($tw !== $sw) {
-            // Lanczos честнее всего уменьшает фото; thumbnailImage быстрее, но заметно грубее
+
             $im->resizeImage($tw, $th, Imagick::FILTER_LANCZOS, 1.0);
         }
-        /* резкость — по той же настройке «Резкость превью» и тем же правилам, что у GD:
-           jpeg-варианты всегда, webp/avif — только из jpeg-оригиналов (нет альфы) */
+
+
         $allowSharpen = $ext === 'jpg' || (($ext === 'webp' || $ext === 'avif') && $img['ext'] === 'jpg');
         $pct = max(0, min(100, (int)setting('sharpen')));
         if ($allowSharpen && $pct > 0 && $sw >= $tw * 1.5) {
-            @$im->unsharpMaskImage(0, 0.8, 0.01 * $pct, 0.02); // 50 % → 0.5 — мягкий подъём микроконтраста
+            @$im->unsharpMaskImage(0, 0.8, 0.01 * $pct, 0.02);
         }
         if ($ext === 'jpg') {
-            /* Прозрачность в JPEG уплощаем на белый — как GD-путь (gd_resample заливает фон
-               белым). Иначе альфа PNG просто отбрасывалась без блендинга и полупрозрачные
-               места «грязнили» (живой тест 1.9.40: rgba(255,0,0,.5) давал чистый красный
-               вместо розового; аудит 1.9.40, п.6). */
+
+
+
+
             if ($im->getImageAlphaChannel()) {
                 $im->setImageBackgroundColor('white');
                 $im->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
@@ -944,18 +944,18 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
             }
             $im->setImageFormat('jpeg');
             $im->setImageCompressionQuality(max(IMG_QUALITY_MIN, min(IMG_QUALITY_MAX, (int)setting('jpg_quality'))));
-            $im->setInterlaceScheme(Imagick::INTERLACE_PLANE); // прогрессивный jpeg, как imageinterlace
+            $im->setInterlaceScheme(Imagick::INTERLACE_PLANE);
         } elseif ($ext === 'webp') {
             $im->setImageFormat('webp');
             $im->setImageCompressionQuality(max(IMG_QUALITY_MIN, min(IMG_QUALITY_MAX, (int)setting('webp_quality'))));
         } elseif ($ext === 'avif') {
-            /* альфа PNG-оригиналов сохраняется сама: уплощение на белый делаем только для jpeg (1.9.48) */
+
             $im->setImageFormat('avif');
             $im->setImageCompressionQuality(avif_quality());
         } else {
             $im->setImageFormat('png');
         }
-        $im->stripImage(); // EXIF/ICC из миниатюр убираем: меньше вес, нет утечки метаданных (GD-путь их и не сохранял)
+        $im->stripImage();
         $dir = dirname($dest);
         if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
             app_log_error('imagick_make_variant: не удалось создать папку ' . $dir);
@@ -988,13 +988,13 @@ function image_make_variant(array $img, int $w, string $ext, $loaded = null): bo
     if (!in_array($w, IMG_WIDTHS, true) || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
         return false;
     }
-    /* AVIF — только при включённой настройке и поддержке движком: ручные запросы к img.php
-       с выключенным avif не должны запускать кодирование (оно самое тяжёлое из форматов) */
+
+
     if ($ext === 'avif' && !avif_enabled()) {
         return false;
     }
     if (img_engine() === 'imagick') {
-        return imagick_make_variant($img, $w, $ext); // GD-объект $loaded сюда не подходит — грузим сами
+        return imagick_make_variant($img, $w, $ext);
     }
     if ($ext === 'webp' && !webp_supported()) {
         return false;
@@ -1007,13 +1007,13 @@ function image_make_variant(array $img, int $w, string $ext, $loaded = null): bo
     if (function_exists('set_time_limit')) {
         set_time_limit(120);
     }
-    $own = $loaded === null; // источник загрузили сами — сами и освобождаем
+    $own = $loaded === null;
     $im = $loaded ?: image_source_for($img, $w);
     if (!$im) {
         return false;
     }
-    /* резкость — только там, где нет прозрачности, которую она «звенит» по краям:
-       jpeg-варианты всегда, webp/avif — только из jpeg-оригиналов (альфы там нет по определению) */
+
+
     $allowSharpen = $ext === 'jpg' || (($ext === 'webp' || $ext === 'avif') && $img['ext'] === 'jpg');
     $ok = gd_save_variant($im, $w, $ext, $dest, $allowSharpen);
     if ($own) {
@@ -1022,13 +1022,13 @@ function image_make_variant(array $img, int $w, string $ext, $loaded = null): bo
     return $ok;
 }
 
-/* ---------- кадр для соцсетей og:image 1200×630 (1.9.63) ---------- */
 
-/**
- * Размеры og-кадра для фото: цель соцсетей 1200×630 (1.91:1). Для оригиналов уже 1200 px —
- * пропорционально меньше; совсем маленькие (< 600 px) не кадрируем вовсе (null) —
- * для них og:image остаётся обычным вариантом с честными размерами.
- */
+
+
+
+
+
+
 function og_image_dims(array $img): ?array
 {
     $ow = (int)($img['w'] ?? 0);
@@ -1039,17 +1039,17 @@ function og_image_dims(array $img): ?array
     return [$w, (int)round($w * 630 / 1200)];
 }
 
-/** Путь файла og-кадра: media/{id}/og-1200x630.jpg — Apache отдаёт как статику. */
+
 function og_variant_path(array $img, int $w, int $h): string
 {
     return media_dir() . '/' . (int)$img['id'] . '/og-' . $w . 'x' . $h . '.jpg';
 }
 
-/**
- * Готовый og-кадр фото (генерирует при первом обращении): обрезка 1.91:1 вокруг
- * фокусной точки кадра (focus_x/focus_y — та же, что у обложек карточек).
- * null — фото слишком маленькое или кадр не родился (тогда og:image — обычный вариант).
- */
+
+
+
+
+
 function og_image_variant(array $img): ?array
 {
     $dims = og_image_dims($img);
@@ -1059,7 +1059,7 @@ function og_image_variant(array $img): ?array
     [$w, $h] = $dims;
     $dest = og_variant_path($img, $w, $h);
     $src = image_original_path($img);
-    /* свежесть: оригинал новее файла (перезаливка той же записью фото) — пересоздаём */
+
     if (!is_file($dest) || (is_file($src) && (int)@filemtime($src) > (int)@filemtime($dest))) {
         $failMark = $dest . '.fail';
         if ((is_file($failMark) && time() - (int)@filemtime($failMark) < 86400) || !img_throttle_allow(client_ip())) {
@@ -1102,7 +1102,7 @@ function og_image_variant(array $img): ?array
     return ['url' => $url, 'w' => $w, 'h' => $h];
 }
 
-/** Создаёт og-кадр: масштаб «cover» + обрезка окном 1200×H вокруг фокусной точки. */
+
 function og_variant_make(array $img, int $w, int $h, string $dest): bool
 {
     $src = image_original_path($img);
@@ -1115,7 +1115,7 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
     if (img_engine() === 'imagick') {
         try {
             $im = new Imagick();
-            /* те же лимиты декодера и явный формат, что в imagick_make_variant (аудит 1.9.40, п.4) */
+
             Imagick::setResourceLimit(Imagick::RESOURCETYPE_MEMORY, 268435456);
             Imagick::setResourceLimit(Imagick::RESOURCETYPE_MAP, 536870912);
             Imagick::setResourceLimit(Imagick::RESOURCETYPE_TIME, 60);
@@ -1137,7 +1137,7 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
                     }
                 }
             } catch (Throwable $ignore) {
-                // профиль не читается — считаем пиксели sRGB, как в остальных вариантах
+
             }
             $sw = $im->getImageWidth();
             $sh = $im->getImageHeight();
@@ -1159,7 +1159,7 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
                 @$im->unsharpMaskImage(0, 0.8, 0.01 * $pct, 0.02);
             }
             if ($im->getImageAlphaChannel()) {
-                /* прозрачность уплощаем на белый — как остальные jpeg-варианты (аудит 1.9.40, п.6) */
+
                 $im->setImageBackgroundColor('white');
                 $im->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
                 $flat = @$im->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
@@ -1181,8 +1181,8 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
         }
     }
 
-    /* GD-путь: сначала обрезка окном вокруг фокуса, потом уменьшение до точного размера —
-       так целевой кадр всегда ровно $w×$h */
+
+
     image_raise_memory();
     $im = gd_load($src);
     if (!$im) {
@@ -1206,7 +1206,7 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
     }
     $white = imagecolorallocate($out, 255, 255, 255);
     if ($white !== false) {
-        imagefill($out, 0, 0, $white); // полупрозрачные места PNG — на белом, как gd_resample
+        imagefill($out, 0, 0, $white);
     }
     if (!imagecopyresampled($out, $im, 0, 0, (int)$cx, (int)$cy, $w, $h, (int)$cw, (int)$ch)) {
         gd_free($im);
@@ -1226,7 +1226,7 @@ function og_variant_make(array $img, int $w, int $h, string $dest): bool
     return $ok && og_variant_write($blob, $dest);
 }
 
-/** Атомарная запись og-кадра (tmp + rename) — как у остальных вариантов. */
+
 function og_variant_write(string $blob, string $dest): bool
 {
     $dir = dirname($dest);
@@ -1252,20 +1252,20 @@ function og_variant_write(string $blob, string $dest): bool
 }
 
 
-/**
- * Принимает файл изображения, сохраняет оригинал в storage/originals (закрыт от веба),
- * сразу делает превью 440 и 1240 px, остальные размеры создаются при первом запросе.
- * Возвращает строку из таблицы images. При ошибке бросает RuntimeException.
- */
-/** Анимированный ли GIF: больше одного кадра — значит, два и более блока Graphic Control
-    Extension. GD читает только первый кадр, поэтому анимация на сайте «сдуется» в статику —
-    админка предупреждает об этом при загрузке. */
+
+
+
+
+
+
+
+
 function gif_is_animated(string $path): bool
 {
-    /* Читаем кусками по 64 КБ с переносом 2 байт: маркер \x21\xF9\x04 может попасть на стык
-       блоков, а целиком многомегабайтный gif в память не тянем (ревизия 1.9.34, п.15).
-       Маркер не может пересекаться сам с собой (ни один его суффикс не равен префиксу),
-       поэтому перенос не даёт ни пропусков, ни двойных подсчётов. */
+
+
+
+
     $fh = @fopen($path, 'rb');
     if (!$fh) {
         return false;
@@ -1284,12 +1284,12 @@ function gif_is_animated(string $path): bool
     return $found > 1;
 }
 
-/**
- * Уборка временных файлов-«сирот» (ревизия 1.9.34, п.16): .up-* в originals остаются при обрыве
- * загрузки между copy() и rename(), .tmp-* в storage/tmp и media/{id}/ — при фатале/обрыве записи
- * варианта до атомарного rename(). Живой процесс держит такой файл секунды-минуты, поэтому
- * удаляем только старше суток. Вызывается из дашборда админки; возвращает число удалённых.
- */
+
+
+
+
+
+
 function img_tmp_gc(int $maxAge = 86400): int
 {
     $n = 0;
@@ -1310,9 +1310,9 @@ function img_tmp_gc(int $maxAge = 86400): int
             }
         }
     }
-    /* сироты видеотеки: файл в media/video/ без строки в videos остаётся, если при загрузке
-       ролика откат не смог удалить файл (сбойная БД — аудит 1.9.48, п.10). Тот же принцип:
-       удаляем только старше суток, живой процесс держит такой файл секунды-минуты */
+
+
+
     $known = [];
     foreach (db_all('SELECT file FROM videos') as $r) {
         $known[basename((string)$r['file'])] = true;
@@ -1331,15 +1331,15 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
         set_time_limit(180);
     }
 
-    /* Декодирование оригинала — самая прожорливая по памяти операция: загрузки делим
-       тот же пул слотов, что и публичная генерация вариантов (img.php), иначе пакетная
-       загрузка пары десятков фото держала бы в памяти столько же декодированных кадров */
+
+
+
     $slot = image_lock(mt_rand(0, IMG_LOCK_SLOTS - 1), true);
     if ($slot === null) {
         throw new RuntimeException('Не удалось получить блокировку обработки изображения. Проверьте storage/locks.');
     }
     try {
-    image_raise_memory(); // сработает, только если владелец задал img_memory_limit в config.php
+    image_raise_memory();
 
     $info = @getimagesize($tmpPath);
     $types = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp', IMAGETYPE_GIF => 'gif'];
@@ -1351,20 +1351,20 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     }
     $maxPx = image_max_pixels();
     if ((int)$info[0] * (int)$info[1] > $maxPx) {
-        /* длинная сторона кадра 3:2 с допустимым числом пикселей — подсказка, до чего уменьшить */
+
         $side = (int)(floor(sqrt($maxPx * 1.5) / 100) * 100);
-        /* при Imagick (1.9.30) предел — не память (он уходит в дисковый кэш), а абсолютный потолок */
+
         $why = img_engine() === 'imagick'
             ? 'это выше абсолютного потолка CMS (' . (int)(IMG_MAX_PIXELS_CAP / 1000000) . ' Мп)'
             : 'при текущем лимите памяти PHP сервер не сможет его обработать';
         throw new RuntimeException('Слишком большое разрешение (' . (int)$info[0] . '×' . (int)$info[1] . ' px) — ' . $why . '. '
             . 'Уменьшите фото до ' . $side . ' px по длинной стороне и загрузите снова: ' . $origName);
     }
-    /* 1.9.30: при движке Imagick оригинал в GD не декодируем вообще — 24-Мп кадр в памяти GD
-       занимает сотни мегабайт и на шаред-хостинге упирался в скрытый лимит RSS процесса
-       (генерация падала фатально, см. CHANGELOG). Размеры и средний цвет берём самим Imagick:
-       при нехватке памяти он сам переходит на дисковый кэш пикселей и не падает. */
-    $im = null; // GD-объект оригинала; при Imagick-движке не используется (gd_free(null) безвреден)
+
+
+
+
+    $im = null;
     if (img_engine() === 'imagick') {
         try {
             $probe = new Imagick();
@@ -1373,7 +1373,7 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
             Imagick::setResourceLimit(Imagick::RESOURCETYPE_TIME, 60);
             $decoder = ['jpg' => 'jpeg', 'png' => 'png', 'gif' => 'gif', 'webp' => 'webp'][$types[$info[2]]];
             $probe->readImage($decoder . ':' . $tmpPath . '[0]');
-            imagick_auto_orient($probe); // EXIF-поворот, как в gd_load: размеры ниже — уже повёрнутые
+            imagick_auto_orient($probe);
             $w = $probe->getImageWidth();
             $h = $probe->getImageHeight();
             if ($w < 1 || $h < 1) {
@@ -1381,7 +1381,7 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
             }
             $color = '#cccccc';
             $one = clone $probe;
-            $one->resizeImage(1, 1, Imagick::FILTER_BOX, 1.0); // средний цвет, аналог imagescale($im, 1, 1)
+            $one->resizeImage(1, 1, Imagick::FILTER_BOX, 1.0);
             $px = $one->getImagePixelColor(0, 0)->getColor();
             $color = sprintf('#%02x%02x%02x', $px['r'] & 255, $px['g'] & 255, $px['b'] & 255);
             $one->clear();
@@ -1411,20 +1411,20 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     if ($slug === '') {
         $slug = 'photo';
     }
-    /* Криптостойкий суффикс: готовые файлы в media/ Apache отдаёт напрямую, минуя PHP,
-       а имена из фотокамер (dsc-1234, img-001) предсказуемы — фото из черновиков и
-       неопубликованных альбомов угадывались перебором id/ширины/slug (аудит 1.9.13,
-       находка 2). Суффикс делает перебор бессмысленным; slug хранится в базе, поэтому
-       все URL (существующие и новые) строятся корректно. */
+
+
+
+
+
     $slug .= '-' . bin2hex(random_bytes(16));
 
     if (!is_dir(originals_dir())) {
         @mkdir(originals_dir(), 0700, true);
     }
     @chmod(originals_dir(), 0700);
-    /* Сначала файл во временное имя (медленный copy), потом INSERT и мгновенный rename:
-       раньше запись в images появлялась ДО копирования, и обрыв процесса между ними
-       оставлял «сироту» — строку в базе без файла-оригинала */
+
+
+
     $tmpDest = originals_dir() . '/.up-' . bin2hex(random_bytes(6)) . '.' . $types[$info[2]];
     if (!@copy($tmpPath, $tmpDest)) {
         gd_free($im);
@@ -1450,21 +1450,21 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     }
     @chmod(image_original_path($img), 0600);
 
-    /* webp-гвард по движку (1.9.30): при Imagick решает imagick_webp_supported(), а не GD */
+
     $canWebp = img_engine() === 'imagick' ? imagick_webp_supported() : webp_supported();
-    /* AVIF (1.9.48): кодируется заметно дольше webp, поэтому при загрузке делаем только те же
-       два размера (440/1240), что и для webp — остальные ширины родятся on-demand через img.php */
+
+
     $canAvif = avif_enabled();
-    /* IMG_SKIP_UPLOAD_VARIANTS=1 — аварийный обход для пакетных CLI-импортов на хостингах, где
-       CLI-сборка php-imagick нестабильна (зависает в нативных потоках libwebp/libaom), а через
-       Apache всё кодируется нормально: фото регистрируются без вариантов, миниатюры затем
-       прогреваются из админки («Кэш» → «Прогреть миниатюры») или on-demand через img.php. */
+
+
+
+
     if (getenv('IMG_SKIP_UPLOAD_VARIANTS')) {
         gd_free($im);
         return $img;
     }
-    /* Сначала 1240, потом 440: мелкие варианты при Imagick берут источником готовый 1240-й
-       (аудит 1.9.40, п.10) — иначе каждый декодировал многомегапиксельный оригинал заново */
+
+
     $formats = ['jpg'];
     if ($canWebp) {
         $formats[] = 'webp';
@@ -1488,22 +1488,22 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     if (!is_file($ogDest) && !og_variant_make($img, 1200, 630, $ogDest)) {
         app_log_error('image_add_from_file: OG-кадр будет создан позже по запросу, фото #' . $id);
     }
-    gd_free($im); // декодированный оригинал при пакетной загрузке десятков фото держал бы память до конца запроса
+    gd_free($im);
     return $img;
     } finally {
         image_unlock($slot);
     }
 }
 
-/**
- * Где используется каждое фото: [id => число мест]. Считает галереи, фото-секции (страниц и заметок),
- * обложки, картинки для соцсетей, иконку сайта и ссылки <img src="/media/ID/…"> в текстовых секциях.
- * Нужна медиатеке, чтобы не удалить фото, которое стоит в статье.
- */
+
+
+
+
+
 function image_usage_map(bool $fresh = false): array
 {
-    /* карта строится полными LIKE-сканами текстов — кэшируем на 2 минуты (в сессии и на запрос);
-       проверка перед удалением ($fresh = true) всегда считает заново, чтобы не удалить используемое фото */
+
+
     static $map = null;
     if ($map !== null && !$fresh) {
         return $map;
@@ -1530,8 +1530,8 @@ function image_usage_map(bool $fresh = false): array
     foreach (db_all('SELECT og_image_id AS a FROM posts') as $r) {
         $add((int)$r['a']);
     }
-    /* logo_image_id добавлен в 1.9.35: без него логотип из шапки числился «не используется
-       нигде» и мог быть удалён как мусор (ревизия 1.9.34, п.4) */
+
+
     foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id'] as $k) {
         $add((int)setting($k));
     }
@@ -1550,8 +1550,8 @@ function image_usage_map(bool $fresh = false): array
     foreach (db_all('SELECT poster_image_id FROM videos') as $r) {
         $add((int)$r['poster_image_id']);
     }
-    /* картинки, вставленные в HTML прямой ссылкой <img src="/media/ID/…"> (текстовые блоки, описания альбомов, заметки);
-       в JSON слэши могут быть экранированы (\/media\/12\/), поэтому разделитель — любой из двух вариантов */
+
+
     $scan = static function (string $text) use ($add): void {
         if ($text !== '' && stripos($text, 'media') !== false && preg_match_all('~[\\\\/]media[\\\\/](\d+)[\\\\/]~', $text, $m)) {
             foreach ($m[1] as $one) {
@@ -1566,9 +1566,9 @@ function image_usage_map(bool $fresh = false): array
         $scan((string)$r['t']);
     }
     $map = $use;
-    /* Кэш в сессии — только для разумного размера медиатеки (аудит 1.9.26): при десятках тысяч
-       фото полный usage-map раздувал бы файл сессии на каждый запрос админки. Перешагнули порог —
-       живём на кэше запроса (static выше), он бесплатен по хранению. */
+
+
+
     if (session_status() === PHP_SESSION_ACTIVE && count($use) <= 2000) {
         $_SESSION['img_usage'] = ['t' => time(), 'm' => $use];
     }
@@ -1604,19 +1604,19 @@ function image_delete(int $id): string
         db_run('UPDATE pages SET cover_image_id = NULL WHERE cover_image_id = ?', [$id]);
         db_run('UPDATE pages SET og_image_id = NULL WHERE og_image_id = ?', [$id]);
         db_run('UPDATE posts SET og_image_id = NULL WHERE og_image_id = ?', [$id]);
-        db_run('UPDATE videos SET poster_image_id = NULL WHERE poster_image_id = ?', [$id]); // постер удалённого кадра не «висит» (1.9.48)
-        foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id'] as $k) { // см. примечание в image_usage_map (ревизия 1.9.34, п.4)
+        db_run('UPDATE videos SET poster_image_id = NULL WHERE poster_image_id = ?', [$id]);
+        foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id'] as $k) {
             if ((int)setting($k) === $id) {
                 set_setting($k, '');
             }
         }
-        /* блоки «Фото» и карточки цен ссылались на удалённый кадр — обнуляем ссылки */
+
         foreach (db_all("SELECT id, data FROM sections WHERE type = 'photo'") as $r) {
             $d = json_decode((string)$r['data'], true);
             if (is_array($d) && (int)($d['image_id'] ?? 0) === $id) {
                 $d['image_id'] = 0;
                 db_run('UPDATE sections SET data = ? WHERE id = ?', [json_db($d), (int)$r['id']]);
-                page_sections_cache_flush(); // секции разных страниц — сбрасываем кэш целиком (1.9.26)
+                page_sections_cache_flush();
             }
         }
         foreach (db_all("SELECT id, data FROM sections WHERE type = 'pricing'") as $r) {
@@ -1638,10 +1638,10 @@ function image_delete(int $id): string
             }
         }
         db_run('DELETE FROM images WHERE id = ?', [$id]);
-        image_cache_flush(); /* image_get($id) выше уже положил строку в кэш */
-        gallery_cache_flush(); /* удалились строки gallery_items — кэш галерей протух */
+        image_cache_flush();
+        gallery_cache_flush();
     });
-    /* файлы удаляем только после того, как запись в базе действительно удалена */
+
     $warning = [];
     $media = media_dir() . '/' . $id;
     rrmdir($media);

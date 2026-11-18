@@ -21,9 +21,9 @@ function section_types(): array
     ];
 }
 
-/** Типы секций, доступные в заметках блога (1.9.54): всё, кроме «Вопросы и ответы» —
-    FAQ-разметка остаётся особенностью страниц. «Пакеты и цены» (1.9.63) тоже только
-    страницам: предложения OfferCatalog в заметке блога смысла не имеют. */
+
+
+
 function post_section_types(): array
 {
     $t = section_types();
@@ -37,8 +37,8 @@ function section_defaults(string $type): array
         case 'text':
             return ['html' => '', 'width' => 'narrow', 'align' => 'left', 'space' => 'md'];
         case 'gallery':
-            /* autoplay* — автопрокрутка ленты (1.9.45): работает только при layout=strip;
-               fx/speed/height — полноэкранное слайдшоу (1.9.46): только при layout=slides */
+
+
             return ['layout' => 'masonry', 'columns' => 0, 'lightbox' => '', 'autoplay' => '0', 'autoplay_dir' => 'fwd', 'autoplay_speed' => '5', 'fx' => 'fade', 'speed' => '5', 'height' => 'full', 'space' => 'md'];
         case 'photo':
             return ['image_id' => 0, 'size' => 'wide', 'lightbox' => '', 'caption' => '', 'link' => '', 'link_new_tab' => false, 'space' => 'md'];
@@ -53,9 +53,9 @@ function section_defaults(string $type): array
         case 'faq':
             return ['kicker' => '', 'heading' => '', 'items' => [], 'space' => 'md'];
         case 'pricing':
-            /* Пакеты и цены (1.9.63): items — [{name, desc, price_from, price_to, duration, url}];
-               duration (1.9.76) — длительность пакета «8 часов» рядом с ценой;
-               цены попадают в OfferCatalog микроразметки (см. jsonld_pricing_offers в seo.php) */
+
+
+
             return ['kicker' => '', 'heading' => '', 'currency' => 'RUB', 'items' => [], 'space' => 'md'];
         case 'video':
             return ['video_id' => 0, 'space' => 'md'];
@@ -83,19 +83,19 @@ function home_page(): ?array
     return db_one('SELECT * FROM pages WHERE is_home = 1 LIMIT 1');
 }
 
-/** Кэш секций на время запроса (1.9.26): на обычной странице page_sections() дёргается из
-    SEO (первый текст для description), потом из render_page() и шаблона — раньше каждый вызов
-    повторял SELECT и json_decode всех секций. Ключ — «владелец:id» ('page:5', 'post:12'):
-    с 1.9.54 секции бывают не только у страниц, но и у заметок блога. */
+
+
+
+
 function &page_sections_cache(): array
 {
     static $cache = [];
     return $cache;
 }
 
-/** Сброс кэша секций: вызывается при любой записи в sections (сохранение страницы/заметки,
-    добавление/удаление/перестановка секций, обнуление ссылки на удалённое фото).
-    null — сбросить всё. */
+
+
+
 function page_sections_cache_flush(?int $pageId = null, string $ownerType = 'page'): void
 {
     $cache = &page_sections_cache();
@@ -106,8 +106,8 @@ function page_sections_cache_flush(?int $pageId = null, string $ownerType = 'pag
     }
 }
 
-/** Секции владельца в порядке вывода: 'page' — страница сайта, 'post' — заметка блога (1.9.54).
-    Колонка в таблице по-прежнему называется page_id — теперь это id владельца. */
+
+
 function owner_sections(string $ownerType, int $ownerId): array
 {
     $cache = &page_sections_cache();
@@ -129,17 +129,17 @@ function page_sections(int $pageId): array
     return owner_sections('page', $pageId);
 }
 
-/** Секции заметки блога (1.9.54: заметка собирается из блоков, как страница). */
+
 function post_content_sections(int $postId): array
 {
     return owner_sections('post', $postId);
 }
 
-/** Пакетное наполнение кэша секций (списки заметок: анонс и «время чтения» у каждой) —
-    один запрос на весь список вместо запроса на заметку. */
+
+
 function sections_prime(string $ownerType, array $ownerIds): void
 {
-    /* owner_type — не пользовательский ввод, а наша константа; страховка на будущее переиспользование */
+
     if (!in_array($ownerType, ['page', 'post'], true)) {
         throw new InvalidArgumentException('sections_prime: недопустимый owner_type');
     }
@@ -156,7 +156,7 @@ function sections_prime(string $ownerType, array $ownerIds): void
     }
     $ids = array_keys($ids);
     foreach ($ids as $id) {
-        $cache[$ownerType . ':' . $id] = []; // у владельца может не быть секций — кэшируем и пустоту
+        $cache[$ownerType . ':' . $id] = [];
     }
     foreach (db_all_in("SELECT * FROM sections WHERE owner_type = '" . $ownerType . "' AND page_id IN ({IN}) ORDER BY page_id, position, id", $ids) as $s) {
         $d = json_decode((string)$s['data'], true);
@@ -167,8 +167,8 @@ function sections_prime(string $ownerType, array $ownerIds): void
 
 function &gallery_cache(): array
 {
-    /* в пределах одного запроса галерея страницы дёргается дважды (рендер секции и обложка) —
-       повторный JOIN по тем же данным не нужен */
+
+
     static $cache = [];
     return $cache;
 }
@@ -200,19 +200,19 @@ function gallery_replace(string $ownerType, int $ownerId, array $imageIds): void
     $want = [];
     foreach ($imageIds as $iid) {
         $iid = (int)$iid;
-        /* Дубликаты отбрасываем сразу (аудит 1.9.26): раньше array_unique стоял только
-           в проверке существования, и POST вида «12,12,15» вставлял фото 12 в галерею дважды. */
+
+
         if ($iid > 0 && !in_array($iid, $want, true)) {
             $want[] = $iid;
         }
     }
-    /* Одна транзакция: раньше сбой посреди цикла оставлял галерею пустой или обрезанной (DELETE уже выполнен). */
+
     db_tx(function () use ($ownerType, $ownerId, $want): void {
         db_run('DELETE FROM gallery_items WHERE owner_type = ? AND owner_id = ?', [$ownerType, $ownerId]);
         if (!$want) {
             return;
         }
-        /* существование фото проверяем одним запросом (раньше — отдельный SELECT на каждое фото) */
+
         $exist = [];
         foreach (db_all_in('SELECT id FROM images WHERE id IN ({IN})', array_values(array_unique($want))) as $r) {
             $exist[(int)$r['id']] = true;
@@ -228,14 +228,14 @@ function gallery_replace(string $ownerType, int $ownerId, array $imageIds): void
     gallery_cache_flush();
 }
 
-/** Обложка страницы: выбранная вручную, иначе первое фото. */
+
 function page_cover(array $p): ?array
 {
     $covers = pages_covers([$p]);
     return $covers[(int)$p['id']] ?? null;
 }
 
-/** Обложки списка: загружаются только выбранные и первые кадры, а не все фото альбомов. */
+
 function pages_covers(array $pages): array
 {
     $result = [];
@@ -313,7 +313,7 @@ function pages_covers(array $pages): array
     return $result;
 }
 
-/** Счётчики фото в галереях страниц одним пакетным запросом: [page_id => кол-во]. Для бейджа «N фото» на карточках. */
+
 function pages_photo_counts(array $pageIds): array
 {
     $ids = array_values(array_unique(array_filter(array_map('intval', $pageIds))));
@@ -333,8 +333,8 @@ function child_pages(int $parentId, bool $onlyPublished = true): array
     return db_all($sql, [$parentId]);
 }
 
-/** Альбомы с количеством фото — для фильтра медиатеки и окна выбора фото (1.9.56).
-    Один проход GROUP BY, без запроса на альбом. */
+
+
 function albums_with_counts(): array
 {
     return db_all("SELECT p.id, p.title, COUNT(gi.id) AS photos FROM pages p
@@ -348,8 +348,8 @@ function listing_pages(array $data, array $currentPage): array
         $pid = (int)($data['parent_id'] ?? 0);
         return child_pages($pid > 0 ? $pid : (int)$currentPage['id'], true);
     }
-    /* array_unique: вручную сформированный/повреждённый POST мог внести одну страницу
-       в список несколько раз — она и выводилась бы несколько раз (аудит 1.9.26) */
+
+
     $ids = array_values(array_unique(array_filter(array_map('intval', (array)($data['page_ids'] ?? [])))));
     if (!$ids) {
         return [];
@@ -359,14 +359,14 @@ function listing_pages(array $data, array $currentPage): array
         $by[(int)$r['id']] = $r;
     }
     $out = array_values($by);
-    /* Порядок — живой, по списку «Страницы» (position): подсказка в редакторе обещает именно
-       его, а раньше карточки шли в порядке, застывшем в page_ids на момент сохранения секции —
-       после перестановки страниц стрелками секцию приходилось пересохранять (1.9.52) */
+
+
+
     usort($out, static fn($a, $b) => ((int)$a['position'] <=> (int)$b['position']) ?: ((int)$a['id'] <=> (int)$b['id']));
     return $out;
 }
 
-/** Меню: два уровня. Скрытые/черновые страницы и пустые рубрики не показываются. */
+
 function menu_tree(string $currentPath): array
 {
     $items = db_all(
@@ -385,7 +385,7 @@ function menu_tree(string $currentPath): array
                 $href = (int)$it['p_home'] ? '/' : '/' . $it['p_slug'];
             }
         } elseif (trim((string)$it['url']) !== '') {
-            /* javascript:/data: в адресе пункта (старые данные, правка БД) превращается в «нет ссылки» */
+
             $href = normalize_url((string)$it['url']);
             if ($href === '') {
                 $href = null;
@@ -399,7 +399,7 @@ function menu_tree(string $currentPath): array
             'new_tab' => (bool)$it['new_tab'],
             'hidden' => $hidden,
             'exact' => $href !== null && $href === $currentPath,
-            /* раздел подсвечивается и на вложенных адресах: пункт «/blog» активен на /blog/любая-заметка */
+
             'active' => $href !== null && ($href === $currentPath
                 || ($href[0] === '/' && $href !== '/' && str_starts_with($currentPath, $href . '/'))),
             'children' => [],
@@ -429,25 +429,25 @@ function menu_tree(string $currentPath): array
     return $result;
 }
 
-/* reserved_slugs() переехала в helpers.php (1.9.35): там она доступна и раннему роутингу,
-   и получила мемоизацию по JSON разделов (ревизия 1.9.34, п.22). */
 
-/* ---------- редиректы ---------- */
 
-/** Путь для таблицы редиректов: декодированный, ведущий «/», без хвостового «/» (кроме корня). */
+
+
+
+
 function redirect_norm_path(string $p): string
 {
-    /* админ может вставить адрес как из браузера (кириллица в %-кодах), а request_path() уже декодирован —
-       без rawurldecode такой редирект никогда бы не сработал */
+
+
     $p = '/' . ltrim(trim(rawurldecode($p)), '/');
     return $p === '/' ? '/' : rtrim($p, '/');
 }
 
-/**
- * Добавляет/обновляет редирект. Возвращает текст ошибки или null при успехе.
- * Отклоняет самоссылки и петли (A→B, B→A), не принимает «//host» и «/\host»,
- * а уже существующие цепочки «X → from» сразу перенаправляет на новый адрес.
- */
+
+
+
+
+
 function redirect_add(string $from, string $to, int $code = 301): ?string
 {
     $from = redirect_norm_path($from);
@@ -487,18 +487,18 @@ function redirect_add(string $from, string $to, int $code = 301): ?string
     return null;
 }
 
-/** Убирает редирект С этого адреса: адрес снова занят живой страницей, редирект с него только мешал бы. */
+
 function redirect_clear_from(string $path): void
 {
     db_run('DELETE FROM redirects WHERE from_path = ?', [redirect_norm_path($path)]);
 }
 
-/** Открывается ли по этому адресу страница, раздел или заметка (тогда редирект с него не сработает). */
+
 function path_has_content(string $path): bool
 {
     $p = trim(rawurldecode($path), '/');
     if ($p === '') {
-        return true; // главная
+        return true;
     }
     $seg = explode('/', $p);
     if (count($seg) > 2) {
@@ -515,7 +515,7 @@ function path_has_content(string $path): bool
     return count($seg) === 1 && page_by_slug($seg[0]) !== null;
 }
 
-/** Является ли $maybeAncestor предком страницы $pageId (по цепочке parent_id): так не создаём циклы A→B→C→A. */
+
 function page_is_ancestor(int $maybeAncestor, int $pageId): bool
 {
     $cur = $pageId;
@@ -529,30 +529,30 @@ function page_is_ancestor(int $maybeAncestor, int $pageId): bool
         }
         $cur = $parent;
     }
-    return true; // подозрительно глубокая цепочка — считаем циклом
+    return true;
 }
 
 function valid_slug(string $s): bool
 {
-    /* модификатор D: без него «$» допускает перевод строки в конце — слаг «page\n» проходил
-       проверку и попадал в базу (ревизия 1.9.34, п.21) */
+
+
     return (bool)preg_match('/^[a-z0-9][a-z0-9_\-]{0,99}$/D', $s) && !in_array($s, reserved_slugs(), true);
 }
 
-/* ---------- видеотека (1.9.48) ---------- */
+
 
 function video_get(int $id): ?array
 {
     return $id > 0 ? db_one('SELECT * FROM videos WHERE id = ?', [$id]) : null;
 }
 
-/** Публичный адрес файла ролика: media/video/<id>-<hex>.mp4 (Apache отдаёт как статику). */
+
 function video_url(array $v): string
 {
     return '/media/video/' . basename((string)$v['file']);
 }
 
-/** Длительность в ISO 8601 («PT1H2M3S») для разметки VideoObject; пусто, если не задана. */
+
 function video_duration_iso($seconds): string
 {
     $s = max(0, (int)$seconds);
@@ -573,7 +573,7 @@ function unique_slug(string $base, ?int $exceptId = null): string
     }
     $slug = $base;
     $i = 2;
-    $reserved = reserved_slugs(); // список строится заново при каждом вызове — выносим из цикла
+    $reserved = reserved_slugs();
     while (in_array($slug, $reserved, true)
         || db_val('SELECT id FROM pages WHERE slug = ? AND id <> ?', [$slug, (int)$exceptId])) {
         $slug = $base . '-' . $i++;

@@ -5,16 +5,16 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
 
-/* ============================================================
- * Админка блога: список заметок, создание, правка, удаление.
- * С 1.9.54 текст заметки собирается из секций (блоков), как у страниц:
- * текст, фото, галерея, кнопки… Таблица sections, owner_type='post'.
- * ============================================================ */
+
+
+
+
+
 
 function unique_post_slug(string $base, ?int $exceptId = null): string
 {
@@ -36,13 +36,13 @@ function admin_posts(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         $aRaw = $_POST['action'] ?? '';
-        $a = is_string($aRaw) ? $aRaw : ''; // ?action[]=x — иначе «Array to string conversion» в журнал
+        $a = is_string($aRaw) ? $aRaw : '';
         if ($a === 'delete') {
             $id = (int)($_POST['id'] ?? 0);
             $p = post_get($id);
             if ($p) {
                 db_tx(static function () use ($p, $id): void {
-                    /* секции заметки (1.9.54) и их галереи удаляем вместе с ней — как у страниц */
+
                     foreach (db_all("SELECT id FROM sections WHERE owner_type = 'post' AND page_id = ?", [$id]) as $s) {
                         db_run("DELETE FROM gallery_items WHERE owner_type = 'section' AND owner_id = ?", [$s['id']]);
                     }
@@ -61,12 +61,12 @@ function admin_posts(): void
 
     $sections = post_sections();
     $filterRaw = $_GET['section'] ?? '';
-    $filter = is_string($filterRaw) ? $filterRaw : ''; // ?section[]=x — иначе «Array to string conversion» в журнал
+    $filter = is_string($filterRaw) ? $filterRaw : '';
     if ($filter !== '' && !section_get($filter)) {
         $filter = '';
     }
-    /* только нужные колонки: SELECT * тянул полные тексты всех заметок ради таблицы списка
-       (ревизия 1.9.34, п.8). Числа обратных ссылок — пакетно, одним проходом по post_links. */
+
+
     $cols = 'id, title, slug, section, updated_at, is_published, noindex';
     $rows = $filter === ''
         ? db_all("SELECT $cols FROM posts ORDER BY updated_at DESC, id DESC")
@@ -92,7 +92,7 @@ function admin_posts(): void
 <thead><tr><th>Название</th><th>Адрес</th><th>Раздел</th><th>Обновлена</th><th>Статус</th><th></th></tr></thead>
 <tbody>
     <?php foreach ($rows as $p): $ps = post_section($p);
-        /* последствия удаления — прямо в подтверждении */
+
         $nBack = (int)($backCounts[(int)$p['id']] ?? 0);
         $confirmDel = 'Удалить заметку «' . $p['title'] . '»? Это нельзя отменить.'
             . ($nBack ? "\n\nНа неё ссылаются другие заметки: " . $nBack . ' — их ссылки сломаются.' : '')
@@ -131,15 +131,15 @@ function admin_post_new(): void
         }
         $t = now();
         $slugNew = unique_post_slug($title);
-        /* текст заметки больше не живёт в posts.body — содержимое набирается секциями
-           в редакторе (1.9.54); колонка остаётся пустой */
+
+
         try {
             $id = db_insert(
                 'INSERT INTO posts (title, slug, section, body, is_published, created_at, updated_at) VALUES (?,?,?,?,0,?,?)',
                 [$title, $slugNew, $section, '', $t, $t]
             );
         } catch (PDOException $e) {
-            /* гонка двух созданий: адрес успели занять между проверкой и INSERT — берём следующий свободный */
+
             if (stripos($e->getMessage(), 'unique') === false) {
                 throw $e;
             }
@@ -149,7 +149,7 @@ function admin_post_new(): void
                 [$title, $slugNew, $section, '', $t, $t]
             );
         }
-        redirect_clear_from(section_base(section_get($section)) . '/' . $slugNew); // старый редирект с этого адреса больше не нужен
+        redirect_clear_from(section_base(section_get($section)) . '/' . $slugNew);
         flash('Заметка создана как черновик. Добавьте блоки содержимого и отметьте «Опубликована».');
         redirect(a_url('post_edit', ['id' => $id]));
     }
@@ -207,33 +207,33 @@ function post_collect(array $post, bool $preview = false): array
         }
     }
 
-    // раздел заметки (Блог, Новости, Статьи…)
+
     $oldSection = (string)($post['section'] ?? 'blog');
     $section = post_str('section') ?: $oldSection;
     if (!section_get($section)) {
         $section = $oldSection;
     }
 
-    // тип микроразметки
+
     $schemaType = post_str('schema_type');
     if (!in_array($schemaType, ['', 'BlogPosting', 'Article', 'NewsArticle'], true)) {
         $schemaType = '';
     }
 
-    // свой JSON-LD: принимаем только валидный JSON
+
     $jsonldExtra = post_str('jsonld_extra');
-    $rejected = 0; // сколько полей отклонила валидация — итоговое сообщение не должно врать про «всё сохранено»
+    $rejected = 0;
     if ($jsonldExtra !== '' && !jsonld_extra_blocks($jsonldExtra)) {
         if (!$preview) {
-            $_SESSION['old']['jsonld_extra'] = $jsonldExtra; // набранное вернётся в поле после редиректа
+            $_SESSION['old']['jsonld_extra'] = $jsonldExtra;
             $rejected++;
             flash('Свой JSON-LD не сохранён: это не JSON-объект. Проверьте запятую, кавычки и скобки.', 'err');
         }
         $jsonldExtra = (string)($post['jsonld_extra'] ?? '');
     }
 
-    /* canonical — те же правила, что у страниц (page_save): пусто, путь «/page» (не «//host»)
-       или полный URL этого же сайта; чужой домен под запретом */
+
+
     $canonical = post_str('canonical', 500);
     if ($canonical !== '') {
         $canonErr = '';
@@ -250,7 +250,7 @@ function post_collect(array $post, bool $preview = false): array
         }
         if ($canonErr !== '') {
             if (!$preview) {
-                $_SESSION['old']['canonical'] = $canonical; // набранное вернётся в поле после редиректа
+                $_SESSION['old']['canonical'] = $canonical;
                 $rejected++;
                 flash($canonErr, 'err');
             }
@@ -259,13 +259,13 @@ function post_collect(array $post, bool $preview = false): array
     }
 
     $isPub = empty($_POST['is_published']) ? 0 : 1;
-    /* дата публикации ставится при первой публикации и дальше не меняется: заметку, написанную неделю назад
-       и опубликованную сегодня, раньше «датировало» днём создания черновика.
-       С 1.9.15 дату можно задать вручную (поле «Дата публикации») — для переноса старых материалов. */
+
+
+
     $pubAt = (int)($post['published_at'] ?? 0);
     $pubIn = post_str('published_at_local');
     if ($isPub === 1 && $pubIn !== '') {
-        $ts = strtotime($pubIn); // datetime-local приходит как «YYYY-MM-DDTHH:MM» — strtotime понимает
+        $ts = strtotime($pubIn);
         if ($ts !== false && $ts > 0) {
             $pubAt = $ts;
         } elseif (!$preview) {
@@ -297,18 +297,18 @@ function post_save(array $post): bool
 {
     $id = (int)$post['id'];
 
-    /* PHP обрезает POST по лимиту max_input_vars: у заметки с секциями «хвост» формы (включая
-       скрытый маркер form_end) просто не доходит. Сохранять половину данных нельзя — отказываем. */
+
+
     if (!isset($_POST['form_end'])) {
         flash('Форма пришла не полностью: хостинг обрезал её по лимиту max_input_vars. '
             . 'Ничего не сохранено — увеличьте max_input_vars в настройках PHP (например, до 5000) и повторите.', 'err');
         return false;
     }
 
-    /* Параллельная правка (аудит 1.9.40, п.3): form_updated_at — updated_at заметки на момент
-       открытия формы. Разошлись — на сервере уже более новая версия; запись поверх молча
-       затирала бы её. Отказываем: набранный текст сохранился в черновике браузера
-       (localStorage) и будет предложен при переоткрытии редактора. */
+
+
+
+
     $formUpd = (int)($_POST['form_updated_at'] ?? 0);
     if ($formUpd > 0 && (int)$post['updated_at'] !== $formUpd) {
         throw new RuntimeException('post_edit_conflict');
@@ -320,8 +320,8 @@ function post_save(array $post): bool
     $oldSection = (string)($post['section'] ?? 'blog');
     $rejected = $fields['rejected'];
 
-    /* body в UPDATE не входит: с 1.9.54 содержимое заметки — секции (ниже), а колонка
-       posts.body остаётся нетронутым архивом старого текста */
+
+
     $saveSql = 'UPDATE posts SET title=?, slug=?, section=?, excerpt=?, is_published=?, published_at=?, seo_title=?, seo_description=?, og_image_id=?, noindex=?, schema_type=?, jsonld_extra=?, canonical=?, updated_at=? WHERE id=?';
     $saveParams = [
         $fields['title'],
@@ -347,8 +347,8 @@ function post_save(array $post): bool
     try {
         $st = db_run($saveSql, $saveParams);
     } catch (PDOException $e) {
-        /* гонка двух сохранений: адрес успела занять параллельная правка — откатываем slug,
-           остальное сохраняем, вместо необработанной ошибки 500 */
+
+
         if ($slug !== (string)$post['slug'] && stripos($e->getMessage(), 'unique') !== false) {
             flash('Адрес «' . $slug . '» только что заняла другая заметка. Оставлен прежний.', 'err');
             $slug = (string)$post['slug'];
@@ -362,9 +362,9 @@ function post_save(array $post): bool
         throw new RuntimeException('post_edit_conflict');
     }
 
-    /* секции заметки (1.9.54) — тот же сборщик, что у страниц. Заголовкам h2/h3 в текстовых
-       секциях проставляем id-якоря (на них опирается «Содержание»): якоря уникальны в пределах
-       ВСЕЙ заметки — $usedIds общий и копится от секции к секции в порядке формы (= позициям) */
+
+
+
     $usedIds = [];
     foreach (post_arr('sec') as $sid => $f) {
         $s = db_one("SELECT * FROM sections WHERE id = ? AND owner_type = 'post' AND page_id = ?", [(int)$sid, $id]);
@@ -377,8 +377,8 @@ function post_save(array $post): bool
         }
     }
 
-    /* галереи секций (ключи s<ID>; id секций глобально уникальны — owner смешивания нет).
-       JS отдаёт порядок одним JSON-полем gal_json[ключ], без JS работает массив gal — как у страниц */
+
+
     $allowed = [];
     foreach (db_all("SELECT id FROM sections WHERE owner_type = 'post' AND page_id = ? AND type = 'gallery'", [$id]) as $s) {
         $allowed[] = 's' . $s['id'];
@@ -400,7 +400,7 @@ function post_save(array $post): bool
         gallery_replace('section', (int)substr($key, 1), $ids);
     }
 
-    /* структурные действия с секциями: добавить/удалить/переставить (как у страниц, 1.9.54) */
+
     $act = post_str('action') ?: 'save';
     if (strpos($act, ':') !== false) {
         [$verb, $arg] = explode(':', $act, 2);
@@ -427,15 +427,15 @@ function post_save(array $post): bool
             }
         }
     }
-    page_sections_cache_flush($id, 'post'); // данные/состав секций изменились — кэш запроса протух
-    /* индекс ссылок между заметками — по свежим текстовым секциям из базы */
+    page_sections_cache_flush($id, 'post');
+
     post_links_reindex($id, post_text_html(post_get($id) ?: $post));
 
-    // при смене адреса или раздела — редирект 301 со старого полного адреса
+
     $oldUrl = post_url($post);
     $newUrl = section_base(section_get($section)) . '/' . $slug;
     if ($newUrl !== $oldUrl) {
-        /* сначала снимаем редирект С нового адреса (возврат на прежний адрес иначе давал бы петлю), потом ставим со старого */
+
         redirect_clear_from($newUrl);
         if ((int)$post['is_published']) {
             $rerr = redirect_add($oldUrl, $newUrl);
@@ -447,9 +447,9 @@ function post_save(array $post): bool
         }
     }
     if ($newUrl !== $oldUrl) {
-        /* чиним ссылки на старый адрес в текстовых секциях остальных заметок (1.9.54:
-           ссылки — обычные <a href> в HTML; json_db пишет слэши неэкранированными, поэтому
-           LIKE по href="…" находит кандидатов прямо в JSON) */
+
+
+
         $esc = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $oldUrl);
         $candidates = db_all(
             "SELECT id, page_id, data FROM sections WHERE owner_type = 'post' AND type = 'text' AND page_id <> ? AND data LIKE ? ESCAPE '\\'",
@@ -468,8 +468,8 @@ function post_save(array $post): bool
                 $fixedPosts[(int)$secRow['page_id']] = true;
             }
         }
-        /* updated_at у «чужих» заметок не трогаем: содержательно они не менялись, иначе у них
-           ложные «обновлено» и lastmod; но кэш секций и индекс ссылок обновляем */
+
+
         foreach (array_keys($fixedPosts) as $fpId) {
             page_sections_cache_flush($fpId, 'post');
             $fp = post_get($fpId);
@@ -498,7 +498,7 @@ function admin_post_edit(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         try {
-            $saved = db_tx(static function () use ($post): bool { // заметка, редиректы и перепись ссылок в других заметках — атомарно
+            $saved = db_tx(static function () use ($post): bool {
                 return post_save($post);
             });
         } catch (RuntimeException $e) {
@@ -517,7 +517,7 @@ function admin_post_edit(): void
         redirect(a_url('post_edit', ['id' => $post['id']]));
     }
 
-    /* вернём в поля значения, отклонённые валидацией при прошлом сохранении */
+
     if (!empty($_SESSION['old']) && is_array($_SESSION['old'])) {
         foreach (['jsonld_extra', 'canonical'] as $oldKey) {
             if (isset($_SESSION['old'][$oldKey]) && is_string($_SESSION['old'][$oldKey])) {
@@ -526,13 +526,13 @@ function admin_post_edit(): void
         }
         unset($_SESSION['old']);
     }
-    $scroll = $_SESSION['scroll_to'] ?? ''; // куда прокрутить после добавления/перестановки секции
+    $scroll = $_SESSION['scroll_to'] ?? '';
     unset($_SESSION['scroll_to']);
 
     $id = (int)$post['id'];
     $postSections = post_content_sections($id);
 
-    // статус ссылок на заметки в тексте: каких заметок не хватает (1.9.54: ссылки — обычные <a> в текстовых секциях)
+
     $links = post_body_links(post_text_html($post));
     $missing = [];
     foreach ($links as $l) {
@@ -546,7 +546,7 @@ function admin_post_edit(): void
         $secOpts[$s['slug']] = section_title($s) . ' (' . section_base($s) . ')';
     }
 
-    /* H1 на странице заметки уже выводится её названием — свой <h1> в блоках даст второй */
+
     $h1Count = 0;
     foreach ($postSections as $hs) {
         $hsrc = $hs['type'] === 'text' ? (string)$hs['data']['html'] : ($hs['type'] === 'html' ? (string)$hs['data']['code'] : '');
@@ -563,7 +563,7 @@ function admin_post_edit(): void
     ?>
 <form method="post" id="postForm" data-scroll="<?= e($scroll) ?>">
 <?= csrf_field() ?>
-<?php /* метка версии: если заметку сохранили в другой вкладке, пока эта была открыта, — предупредим при сохранении */ ?>
+<?php  ?>
 <input type="hidden" name="form_updated_at" value="<?= (int)$post['updated_at'] ?>">
 <div class="bar sticky">
   <h1><?= e($post['title']) ?> <span class="tag">заметка</span>
@@ -630,7 +630,7 @@ function admin_post_edit(): void
 <div class="card"><h2>Опасная зона</h2>
   <button type="submit" class="btn danger" form="delPostForm" data-confirm-btn="Удалить заметку «<?= e($post['title']) ?>»?">Удалить заметку</button>
 </div>
-<?php /* маркер конца формы: при обрезке POST лимитом max_input_vars его не будет — откажемся сохранять половину данных (как у страниц) */ ?>
+<?php  ?>
 <input type="hidden" name="form_end" value="1">
 </form>
 <form method="post" id="delPostForm" action="<?= e(a_url('posts')) ?>"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$post['id'] ?>"></form>
@@ -638,10 +638,10 @@ function admin_post_edit(): void
     admin_footer();
 }
 
-/** Предпросмотр заметки без сохранения: правки из POST применяются во временной транзакции,
- *  заметка рендерится боевым шаблоном (со всеми стилями темы, меню и подвалом), затем
- *  транзакция откатывается — в базе ничего не меняется. Только POST + CSRF
- *  (кнопка «Предпросмотр» в редакторе отправляет форму в новую вкладку). */
+
+
+
+
 function admin_post_preview(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -661,12 +661,12 @@ function admin_post_preview(): void
         return;
     }
     $fields = post_collect($post, true);
-    session_write_close(); // дальше только чтение настроек/картинок — не держим блокировку сессии
+    session_write_close();
     $id = (int)$post['id'];
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        /* поля самой заметки — только то, что видно посетителю; редиректы и индекс ссылок здесь не меняются */
+
         db_run('UPDATE posts SET title=?, slug=?, section=?, excerpt=?, is_published=?, published_at=?, seo_title=?, seo_description=?, og_image_id=?, noindex=?, schema_type=?, jsonld_extra=?, canonical=? WHERE id=?', [
             $fields['title'],
             $fields['slug'],
@@ -683,8 +683,8 @@ function admin_post_preview(): void
             $fields['canonical'],
             $id,
         ]);
-        /* данные секций — тем же сборщиком, что и при настоящем сохранении (1.9.54);
-           якоря заголовков — с общей уникальностью по всей заметке, как в post_save */
+
+
         $usedIds = [];
         foreach (post_arr('sec') as $sid => $f) {
             $s = db_one("SELECT * FROM sections WHERE id = ? AND owner_type = 'post' AND page_id = ?", [(int)$sid, $id]);
@@ -696,7 +696,7 @@ function admin_post_preview(): void
                 db_run('UPDATE sections SET data = ? WHERE id = ?', [json_db($data), $s['id']]);
             }
         }
-        /* состав и порядок фото в галереях секций (как в post_save: gal_json от JS, gal — запасной) */
+
         $allowed = [];
         foreach (db_all("SELECT id FROM sections WHERE owner_type = 'post' AND page_id = ? AND type = 'gallery'", [$id]) as $s) {
             $allowed[] = 's' . $s['id'];
@@ -717,21 +717,21 @@ function admin_post_preview(): void
             }
             gallery_replace('section', (int)substr($key, 1), $ids);
         }
-        page_sections_cache_flush($id, 'post'); /* рендер должен увидеть правки из временной
-            транзакции, а не кэш, который мог наполниться до неё в этом же запросе */
-        gallery_cache_flush(); // галереи пересобраны в транзакции — их кэш запроса тоже протух
+        page_sections_cache_flush($id, 'post');
+
+        gallery_cache_flush();
         $fresh = post_get($id);
         $html = render_blog_post($fresh ?: $post);
     } finally {
         if ($pdo->inTransaction()) {
-            $pdo->rollBack(); // предпросмотр не должен ничего менять в базе
+            $pdo->rollBack();
         }
-        page_sections_cache_flush($id, 'post'); // кэш успел наполниться данными из откаченной транзакции
+        page_sections_cache_flush($id, 'post');
         gallery_cache_flush();
     }
     header('Content-Type: text/html; charset=utf-8');
     header('X-Robots-Tag: noindex, nofollow');
-    /* жёлтая плашка поверх боевой вёрстки: сразу видно, что это не опубликованная заметка */
+
     $style = '<style>.preview-note{position:sticky;top:0;z-index:90;background:#fff8d6;border-bottom:1px solid #e0d28a;padding:10px 16px;font:14px/1.4 sans-serif;text-align:center}</style>';
     $note = '<div class="preview-note">Это предпросмотр несохранённой заметки — её видите только вы. Чтобы опубликовать правки, вернитесь в редактор и нажмите «Сохранить».</div>';
     $html = (string)preg_replace('~</head>~i', $style . '</head>', $html, 1);
@@ -739,15 +739,15 @@ function admin_post_preview(): void
     echo public_csp_send($html);
 }
 
-/* ---------- разделы заметок ---------- */
 
-/** Проверка, не занят ли адрес раздела (системой, страницей или другим разделом). Возвращает текст ошибки или ''. */
+
+
 function section_slug_taken(string $slug): string
 {
     if (section_get($slug)) {
         return 'Такой раздел уже есть.';
     }
-    if (in_array($slug, reserved_slugs(), true)) { // включая текущий секретный адрес админки
+    if (in_array($slug, reserved_slugs(), true)) {
         return 'Этот адрес занят системой.';
     }
     if (page_by_slug($slug)) {
@@ -782,7 +782,7 @@ function admin_sections(): void
                 $sections = post_sections();
                 $sections[] = ['slug' => $slug, 'title' => $title, 'description' => post_str('description', 500)];
                 sections_save($sections);
-                redirect_clear_from('/' . $slug); // адрес теперь занят разделом — старый редирект с него не нужен
+                redirect_clear_from('/' . $slug);
                 flash('Раздел «' . $title . '» создан: /' . $slug . '. Добавьте его в меню сайта (Меню → «+ Пункт»).');
                 redirect(a_url('sections'));
             }
@@ -798,9 +798,9 @@ function admin_sections(): void
                 sections_save($sections);
                 db_run('DELETE FROM redirects WHERE from_path = ?', ['/' . $slug]);
                 flash('Раздел удалён.');
-                /* Пункты меню со «своим адресом» на удалённый раздел дальше ведут на 404 —
-                   их не удаляем молча (меню — ручная работа владельца), но предупреждаем
-                   (аудит 1.9.18, находка 6) */
+
+
+
                 $orphans = db_all('SELECT title FROM menu_items WHERE url = ? OR url = ?', ['/' . $slug, '/' . $slug . '/']);
                 if ($orphans) {
                     $names = implode(', ', array_map(static fn($r) => '«' . (string)$r['title'] . '»', $orphans));
@@ -821,8 +821,8 @@ function admin_sections(): void
 <table class="tbl">
 <thead><tr><th>Название</th><th>Адрес</th><th>Заметок</th><th></th></tr></thead>
 <tbody>
-    <?php /* счётчики заметок одним запросом, а не COUNT(*) на каждый раздел в цикле — классический
-             N+1: при 20 разделах было 20 лишних запросов (аудит 1.9.18, находка 5) */
+    <?php
+
         $counts = [];
         foreach (db_all('SELECT section, COUNT(*) AS n FROM posts GROUP BY section') as $r) {
             $counts[(string)$r['section']] = (int)$r['n'];
@@ -888,15 +888,15 @@ function admin_section_edit(): void
         $sections = post_sections();
         foreach ($sections as &$s) {
             if ($s['slug'] === $slug) {
-                /* название и описание основного раздела хранятся в настройках сайта (blog_title/blog_description), а не в списке разделов — правятся в этой же форме */
+
                 $s = $slug === 'blog'
                     ? ['slug' => 'blog', 'title' => '', 'description' => '']
                     : ['slug' => $newSlug, 'title' => $title, 'description' => $desc];
             }
         }
         unset($s);
-        /* настройки, перенос заметок и редиректы — одной транзакцией: при сбое посередине не останется
-           половины заметок в старом разделе, а половины в новом */
+
+
         $rerr = null;
         db_tx(static function () use ($sections, $slug, $newSlug, $title, $desc, &$rerr): void {
             sections_save($sections);
@@ -905,11 +905,11 @@ function admin_section_edit(): void
                 set_setting('blog_description', $desc);
             }
             if ($newSlug !== $slug) {
-                // переносим заметки и ставим редиректы со старых адресов
-                $now = now(); /* бампаем updated_at: адреса заметок сменились — lastmod в sitemap и RSS обязан это показать */
+
+                $now = now();
                 foreach (db_all('SELECT * FROM posts WHERE section = ?', [$slug]) as $p) {
                     db_run('UPDATE posts SET section = ?, updated_at = ? WHERE id = ?', [$newSlug, $now, (int)$p['id']]);
-                    post_links_reindex((int)$p['id'], post_text_html($p)); // цели ссылок не меняются, но индекс держим в порядке (1.9.54: ссылки живут в текстовых секциях)
+                    post_links_reindex((int)$p['id'], post_text_html($p));
                     redirect_clear_from('/' . $newSlug . '/' . $p['slug']);
                     if ((int)$p['is_published']) {
                         $rerr = redirect_add('/' . $slug . '/' . $p['slug'], '/' . $newSlug . '/' . $p['slug']) ?? $rerr;

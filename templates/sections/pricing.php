@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */
-/* Пакеты и цены (1.9.63): карточки с вилкой цены. Те же данные попадают в JSON-LD
-   OfferCatalog — см. jsonld_pricing_offers() в app/seo.php. Публикуем карточку, если
-   заполнено хоть что-то из названия/цены/описания — тот же критерий, что у редактора
-   при сохранении (аудит 1.9.67, п.5: раньше карточка с одним описанием сохранялась,
-   но молча не показывалась). Фото карточки (1.9.69): необязательное, 4:5 с кадрированием
-   по фокусной точке; то же фото уходит в Offer.image микроразметки. */
+<?php
+
+
+
+
+
+
 $items = array_values(array_filter((array)$d['items'], static fn($it) => is_array($it)
     && (trim((string)($it['name'] ?? '')) !== '' || trim((string)($it['price_from'] ?? '')) !== ''
         || trim((string)($it['desc'] ?? '')) !== '' || (int)($it['image_id'] ?? 0) > 0)));
@@ -36,8 +36,8 @@ $cur = (string)($d['currency'] ?? 'RUB');
       <span class="price-img"><?= img_html($img, '(max-width: 700px) 92vw, 300px', $name, false, 900) ?></span>
       <?php endif; ?>
       <?php if ($name !== ''): ?><span class="price-name"><?= e($name) ?></span><?php endif; ?>
-      <?php /* длительность выводим и без цены (пакет «бесплатно»/бесценный): раньше она
-               пряталась внутри условия непустой цены (аудит 1.9.78) */ ?>
+      <?php
+ ?>
       <?php if ($price !== '' || $dur !== ''): ?><span class="price-val"><?= e($price) ?><?php if ($dur !== ''): ?><span class="price-dur"><?= $price !== '' ? ' · ' : '' ?><?= e($dur) ?></span><?php endif; ?></span><?php endif; ?>
       <?php if ($desc !== ''): ?><span class="price-desc"><?= nl2br(e($desc)) ?></span><?php endif; ?>
     </<?= $tag ?>>

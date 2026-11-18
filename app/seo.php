@@ -34,8 +34,8 @@ function seo_description(array $page): string
     if ($d !== '') {
         return $d;
     }
-    /* Лимит 155: Google в сниппете показывает ~150–160 знаков — раньше хвост описания
-       (170) обрезался многоточием прямо посреди фразы */
+
+
     if (trim((string)$page['short_text']) !== '') {
         return str_limit((string)$page['short_text'], 155);
     }
@@ -48,8 +48,8 @@ function seo_description(array $page): string
             return $t;
         }
     }
-    /* Последний запасной вариант — название сайта: пустой description означает, что сниппет
-       в выдаче соберётся из случайного куска страницы (для главной и альбомов — потеря CTR) */
+
+
     $d = trim(setting('default_description'));
     return $d !== '' ? $d : trim(setting('site_name'));
 }
@@ -70,16 +70,16 @@ function page_breadcrumbs(array $page): array
     return $crumbs;
 }
 
-/**
- * og:image для выбранного фото: кадр для соцсетей 1200×630 с обрезкой вокруг фокусной
- * точки (1.9.63) — вертикальные фото не уезжают в обрезку мессенджерами по центру среза.
- * Кадр не родился (мелкий оригинал, ошибка декодера) — обычный вариант с честными размерами:
- * размеры от реально выбранной ступени, а не от min(1240, оригинал) — иначе для оригинала
- * 1000 px в og:image:width писали 1000, а файл отдавали 900, и краулеры соцсетей из-за
- * расхождения игнорировали размеры.
- * Общая логика страниц (og_image_for ниже), заметок и разделов блога (post_meta,
- * blog_index_og_image) — до 1.9.67 блог копировал старую ветку без og-кадра (аудит 1.9.67, п.4).
- */
+
+
+
+
+
+
+
+
+
+
 function og_image_meta(array $img, string $altFallback): array
 {
     $alt = trim((string)$img['alt']) !== '' ? (string)$img['alt'] : $altFallback;
@@ -119,12 +119,12 @@ function social_links(): array
     $defs = [
         'vk' => 'VK', 'telegram' => 'Telegram', 'instagram' => 'Instagram',
         'whatsapp' => 'WhatsApp', 'youtube' => 'YouTube',
-        /* 1.9.63: профили, которые усиливают sameAs организации */
+
         'mywed' => 'MyWed', 'yandex_maps' => 'Яндекс Карты', 'tiktok' => 'TikTok', 'max' => 'MAX',
     ];
     $out = [];
     foreach ($defs as $k => $label) {
-        $u = normalize_url(setting('social_' . $k)); // javascript:/data: в адресе соцсети отбрасывается и при выводе
+        $u = normalize_url(setting('social_' . $k));
         if ($u !== '') {
             $out[] = ['key' => $k, 'label' => $label, 'url' => $u];
         }
@@ -132,10 +132,10 @@ function social_links(): array
     return $out;
 }
 
-/**
- * Колонки ссылок в подвале (1–4). Ссылки задаются в настройках построчно: «Текст | /адрес».
- * Возвращает только заполненные колонки: [['title'=>…, 'links'=>[['text'=>…,'url'=>…], …]], …]
- */
+
+
+
+
 function footer_columns(): array
 {
     $cols = [];
@@ -154,7 +154,7 @@ function footer_columns(): array
                 $url = $text;
                 $text = (string)preg_replace('~^https?://(www\.)?|/$~', '', $url);
             }
-            /* «/» разрешён, но НЕ «//» и «/\» — это protocol-relative URL на чужой домен */
+
             if ($text === '' || !preg_match('~^(https?://|/(?![/\\\\])|#|mailto:|tel:)~i', $url)) {
                 continue;
             }
@@ -172,8 +172,8 @@ function page_meta(array $page): array
     $noindex = !empty($page['noindex']) || !(int)$page['is_published'];
     $canonical = trim((string)$page['canonical']);
     if ($canonical === '' || str_starts_with($canonical, '//')) {
-        /* «//host» — protocol-relative URL на ЧУЖОЙ сайт: в админке такое значение отклоняется
-           (1.9.26), но если попало в базу раньше/извне — подставляем self-canonical, а не чужой домен */
+
+
         $canonical = abs_url(page_url($page));
     } elseif ($canonical[0] === '/') {
         $canonical = abs_url($canonical);
@@ -190,7 +190,7 @@ function page_meta(array $page): array
     return $meta;
 }
 
-/** Логотип для Organization/publisher в JSON-LD: картинка соцсетей по умолчанию, иначе favicon. */
+
 function jsonld_logo(): ?array
 {
     $img = null;
@@ -212,10 +212,10 @@ function jsonld_logo(): ?array
     ];
 }
 
-/* Короткий блок WebSite — на каждой странице, а не только на главной: блоки страниц и блога
-   ссылаются на #website через isPartOf, и части парсеров (Rich Results Test в пограничных
-   случаях) лучше видят граф, когда сущность присутствует в том же ответе. Вынесено в функцию
-   в 1.9.32: блог собирает JSON-LD вручную (blog.php) и без этой сущности ссылка была висячей. */
+
+
+
+
 function jsonld_website_short(): array
 {
     $base = base_url();
@@ -228,12 +228,12 @@ function jsonld_website_short(): array
     ];
 }
 
-/**
- * Часы работы из настройки → массив строк формата schema.org (1.9.43).
- * Дни недели можно писать по-русски («Пн-Пт 10:00-19:00» → «Mo-Fr 10:00-19:00»),
- * интервалы разделяются переводом строки или «;». \b вокруг кириллицы в PCRE не работает
- * без UCP, поэтому границы слова собраны вручную через (?<!\p{L})/(?!\p{L}).
- */
+
+
+
+
+
+
 function opening_hours_schema(string $raw): array
 {
     static $days = ['пн' => 'Mo', 'вт' => 'Tu', 'ср' => 'We', 'чт' => 'Th', 'пт' => 'Fr', 'сб' => 'Sa', 'вс' => 'Su'];
@@ -253,16 +253,16 @@ function opening_hours_schema(string $raw): array
     return $out;
 }
 
-/**
- * JSON-LD блоки из секций страницы или заметки: один FAQPage со всеми вопросами разделов
- * «Вопросы и ответы» и по VideoObject на каждый раздел «Видео». Разделы бывают и у
- * альбомов (1.9.52) — обслуживаются так же (аудит 1.9.67, п.3).
- */
+
+
+
+
+
 function jsonld_section_blocks(array $page, array $meta, ?array $sections = null): array
 {
-    /* Ранняя отсечка альбомов убрана (аудит 1.9.67, п.3): разделы у альбомов есть с 1.9.52,
-       их FAQ/видео видны на странице — значит, и разметка обязана быть, иначе видимое
-       содержимое расходится со structured data (прямой запрет Google). */
+
+
+
     $faq = [];
     $blocks = [];
     foreach (($sections ?? page_sections((int)$page['id'])) as $sec) {
@@ -273,7 +273,7 @@ function jsonld_section_blocks(array $page, array $meta, ?array $sections = null
                     continue;
                 }
                 $q = trim((string)($it['q'] ?? ''));
-                /* ответ — плоский текст без переводов строк (как требуют валидаторы FAQPage) */
+
                 $a = trim((string)preg_replace('/\s+/u', ' ', strip_tags((string)($it['a'] ?? ''))));
                 if ($q !== '' && $a !== '') {
                     $faq[] = ['@type' => 'Question', 'name' => $q, 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $a]];
@@ -298,9 +298,9 @@ function jsonld_section_blocks(array $page, array $meta, ?array $sections = null
             if ($poster) {
                 $vo['thumbnailUrl'] = abs_url(image_url($poster, (int)image_pick_width(image_widths($poster), 1240), 'jpg'));
             } elseif (!empty($meta['og_image']['url'])) {
-                /* постера нет — картинка соцсетей по умолчанию (та же цепочка, что у og:image:
-                   og_image_id страницы → обложка → default_og_image_id); thumbnailUrl у
-                   VideoObject рекомендован, без него валидатор Google выдаёт предупреждение (1.9.78) */
+
+
+
                 $vo['thumbnailUrl'] = $meta['og_image']['url'];
             }
             $dur = video_duration_iso($v['duration'] ?? 0);
@@ -311,8 +311,8 @@ function jsonld_section_blocks(array $page, array $meta, ?array $sections = null
         }
     }
     if ($faq) {
-        /* один FAQPage на страницу со всеми вопросами: несколько блоков-дублей одной
-           сущности валидаторы считают ошибкой */
+
+
         $blocks[] = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $faq];
     }
     return $blocks;
@@ -333,12 +333,12 @@ function jsonld_blocks(array $page, array $meta): array
             'name' => $siteName,
             'inLanguage' => setting('lang'),
         ];
-        /* Типа «Photographer» в schema.org НЕТ (проверено по официальному словарю
-           schemaorg-current-https.jsonld: существуют только Photograph и PhotographAction;
-           https://schema.org/Photographer отдаёт 404). До 1.9.59 он выводился в паре с
-           ProfessionalService «для Google» — валидаторы справедливо ругались на неизвестный
-           тип. Теперь: сам тип — всем признанный ProfessionalService (подтип LocalBusiness),
-           а профессия уточняется штатным additionalType со ссылкой на определение. */
+
+
+
+
+
+
         $schemaType = setting('schema_type') !== '' ? setting('schema_type') : 'Photographer';
         $isPhotog = $schemaType === 'Photographer';
         if ($isPhotog) {
@@ -357,7 +357,7 @@ function jsonld_blocks(array $page, array $meta): array
         if ($meta['og_image']) {
             $biz['image'] = $meta['og_image']['url'];
         }
-        $logo = jsonld_logo(); // logo у Organization укрепляет разметку и нужен для publisher в статьях
+        $logo = jsonld_logo();
         if ($logo) {
             $biz['logo'] = $logo;
         }
@@ -373,8 +373,8 @@ function jsonld_blocks(array $page, array $meta): array
         if ($isLocal && trim(setting('price_range')) !== '') {
             $biz['priceRange'] = trim(setting('price_range'));
         }
-        /* реквизиты (1.9.63): legalName/taxID/identifier — доверие поисковиков к организации;
-           публикуются только заполненными, пустых полей в разметке нет */
+
+
         if (trim(setting('business_legal_name')) !== '') {
             $biz['legalName'] = trim(setting('business_legal_name'));
         }
@@ -388,8 +388,8 @@ function jsonld_blocks(array $page, array $meta): array
                 'value' => trim(setting('business_ogrnip')),
             ]];
         }
-        /* локальное SEO (1.9.43): адрес собираем из того, что заполнено — у выездного
-           фотографа студии может не быть, тогда в разметке только город/страна */
+
+
         $addr = [];
         if (trim(setting('street_address')) !== '') {
             $addr['streetAddress'] = trim(setting('street_address'));
@@ -403,7 +403,7 @@ function jsonld_blocks(array $page, array $meta): array
         if ($addr) {
             $biz['address'] = ['@type' => 'PostalAddress'] + $addr + ['addressCountry' => trim(setting('country'))];
         }
-        /* города обслуживания списком («Города, где работаете»); пусто — как раньше, один город */
+
         $areas = array_values(array_filter(array_map('trim', explode(',', setting('cities_served')))));
         if (!$areas && trim(setting('city')) !== '') {
             $areas = [trim(setting('city'))];
@@ -411,8 +411,8 @@ function jsonld_blocks(array $page, array $meta): array
         if ($areas) {
             $biz['areaServed'] = $areas;
         }
-        /* координаты студии — только парой: одинокая широта без долготы валидна синтаксически,
-           но бессмысленна для карт */
+
+
         if ($isLocal && trim(setting('geo_lat')) !== '' && trim(setting('geo_lng')) !== '') {
             $biz['geo'] = [
                 '@type' => 'GeoCoordinates',
@@ -429,8 +429,8 @@ function jsonld_blocks(array $page, array $meta): array
             $biz['sameAs'] = $same;
         }
         if (trim(setting('person_name')) !== '') {
-            /* специализация (knowsAbout) и награды (award) — списки через запятую из настроек (1.9.65);
-               пустые поля array_filter выбросит, разметка останется прежней */
+
+
             $knows = array_values(array_filter(array_map('trim', explode(',', setting('person_knows_about')))));
             $awards = array_values(array_filter(array_map('trim', explode(',', setting('person_awards')))));
             $biz['founder'] = array_filter([
@@ -440,12 +440,12 @@ function jsonld_blocks(array $page, array $meta): array
                 'url' => $base . '/',
                 'knowsAbout' => $knows ?: null,
                 'award' => $awards ?: null,
-                /* те же профили, что у организации: поисковики связывают личность и бизнес */
+
                 'sameAs' => array_column(social_links(), 'url') ?: null,
             ]);
         }
-        /* пакеты и цены из разделов «Пакеты и цены» главной (1.9.63) — hasOfferCatalog,
-           как у страниц-услуг: предложения показываются в сниппете организации */
+
+
         $homeOffers = jsonld_pricing_offers($page);
         if ($homeOffers) {
             $biz['hasOfferCatalog'] = ['@type' => 'OfferCatalog', 'itemListElement' => $homeOffers];
@@ -477,16 +477,16 @@ function jsonld_blocks(array $page, array $meta): array
     if ($meta['description'] !== '') {
         $wp['description'] = $meta['description'];
     }
-    /* Связь страницы с бизнесом главной (#business): ContactPage без mainEntity —
-       частая ошибка, поисковик не понимает, чьи это контакты (ревью 1.9.75) */
+
+
     if ($type === 'ContactPage') {
         $wp['mainEntity'] = ['@id' => $base . '/#business'];
     }
     if ($page['type'] === 'album') {
         $imgs = [];
         foreach (array_slice(gallery_images('page', (int)$page['id']), 0, 30) as $i => $img) {
-            /* width/height — от реально отдаваемой ступени (contentUrl ограничен 2520px),
-               как в og_image_for(): размеры, расходящиеся с файлом, — сигнал небрежной разметки */
+
+
             $w = (int)max(image_widths($img, 2520));
             $imgs[] = [
                 '@type' => 'ImageObject',
@@ -503,8 +503,8 @@ function jsonld_blocks(array $page, array $meta): array
     }
     $blocks[] = $wp;
 
-    /* страница-услуга (1.9.42): блок Service со ссылкой на организацию главной (#business) —
-       перекрёстная ссылка по @id, штатный механизм JSON-LD; сама организация описана на главной */
+
+
     if (!empty($page['is_service'])) {
         $svcName = trim((string)($page['service_name'] ?? ''));
         if ($svcName === '') {
@@ -541,12 +541,12 @@ function jsonld_blocks(array $page, array $meta): array
             if (!array_key_exists($svcCur, service_currencies())) {
                 $svcCur = 'RUB';
             }
-            /* поле в админке — «Цена от»: честнее был бы minPrice, но простой price понимают
-               все потребители разметки; «от» остаётся в человекочитаемом описании услуги */
+
+
             $svc['offers'] = ['@type' => 'Offer', 'price' => $svcPrice, 'priceCurrency' => $svcCur];
         }
-        /* развёрнутые пакеты из разделов «Пакеты и цены» (1.9.63): каталог предложений
-           с вилками цен — как на главной у организации */
+
+
         $svcOffers = jsonld_pricing_offers($page);
         if ($svcOffers) {
             $svc['hasOfferCatalog'] = ['@type' => 'OfferCatalog', 'itemListElement' => $svcOffers];
@@ -554,8 +554,8 @@ function jsonld_blocks(array $page, array $meta): array
         $blocks[] = $svc;
     }
 
-    /* страница без пометки «услуга», но с разделом «Пакеты и цены» (1.9.63):
-       отдельный OfferCatalog */
+
+
     if (empty($page['is_service']) && ($otherOffers = jsonld_pricing_offers($page))) {
         $blocks[] = [
             '@context' => 'https://schema.org',
@@ -575,15 +575,15 @@ function jsonld_blocks(array $page, array $meta): array
     return $blocks;
 }
 
-/**
- * Убирает символы, недопустимые в XML 1.0 (управляющие, кроме табуляции и переводов строк).
- * Один такой байт из текста заметки или названия делал невалидным весь sitemap.xml/feed.xml
- * (ревизия 1.9.34, п.11).
- */
+
+
+
+
+
 function xml_clean(string $s): string
 {
     $r = preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $s);
-    return $r === null ? '' : $r; // null — при битом UTF-8: лучше пусто, чем невалидный XML целиком
+    return $r === null ? '' : $r;
 }
 
 function xml_e(string $s): string
@@ -591,7 +591,7 @@ function xml_e(string $s): string
     return htmlspecialchars(xml_clean($s), ENT_XML1 | ENT_QUOTES, 'UTF-8');
 }
 
-/** JSON-LD BreadcrumbList из списка крошек [['name'=>…, 'url'=>…], …] (три одинаковых блока сведены сюда). */
+
 function jsonld_breadcrumbs(array $crumbs): array
 {
     $list = [];
@@ -601,10 +601,10 @@ function jsonld_breadcrumbs(array $crumbs): array
     return ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list];
 }
 
-/**
- * Подпись данных, влияющих на sitemap.xml и feed.xml. Изменение страниц, заметок, изображений,
- * видео или базовых настроек меняет подпись — и файловый кэш XML пересобирается.
- */
+
+
+
+
 function xml_fresh_key(): string
 {
     $p = db_one('SELECT COUNT(*) AS c, COALESCE(MAX(updated_at), 0) AS m FROM pages');
@@ -612,31 +612,31 @@ function xml_fresh_key(): string
     $i = db_one('SELECT COUNT(*) AS c, COALESCE(MAX(id), 0) AS m FROM images');
     $v = db_one('SELECT COUNT(*) AS c, COALESCE(MAX(id), 0) AS m FROM videos');
     $s = [];
-    /* post_sections обязателен в ключе: при переименовании адреса раздела меняются URL всех
-       его заметок — без настройки в подписи sitemap/feed продолжали бы отдавать старые адреса */
+
+
     foreach (['site_name', 'blog_title', 'blog_description', 'base_url', 'default_description', 'lang', 'post_sections', 'site_rev'] as $k) {
         $s[] = setting($k);
     }
-    /* 1.9.65: llms.txt делится тем же кэшем и печатает данные из настроек (блок «О специалисте»,
-       профили соцсетей) — без них в подписи правка настроек не пересобирала бы файл */
+
+
     foreach (['person_name', 'person_job', 'person_knows_about', 'person_awards', 'city', 'cities_served',
               'phone', 'email', 'social_vk', 'social_telegram', 'social_instagram', 'social_whatsapp',
               'social_youtube', 'social_mywed', 'social_yandex_maps', 'social_tiktok', 'social_max'] as $k) {
         $s[] = setting($k);
     }
-    /* Эффективный базовый адрес — в подпись обязательно: при пустой настройке base_url и без
-       allowed_hosts он строится из заголовка Host, то есть подчинён клиенту. Без этого один
-       запрос с чужим Host отравлял файловый кэш sitemap/feed для ВСЕХ посетителей и ботов:
-       подпись не зависела от фактического хоста (аудит 1.9.13, находка 1). Теперь ядовитый
-       XML уходит только самому атакующему, легитимные запросы собирают свой кэш. Полностью
-       класс закрывается заполненным «Адресом сайта» (владельцу — см. панель). */
+
+
+
+
+
+
     $s[] = base_url();
-    /* APP_VERSION в ключе: формат XML меняется и при обновлении кода (как в 1.9.5 — caption,
-       лимиты), а не только при смене контента — иначе после апдейта сайт отдавал бы старый кэш */
+
+
     return implode('|', [APP_VERSION, (int)$p['c'], (int)$p['m'], (int)$b['c'], (int)$b['m'], (int)$i['c'], (int)$i['m'], (int)$v['c'], (int)$v['m'], sha1(implode("\0", $s))]);
 }
 
-/** Дата последнего изменения контента — для Last-Modified у sitemap.xml/feed.xml. */
+
 function xml_content_lastmod(): int
 {
     return (int)max(
@@ -645,11 +645,11 @@ function xml_content_lastmod(): int
     );
 }
 
-/**
- * Файловый кэш XML в storage/cache: пока подпись $freshKey() не изменилась, отдаём готовый файл,
- * не перестраивая XML запросами к базе на каждый хит ботов.
- * Подпись хранится первой строкой-комментарием и при отдаче срезается (<?xml обязан быть первым байтом).
- */
+
+
+
+
+
 function xml_cache_fetch(string $name, callable $build): string
 {
     $dir = ROOT . '/storage/cache';
@@ -662,9 +662,9 @@ function xml_cache_fetch(string $name, callable $build): string
     }
     $xml = (string)$build();
     if (@mkdir($dir, 0775, true) || is_dir($dir)) {
-        /* атомарная запись, как у вариантов изображений и бэкапов: LOCK_EX защищал только
-           от конкурентной записи, а читатель другого процесса мог подхватить файл наполовину —
-           бот получал бы обрезанный sitemap (аудит 1.9.12, находка 5) */
+
+
+
         $tmp = $file . '.tmp-' . getmypid();
         if (@file_put_contents($tmp, '<!--' . $key . "-->\n" . $xml, LOCK_EX) !== false) {
             if (!@rename($tmp, $file)) {
@@ -677,7 +677,7 @@ function xml_cache_fetch(string $name, callable $build): string
     return $xml;
 }
 
-/** Допустимые типы Schema.org для обычных страниц (альбомы по умолчанию — ImageGallery). */
+
 function page_schema_types(): array
 {
     return [
@@ -691,7 +691,7 @@ function page_schema_types(): array
     ];
 }
 
-/** Валюты цены услуги (1.9.42): ключ — код ISO 4217 для разметки Offer, значение — подпись в админке. */
+
 function service_currencies(): array
 {
     return [
@@ -704,16 +704,16 @@ function service_currencies(): array
     ];
 }
 
-/** Символ валюты для вывода цены на сайте (1.9.63); неизвестный код возвращается как есть. */
+
 function price_currency_symbol(string $code): string
 {
     return ['RUB' => '₽', 'USD' => '$', 'EUR' => '€', 'KZT' => '₸', 'UAH' => '₴', 'BYN' => 'Br'][$code] ?? $code;
 }
 
-/**
- * Человекочитаемая цена пакета (1.9.63): «от 15 000 ₽», «40 000–72 000 ₽», «80 000 ₽».
- * Пусто — когда не заполнено даже «от»: тогда цену в карточке не показываем.
- */
+
+
+
+
 function price_format_range(string $from, string $to, string $currency): string
 {
     $from = preg_replace('~\D~', '', $from);
@@ -732,13 +732,13 @@ function price_format_range(string $from, string $to, string $currency): string
     return 'от ' . $f . ' ' . $sym;
 }
 
-/**
- * Предложения Offer из разделов «Пакеты и цены» страницы (1.9.63) — для JSON-LD
- * OfferCatalog у организации (главная) или у услуги (страница с is_service).
- * Берутся только пакеты с названием и ценой «от»: без цены Offer бессмысленен,
- * сочинять её из описания нечестно. Разделы бывают и у альбомов (1.9.52) — их пакеты
- * размечаем так же (аудит 1.9.67, п.3): карточки видны на странице, разметка обязана совпадать.
- */
+
+
+
+
+
+
+
 function jsonld_pricing_offers(array $page): array
 {
     $offers = [];
@@ -766,7 +766,7 @@ function jsonld_pricing_offers(array $page): array
             if ($desc !== '') {
                 $o['description'] = $desc;
             }
-            /* фото карточки (1.9.69) — то же, что видно на странице */
+
             $iid = (int)($it['image_id'] ?? 0);
             if ($iid > 0 && ($img = image_get($iid))) {
                 $o['image'] = abs_url(image_url($img, image_pick_width(image_widths($img, 1240), 1240), 'jpg'));
@@ -775,17 +775,17 @@ function jsonld_pricing_offers(array $page): array
             if ($url === '') {
                 $o['url'] = abs_url(page_url($page));
             } elseif (preg_match('~^[a-z][a-z0-9+.\-]*:~i', $url)) {
-                /* внешняя ссылка (https://…, tel:) — как есть: abs_url() без проверки схемы
-                   склеивал её с доменом сайта в «https://site.ru/https://t.me/…» (аудит 1.9.67, п.1) */
+
+
                 $o['url'] = $url;
             } elseif ($url[0] === '#') {
-                $o['url'] = abs_url(page_url($page)) . $url; // якорь — на этой же странице, а не на главной
+                $o['url'] = abs_url(page_url($page)) . $url;
             } else {
                 $o['url'] = abs_url($url);
             }
             if ($to !== '' && (int)$to > (int)$from) {
-                /* вилка — штатный PriceSpecification с min/max; одиночная цена —
-                   простой price: его понимают все потребители разметки */
+
+
                 $o['priceSpecification'] = [
                     '@type' => 'PriceSpecification',
                     'minPrice' => (int)$from,
@@ -802,7 +802,7 @@ function jsonld_pricing_offers(array $page): array
     return $offers;
 }
 
-/** Заготовки JSON-LD для админки: подставляются в поле «Свой JSON-LD» и дополняются своими значениями. */
+
 function jsonld_presets(): array
 {
     return [
@@ -821,8 +821,8 @@ function jsonld_presets(): array
                 ['@type' => 'HowToStep', 'name' => 'Шаг 2', 'text' => 'Что делаем на втором шаге.'],
             ],
         ],
-        /* Service из заготовок убран (1.9.42): для услуг есть штатный блок «Услуга»
-           на вкладке SEO — двойная разметка одной услуги путала бы поисковиков */
+
+
         'VideoObject' => [
             '@type' => 'VideoObject',
             'name' => 'Название видео',
@@ -834,7 +834,7 @@ function jsonld_presets(): array
     ];
 }
 
-/** Свои блоки JSON-LD из текстового поля: один объект {...} или массив [{...},{...}]. */
+
 function jsonld_extra_blocks(string $raw): array
 {
     $raw = trim($raw);
@@ -866,17 +866,17 @@ function sitemap_xml(): string
     $base = base_url();
     $x = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     $x .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
-    /* узкие выборки: SELECT * тянул тела страниц/заметок и все поля фото ради пары колонок */
+
     $pages = db_all('SELECT id, slug, is_home, is_published, noindex, canonical, updated_at, position, title FROM pages WHERE is_published = 1 AND noindex = 0 ORDER BY is_home DESC, position, id');
-    /* Картинки всех страниц — двумя запросами вместо отдельного запроса на каждую страницу */
+
     $secPage = [];
     foreach (db_all("SELECT id, page_id FROM sections WHERE owner_type = 'page'") as $r) {
         $secPage[(int)$r['id']] = (int)$r['page_id'];
     }
     $imgsByPage = [];
-    /* Выборка чанками по gi.id (keyset): одним запросом джойн на десятки тысяч фото
-       съедал бы память целиком (аудит 1.9.12, находка 7). Порядок внутри страницы
-       восстанавливаем usort'ом ниже — выдача не меняется. */
+
+
+
     $lastGi = 0;
     do {
         $chunk = db_all(
@@ -888,16 +888,16 @@ function sitemap_xml(): string
         foreach ($chunk as $r) {
             $lastGi = (int)$r['gi_id'];
             $pid = $r['gi_type'] === 'page' ? (int)$r['gi_owner'] : ($secPage[(int)$r['gi_owner']] ?? 0);
-            /* Не больше 500 картинок на URL (Google позволяет 1000): на портфолио с огромными
-               альбомами это защита от раздувания файла — лимит одного sitemap 50 МБ несжатого */
+
+
             if ($pid > 0 && count($imgsByPage[$pid] ?? []) < 500) {
                 $imgsByPage[$pid][] = $r;
             }
         }
     } while (count($chunk) === 5000);
-    /* Одиночные секции «Фото» (не галерея) в image sitemap раньше не попадали вовсе
-       (аудит 1.9.26, SEO-находка 1): картинка была в HTML страницы, но поисковик не получал
-       image-подсказку. Добавляем их к странице-владельцу, пропуская уже учтённые галереями. */
+
+
+
     $seen = [];
     foreach ($imgsByPage as $pidSeen => $listSeen) {
         foreach ($listSeen as $rowSeen) {
@@ -923,20 +923,20 @@ function sitemap_xml(): string
         foreach (db_all_in('SELECT id, slug, w, h, alt FROM images WHERE id IN ({IN})', array_keys($photoIds)) as $imgRow) {
             foreach ($photoRef as $pid => $set) {
                 if (isset($set[(int)$imgRow['id']])) {
-                    /* gi_pos-полей у секции нет — usort ниже устойчив к отсутствию ключей (null == null) */
+
                     $imgsByPage[$pid][] = $imgRow;
                 }
             }
         }
     }
-    foreach ($imgsByPage as &$list) { // чанки шли по gi.id — возвращаем порядок по position
-        /* у фото из секций «Фото» (добавлены выше, аудит 1.9.26) gi_pos/gi_id нет —
-           сортируем их после галерейных, ?? гасит undefined key */
+    foreach ($imgsByPage as &$list) {
+
+
         usort($list, static fn($a, $b) => (($a['gi_pos'] ?? PHP_INT_MAX) <=> ($b['gi_pos'] ?? PHP_INT_MAX)) ?: (($a['gi_id'] ?? 0) <=> ($b['gi_id'] ?? 0)));
     }
     unset($list);
-    /* Страховочный бюджет URL: формальный лимит файла — 50 000 <url>. Для этого движка
-       недостижим, но дешёвый счётчик лучше, чем однажды отдать битый по правилам файл */
+
+
     $urlBudget = 45000;
     foreach ($pages as $p) {
         if ($urlBudget-- <= 0) {
@@ -953,7 +953,7 @@ function sitemap_xml(): string
         }
         foreach ($imgsByPage[(int)$p['id']] ?? [] as $img) {
             $x .= '    <image:image><image:loc>' . xml_e($base . image_large_url($img)) . '</image:loc>';
-            /* caption (расширенная подпись для image-поиска) — только когда есть осмысленный alt */
+
             $alt = trim((string)$img['alt']);
             $x .= '<image:title>' . xml_e($alt !== '' ? $alt : $p['title']) . '</image:title>';
             if ($alt !== '') {
@@ -964,9 +964,9 @@ function sitemap_xml(): string
         $x .= "  </url>\n";
     }
 
-    // заметки: списки разделов и сами заметки
-    /* картинки заметок — из их секций (с 1.9.54 заметки собраны из секций, как страницы):
-       фото-секции по data, галереи — через gallery_items */
+
+
+
     $publishedPosts = db_all('SELECT id, slug, title, section, updated_at, published_at, created_at, canonical, noindex FROM posts WHERE is_published = 1 ORDER BY ' . POST_TS_SQL . ' DESC, id DESC');
     $posts = array_values(array_filter($publishedPosts, static fn($p) => !(int)$p['noindex']));
     $pidToIdx = [];
@@ -980,7 +980,7 @@ function sitemap_xml(): string
             return;
         }
         $i = $pidToIdx[$postId];
-        if (count($imgsByPost[$i] ?? []) < 100) { // как у страниц: не больше 100 картинок на URL
+        if (count($imgsByPost[$i] ?? []) < 100) {
             $imgsByPost[$i][$iid] = true;
             $needImg[$iid] = true;
         }
@@ -1011,7 +1011,7 @@ function sitemap_xml(): string
             }
         }
         if ($count === 0) {
-            continue; // пустой список заметок в sitemap не нужен
+            continue;
         }
         $x .= "  <url>\n    <loc>" . xml_e($base . section_base($s)) . "</loc>\n";
         if ($last > 0) {
@@ -1024,7 +1024,7 @@ function sitemap_xml(): string
             break;
         }
         $own = $base . post_url($p);
-        /* как у страниц: canonical на другой адрес — заметку из sitemap убираем (1.9.55) */
+
         $canon = trim((string)($p['canonical'] ?? ''));
         if ($canon !== '' && rtrim($canon, '/') !== rtrim($own, '/') && rtrim($canon, '/') !== rtrim(post_url($p), '/')) {
             continue;
@@ -1036,7 +1036,7 @@ function sitemap_xml(): string
         foreach (array_keys($imgsByPost[$i] ?? []) as $iid) {
             $img = $postImgRows[$iid] ?? null;
             if (!$img) {
-                continue; // фото удалено из медиатеки, а ссылка в тексте осталась
+                continue;
             }
             $x .= '    <image:image><image:loc>' . xml_e($base . image_large_url($img)) . '</image:loc>';
             $alt = trim((string)$img['alt']);
@@ -1053,14 +1053,14 @@ function sitemap_xml(): string
 
 function robots_txt(): string
 {
-    /* Disallow: /admin/ оставлен и при спрятанной админке (admin_path в config.php): это
-       безобидный «макет» — настоящий секретный адрес в robots.txt НИКОГДА не пишем,
-       иначе он стал бы публичным (1.9.27). /dl.php закрыт превентивно (1.9.32): скачивание
-       и так отвечает 403 без сессии и публичных ссылок на него нет, но если URL когда-нибудь
-       утечёт, робот не станет тратить на него обход. */
+
+
+
+
+
     $t = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
-    /* Clean-param убрана в 1.9.37: Яндекс исключил директиву из документации ещё в 2018 и игнорирует
-       её. Склейку дублей с utm/fbclid/gclid/yclid делает 301-редирект в index.php — этого достаточно. */
+
+
     $extra = trim(setting('robots_extra'));
     if ($extra !== '') {
         $t .= $extra . "\n\n";
@@ -1068,18 +1068,18 @@ function robots_txt(): string
     return $t . 'Sitemap: ' . base_url() . "/sitemap.xml\n";
 }
 
-/**
- * llms.txt (1.9.64) — маркдаун-карта сайта для языковых моделей (llmstxt.org).
- * Стандарт пока неофициальный: AI-краулеры его не подтвердили, но файл безвреден,
- * а собирается из тех же данных, что sitemap, — пусть лежит на будущее.
- * Правила видимости те же, что в sitemap_xml(): только опубликованные и индексируемые,
- * с чужим canonical не включаем.
- */
+
+
+
+
+
+
+
 function llms_txt(): string
 {
     $base = base_url();
-    /* Одна строка на элемент: маркдаун-списки не терпят переносов в описании, а скобки
-       в заголовке ломали бы синтаксис ссылки */
+
+
     $line = static function (string $s): string {
         $s = trim(preg_replace('~\s+~u', ' ', strip_tags($s)));
         return strtr($s, ['[' => '(', ']' => ')']);
@@ -1090,9 +1090,9 @@ function llms_txt(): string
     if ($summary !== '') {
         $t .= '> ' . $summary . "\n\n";
     }
-    /* Блок «О специалисте» (1.9.65): рукописные llms.txt конкурентов начинаются с эксперта
-       и преимуществ — собираем то же самое из настроек, руками обновлять не нужно.
-       Каждая строка выводится, только если заполнено соответствующее поле. */
+
+
+
     $about = [];
     $person = trim(setting('person_name'));
     if ($person !== '') {

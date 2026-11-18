@@ -5,7 +5,7 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
@@ -30,7 +30,7 @@ function admin_upload(): void
         json_out(['ok' => false, 'error' => 'Только POST'], 405);
     }
     csrf_check();
-    session_write_close(); // загрузка долгая: не держим блокировку файла сессии, иначе остальные запросы админки встанут в очередь
+    session_write_close();
     $f = $_FILES['file'] ?? null;
     if (!$f) {
         json_out(['ok' => false, 'error' => 'Файл не получен: вероятно, он больше post_max_size на сервере.'], 400);
@@ -49,20 +49,20 @@ function admin_upload(): void
     if (!is_uploaded_file((string)$f['tmp_name'])) {
         json_out(['ok' => false, 'error' => 'Некорректная загрузка'], 400);
     }
-    /* Серверный лимит байт: ini-лимиты хостинга могут быть шире, а гигабайтный файл
-       съест память/диск ещё до проверок формата */
+
+
     if ((int)$f['size'] > UPLOAD_MAX_BYTES) {
         json_out(['ok' => false, 'error' => 'Файл больше ' . intdiv(UPLOAD_MAX_BYTES, 1048576) . ' МБ — сожмите фото перед загрузкой.'], 422);
     }
     try {
         $img = image_add_from_file((string)$f['tmp_name'], (string)$f['name']);
         $resp = ['ok' => true, 'image' => img_json($img)];
-        /* GD декодирует только первый кадр GIF — предупреждаем, иначе «анимация пропала» неожиданно */
+
         if (strtolower(pathinfo((string)$f['name'], PATHINFO_EXTENSION)) === 'gif' && gif_is_animated((string)$f['tmp_name'])) {
             $resp['note'] = 'анимированный GIF — на сайте останется только первый кадр';
         }
-        /* GD не применяет ICC-профили: у JPEG с гамутом шире sRGB (Adobe RGB, Display P3)
-           превью после снятия профиля потускнеют — предупреждаем (аудит 1.9.40, п.1) */
+
+
         if (img_engine() === 'gd' && (string)$img['ext'] === 'jpg' && image_icc_wide_gamut(image_original_path($img))) {
             $resp['note'] = isset($resp['note']) ? $resp['note'] . '; ' : '';
             $resp['note'] .= 'цветовой профиль шире sRGB: без расширения Imagick цвета превью станут тусклее — включите Imagick в панели хостинга или экспортируйте фото в sRGB';
@@ -72,9 +72,9 @@ function admin_upload(): void
         app_log_error('upload: ' . get_class($e) . ': ' . $e->getMessage() . ' в ' . $e->getFile() . ':' . $e->getLine());
         json_out(['ok' => false, 'error' => 'Внутренняя ошибка при обработке фото. Подробности в storage/error.log.'], 500);
     } catch (RuntimeException $e) {
-        json_out(['ok' => false, 'error' => $e->getMessage()], 422); // ожидаемые ошибки: формат, размер и т.п.
+        json_out(['ok' => false, 'error' => $e->getMessage()], 422);
     } catch (Throwable $e) {
-        /* остальное (пути к файлам, непредвиденные ошибки) наружу не отдаём — только в журнал */
+
         app_log_error('upload: ' . get_class($e) . ': ' . $e->getMessage() . ' в ' . $e->getFile() . ':' . $e->getLine());
         json_out(['ok' => false, 'error' => 'Внутренняя ошибка при обработке фото. Подробности в storage/error.log.'], 500);
     }
@@ -82,14 +82,14 @@ function admin_upload(): void
 
 function admin_media_json(): void
 {
-    session_write_close(); // только чтение — не блокируем сессию
-    /* Keyset-пагинация вместо OFFSET: большой OFFSET в SQLite — полный скан на каждую
-       страницу (медиатека в тысячи фото подтормаживала), а «WHERE id < ?» идёт по индексу */
+    session_write_close();
+
+
     $album = max(0, (int)($_GET['album'] ?? 0));
     $limit = 60;
     if ($album > 0) {
-        /* режим альбома (1.9.56): фото одного альбома в его порядке. Альбомы ограничены
-           сотнями фото, поэтому здесь достаточно OFFSET-пагинации (параметр off) */
+
+
         if (!db_val("SELECT id FROM pages WHERE id = ? AND type = 'album'", [$album])) {
             json_out(['ok' => false, 'error' => 'Альбом не найден'], 404);
         }
@@ -132,17 +132,17 @@ function admin_image_alt(): void
         json_out(['ok' => false], 404);
     }
     db_run('UPDATE images SET alt = ? WHERE id = ?', [post_str('alt', 250), $id]);
-    image_cache_flush(); // в кэше image_get() лежит прежняя строка — сбрасываем
-    /* alt меняет публичный HTML и SEO-файлы через site_rev, но не является редактированием
-       страницы: updated_at не трогаем, чтобы не создавать ложный конфликт в открытом редакторе. */
+    image_cache_flush();
+
+
     site_touch();
     json_out(['ok' => true]);
 }
 
-/**
- * Сохранение фокусной точки кадра (1.9.25): координаты 0..1 по осям, центр — 0.5.
- * Используется object-position'ом на картинках с object-fit:cover (обложки, миниатюры).
- */
+
+
+
+
 function admin_image_focus(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -159,17 +159,17 @@ function admin_image_focus(): void
     $fx = max(0.0, min(1.0, $fx));
     $fy = max(0.0, min(1.0, $fy));
     db_run('UPDATE images SET focus_x = ?, focus_y = ? WHERE id = ?', [$fx, $fy, $id]);
-    /* og-кадр 1200×630 (1.9.63) запекает фокусную точку в пиксели, а свежесть файла
-       проверяется только по mtime оригинала — без удаления превью ссылки в мессенджерах
-       навсегда оставалось со старым кадрированием (аудит 1.9.67, п.2). Удаляем: og-кадр
-       пересоздаётся при ближайшем показе любой страницы, где фото выбрано для og:image. */
+
+
+
+
     foreach (glob(media_dir() . '/' . $id . '/og-*.jpg') ?: [] as $ogf) {
         @unlink($ogf);
     }
-    image_cache_flush(); // в кэше image_get() лежит прежняя строка
-    /* фокус меняет публичные страницы (object-position обложек), но не трогает ни updated_at,
-       ни настройки: без отметки Last-Modified оставался старым, и Яндекс по If-Modified-Since
-       получал 304 на фактически изменившуюся страницу (аудит 1.9.48, п.8) */
+    image_cache_flush();
+
+
+
     site_touch();
     json_out(['ok' => true, 'fx' => $fx, 'fy' => $fy]);
 }
@@ -183,7 +183,7 @@ function admin_image_delete(): void
     session_write_close();
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0 && empty($_POST['force'])) {
-        $n = (int)(image_usage_map(true)[$id] ?? 0); // свежий подсчёт, а не кэш: решаем судьбу файла
+        $n = (int)(image_usage_map(true)[$id] ?? 0);
         if ($n > 0) {
             json_out(['ok' => false, 'in_use' => $n, 'error' => 'Фото используется на сайте (мест: ' . $n . ').'], 409);
         }
@@ -200,9 +200,9 @@ function admin_media(): void
 {
     $per = 60;
     $noalt = !empty($_GET['noalt']);
-    /* серверный поиск по имени файла и alt — ищет по ВСЕЙ медиатеке, а не по открытой странице (аудит 1.9.15) */
+
     $qRaw = $_GET['q'] ?? '';
-    $q = trim(is_string($qRaw) ? $qRaw : ''); // ?q[]=x — иначе «Array to string conversion» в журнал
+    $q = trim(is_string($qRaw) ? $qRaw : '');
     $cond = [];
     $args = [];
     if ($noalt) {
@@ -215,17 +215,17 @@ function admin_media(): void
         $args[] = '%' . $esc . '%';
     }
     $where = $cond ? 'WHERE ' . implode(' AND ', $cond) : '';
-    /* фильтр по альбому (1.9.56): при сотне альбомов найти фото в общей ленте нереально.
-       «Не в альбомах» приходит как album=-1 из того же select */
+
+
     $albumRaw = (int)($_GET['album'] ?? 0);
     $album = $albumRaw > 0 ? $albumRaw : 0;
     $noalbum = $albumRaw === -1 || !empty($_GET['noalbum']);
     $albumRow = $album > 0 ? db_one("SELECT id, title FROM pages WHERE id = ? AND type = 'album'", [$album]) : null;
     if ($album > 0 && !$albumRow) {
-        $album = 0; // альбом удалили — показываем общую ленту, а не пустоту
+        $album = 0;
     }
     if ($album > 0) {
-        /* фото альбома в его собственном порядке (position) — как в редакторе альбома */
+
         $joinWhere = ($where !== '' ? $where . ' AND' : 'WHERE') . " gi.owner_type = 'page' AND gi.owner_id = " . $album;
         $total = (int)db_val("SELECT COUNT(*) FROM gallery_items gi JOIN images i ON i.id = gi.image_id $joinWhere", $args);
         $pages = max(1, (int)ceil($total / $per));
@@ -237,17 +237,17 @@ function admin_media(): void
         }
         $total = (int)db_val("SELECT COUNT(*) FROM images $where", $args);
         $pages = max(1, (int)ceil($total / $per));
-        $pg = min($pages, max(1, (int)($_GET['page'] ?? 1))); // раньше огромный ?page= превращался в float в SQL и давал 500
+        $pg = min($pages, max(1, (int)($_GET['page'] ?? 1)));
         $imgs = db_all("SELECT i.* FROM images i $where ORDER BY id DESC LIMIT $per OFFSET " . (($pg - 1) * $per), $args);
     }
-    $use = image_usage_map(); // галереи, фото на страницах, обложки, соцсети И вставки в тексты заметок
+    $use = image_usage_map();
     foreach ($imgs as &$im) {
         $im['uses'] = (int)($use[(int)$im['id']] ?? 0);
     }
     unset($im);
     $noAltTotal = (int)db_val("SELECT COUNT(*) FROM images WHERE alt = ''");
     $albums = albums_with_counts();
-    /* общие параметры фильтра — для ссылок пагинации и кнопок */
+
     $flt = static function (array $extra = []) use ($q, $noalt, $album, $noalbum): array {
         return array_filter(array_merge([
             'q' => $q !== '' ? $q : null,
@@ -306,9 +306,9 @@ function admin_media(): void
     <?php if (!$imgs): ?><p class="muted"><?= $q !== '' ? 'По запросу «' . e($q) . '» ничего не нашлось.' : ($albumRow ? 'В этом альбоме пока нет фото — добавьте их в редакторе альбома.' : ($noalbum ? 'Таких фото нет: всё разложено по альбомам.' : 'Фото пока нет — загрузите первое.')) ?></p><?php endif; ?>
 </div>
     <?php if ($pages > 1):
-        /* окно ±5 вокруг текущей страницы + первая/последняя: раньше рисовались ВСЕ номера —
-           при десятках тысяч фото каждая страница медиатеки несла бы тысячи ссылок
-           (аудит 1.9.12, находка 10) */
+
+
+
         $pFrom = max(1, $pg - 5);
         $pTo = min($pages, $pg + 5);
         $pageLink = static fn(int $i): string => e(a_url('media', $flt(['page' => $i])));

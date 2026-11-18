@@ -5,23 +5,23 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-/* Публичная форма связи (секция «Форма связи», 1.9.48). Разметка — templates/sections/contact.php,
-   приём POST — корневой contact.php; здесь токен, троттлинг и доставка (почта + Telegram).
-   Сессий у анонимных посетителей нет (публичные страницы её не поднимают), поэтому вместо
-   CSRF-токена сессии — HMAC от даты и адреса страницы. */
 
-/** Секрет для токенов формы: генерируется один раз и лежит в settings (база закрыта от веба). */
+
+
+
+
+
 function form_secret(): string
 {
     $s = setting('form_secret');
     if (strlen($s) >= 32) {
         return $s;
     }
-    /* Гонка первого рендера: два процесса могут сгенерировать разные секреты, и HTML
-       с «проигравшим» токеном способен лечь в файловый кэш страниц — форма была бы
-       мертва до смены ключа кэша. Поэтому пишем INSERT OR IGNORE (побеждает первый
-       писатель) и перечитываем базу: все процессы работают с одним секретом. Напрямую,
-       без set_setting(): создание секрета не правка контента, site_touch() не нужен. */
+
+
+
+
+
     $s = bin2hex(random_bytes(32));
     db_run('INSERT OR IGNORE INTO settings (k, v) VALUES (?, ?)', ['form_secret', $s]);
     settings_all(true);
@@ -29,18 +29,18 @@ function form_secret(): string
     return strlen($stored) >= 32 ? $stored : $s;
 }
 
-/** Токен формы: HMAC от текущей даты и адреса страницы с формой. */
+
 function contact_token(string $pagePath): string
 {
     return hash_hmac('sha256', date('Ymd') . '|' . $pagePath, form_secret());
 }
 
-/**
- * Принимаются токены последних 8 суток: форму могли открыть вчера до полуночи, а с файловым
- * кэшем страниц (pagecache.php, 1.9.48) HTML с токеном живёт до 7 суток — иначе форма на
- * закэшированной странице начала бы отклонять реальных посетителей через пару дней.
- * Окно не ослабляет защиту заметно: основную работу делают ловушка и троттлинг.
- */
+
+
+
+
+
+
 function contact_token_ok(string $token, string $pagePath): bool
 {
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
@@ -55,7 +55,7 @@ function contact_token_ok(string $token, string $pagePath): bool
     return false;
 }
 
-/** Файл счётчиков троттлинга формы (формат — как у storage/locks/img-gen.json: подсеть → метки времени). */
+
 function contact_throttle_file(): string
 {
     $dir = ROOT . '/storage/throttle';
@@ -65,11 +65,11 @@ function contact_throttle_file(): string
     return $dir . '/contact.json';
 }
 
-/**
- * Лог событий формы, не чаще раза в 5 минут на ключ: бот с битым токеном иначе флудит
- * error.log сотнями строк в час, и ротация (1 МБ) вымывает реальные ошибки сайта.
- * Метки — в JSON рядом со счётчиками троттлинга; любой сбой чтения/записи не мешает логу.
- */
+
+
+
+
+
 function contact_log_throttled(string $key, string $msg): void
 {
     $file = dirname(contact_throttle_file()) . '/contact-log.json';
@@ -90,18 +90,18 @@ function contact_log_throttled(string $key, string $msg): void
     app_log_error($msg);
 }
 
-/**
- * Поле формы: обрезка до $max и вырезание управляющих символов — CRLF в имени/email
- * это вектор подстановки лишних заголовков в письмо (header injection).
- * $keepNewlines — только для текста сообщения: там переводы строк легитимны.
- */
+
+
+
+
+
 function contact_clean(string $s, int $max, bool $keepNewlines = false): string
 {
     $re = $keepNewlines ? '/[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]/u' : '/[\x00-\x1f\x7f]/u';
     return clip((string)preg_replace($re, '', $s), $max);
 }
 
-/** Адрес возврата после отправки: только локальный путь (не «//host», не «/\host»), иначе главная. */
+
 function contact_back_url(string $back): string
 {
     if ($back !== '' && $back[0] === '/'
@@ -112,7 +112,7 @@ function contact_back_url(string $back): string
     return '/';
 }
 
-/** Добавляет параметр к адресу возврата, не ломая #якорь: «/page#s12» → «/page?sent=1#s12». */
+
 function contact_back_with(string $back, string $qs): string
 {
     $frag = '';
@@ -148,7 +148,7 @@ function contact_old_read(): array
     return $old;
 }
 
-/** Текст заявки, общий для письма и Telegram. */
+
 function contact_message_text(array $m): string
 {
     $lines = ['Имя: ' . $m['name']];
@@ -167,11 +167,11 @@ function contact_message_text(array $m): string
     return implode("\n", $lines);
 }
 
-/**
- * Письмо владельцу. Адрес — «Почта для заявок» из настроек (пусто — основной email).
- * From — технический no-reply@хост-сайта (не подменяем чужой домен — SPF/DKIM такое режут);
- * адрес отправителя формы уходит в Reply-To, чтобы «Ответить» в почте работало.
- */
+
+
+
+
+
 function contact_send_mail(array $m): bool
 {
     $to = trim(setting('contact_email'));
@@ -202,24 +202,24 @@ function contact_send_mail(array $m): bool
     }
 }
 
-/**
- * Дубль заявки в Telegram-бота (настройки tg_bot_token/tg_chat_id). Текст отправляем без
- * parse_mode: в полях произвольный ввод, а разметка Markdown/HTML в нём ломала бы форматирование.
- */
+
+
+
+
 function contact_send_telegram(array $m): bool
 {
     $token = trim(setting('tg_bot_token'));
     $chat = trim(setting('tg_chat_id'));
     if (!preg_match('~^\d+:[A-Za-z0-9_\-]{20,}$~', $token)
         || !preg_match('~^(-?\d+|@[A-Za-z0-9_]{5,})$~', $chat)) {
-        return false; // не настроено — не ошибка
+        return false;
     }
     $text = 'Заявка с сайта «' . setting('site_name') . '»' . "\n" . contact_message_text($m);
     $url = 'https://api.telegram.org/bot' . $token . '/sendMessage';
     $body = http_build_query(['chat_id' => $chat, 'text' => $text, 'disable_web_page_preview' => 'true']);
     try {
         $r = false;
-        /* На части хостингов allow_url_fopen=Off — пробуем cURL, он обычно разрешён (аудит 1.9.57) */
+
         if (!ini_get('allow_url_fopen') && function_exists('curl_init')) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
@@ -239,7 +239,7 @@ function contact_send_telegram(array $m): bool
                 'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
                 'content' => $body,
                 'timeout' => 5,
-                'ignore_errors' => true, // иначе тело ответа при 4xx не прочитать
+                'ignore_errors' => true,
             ]]);
             $r = @file_get_contents($url, false, $ctx);
         }
@@ -247,7 +247,7 @@ function contact_send_telegram(array $m): bool
         if (is_array($j) && !empty($j['ok'])) {
             return true;
         }
-        /* токен/чат в ответ не включаем: журнал читаем глазами, лишнего там быть не должно */
+
         app_log_error('contact: Telegram API отклонил сообщение'
             . (is_array($j) && isset($j['description']) ? ' — ' . (string)$j['description'] : ''));
         return false;
@@ -257,10 +257,10 @@ function contact_send_telegram(array $m): bool
     }
 }
 
-/**
- * Приём POST: ловушка → токен → валидация → троттлинг по точному IP → сохранение → доставка.
- * Ошибки возвращают введённые поля через короткоживущую сессию; заявка сначала пишется в базу.
- */
+
+
+
+
 function contact_handle(): void
 {
     header('Cache-Control: no-store');

@@ -2,15 +2,11 @@
  * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
-/* Публичная часть. Цвета и шрифты переопределяются из настроек (inline :root в <head>). */
-/* --line-ui (1.9.78): рамка интерактивных элементов (поля формы, мелкие кнопки) —
-   декоративная --line (.18) давала контраст 1.43:1, для UI по WCAG 1.4.11 нужно 3:1 */
+
+
 :root{--bg:#fff;--text:#252525;--muted:rgba(37,37,37,.65);--line:rgba(37,37,37,.18);--line-ui:rgba(37,37,37,.45);--font-head:"Tenor Sans","Helvetica Neue",Arial,sans-serif;--font-body:"Golos Text",system-ui,sans-serif;--sidebar:240px;--gap:6px;--fs-label:12px;--h-scale:1;--t-scale:1}
 *,*::before,*::after{box-sizing:border-box}
-/* overflow-x:clip (именно clip, не hidden — он не создаёт scroll-контейнер и не ломает
-   position:sticky у сайдбара): full-bleed у .slides (100vw + margin-left:calc(50% - 50vw))
-   вместе со scrollbar-gutter:stable давал странице горизонтальную прокрутку
-   в Safari/Firefox/Chrome<145 (аудит 1.9.78) */
+
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scrollbar-gutter:stable;overflow-x:clip}
 body{margin:0;background:var(--bg);color:var(--text);font:400 calc(16px * var(--t-scale))/1.65 var(--font-body);-webkit-font-smoothing:antialiased}
 img,picture{display:block;max-width:100%}
@@ -24,7 +20,7 @@ img{height:auto}
 .skip{position:absolute;left:-999px;top:0;background:var(--text);color:var(--bg);padding:8px 14px;z-index:100}
 .skip:focus{left:0}
 
-/* каркас */
+
 .layout{display:flex;max-width:1520px;margin:0 auto;min-height:100vh}
 .sidebar{flex:0 0 var(--sidebar);width:var(--sidebar);padding:40px 24px 40px 32px;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow:auto}
 .main{flex:1;min-width:0;padding:40px 32px 0 0;display:flex;flex-direction:column}
@@ -33,12 +29,11 @@ img{height:auto}
 .author-credit{display:inline-block;margin-top:8px;font-size:12px;text-decoration:none;border-bottom:1px solid var(--line)}
 .author-credit:hover{color:var(--text);border-color:var(--text)}
 .footer p{margin:0 0 8px}
-/* низ подвала — одна строка: расстояние между частями даёт разделитель « · », а не поля ссылок (1.9.44) */
+
 .footer-links a{text-decoration:none;border-bottom:1px solid var(--line)}
 .footer-links a:hover{color:var(--text);border-color:var(--text)}
 .footer-sep{margin:0 .55em;opacity:.5}
-/* есть копирайт — строка становится flex: копирайт слева заподлицо с первой колонкой
-   ссылок подвала, адрес/контакты — у правого края; без копирайта всё по центру, как раньше */
+
 .footer-links.has-copy{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 20px;text-align:left}
 .footer-links.has-copy .footer-rest{margin-left:auto;text-align:right}
 @media (max-width:700px){
@@ -46,18 +41,16 @@ img{height:auto}
   .footer-links.has-copy .footer-rest{margin-left:0;text-align:center}
   .footer-links.has-copy .footer-copy{display:block;margin:0 0 4px}
 }
-/* колонки подвала — фиксированное расстояние между ними (1.9.74): раньше grid-1fr
-   растягивал колонки на всю ширину, и при 2 колонках между ними зияло ~300 px */
+
 .footer-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:28px 72px;margin:0 0 40px;padding-top:32px;border-top:1px solid var(--line);text-align:left}
 .fcol{min-width:140px}
 .fcol-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .fcol-link{display:block;padding:3px 0;font-size:14px;color:var(--text);text-decoration:none}
 .fcol-link:hover{text-decoration:underline;text-underline-offset:.2em}
 
-/* меню */
+
 .brand{font:400 22px/1.2 var(--font-head);text-decoration:none;display:inline-block;margin-bottom:28px}
-/* логотип в шапке (с 1.9.10): в колонке меню — не шире колонки и не выше 160 px;
-   в режиме «логотип и надпись» под ним остаётся небольшой отступ */
+
 .brand-logo{display:block;max-width:100%;max-height:160px;width:auto;height:auto}
 .brand-both .brand-logo{margin-bottom:14px}
 .burger,.to-top{display:none}
@@ -65,110 +58,93 @@ img{height:auto}
 .menu a,.menu .cat{display:block;padding:5px 0;font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
 .menu .cat{color:var(--muted);cursor:default;margin-top:14px}
 @media (hover:hover){.menu a:hover{text-decoration:underline;text-underline-offset:.4em}}
-/* Golos Text с 1.9.36 имеет начертание 600 (см. fonts.css) — синтетического жирного нет.
-   Активный пункт — 500 плюс тонкое подчёркивание: одного веса 400→500 глаз почти не
-   замечал (ревизия 1.9.35, п.11). Чёрточка-::before по-прежнему не нужна. */
+
 .menu li.is-active>a{font-weight:500;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.45em}
 .menu .lvl-1{padding-left:14px;margin-bottom:6px}
 .menu .lvl-1 a{font-size:12px;letter-spacing:.11em}
 
-/* типографика */
+
 h1,h2,h3,h4{font-family:var(--font-head);font-weight:400;line-height:1.33;margin:0 0 .6em}
-/* надзаголовок (кикер) секции (1.9.68): строка капсом над H2 — у контактной формы,
-   вопросов, цен и списка страниц */
+
 .sec-kicker{margin:0 0 12px;font:500 var(--fs-label)/1.5 var(--font-body);letter-spacing:.22em;text-transform:uppercase;color:var(--muted);text-align:center}
-/* --h-scale/--t-scale (1.9.79): регуляторы кегля из «Оформления»; calc от var — чтобы
-   владельцу не пришлось править каждый размер отдельно */
+
 h1{font-size:calc(clamp(28px,3.6vw,36px) * var(--h-scale))}
 h2{font-size:calc(24px * var(--h-scale))}
 h3{font-size:calc(20px * var(--h-scale))}
 h4{font-size:calc(18px * var(--h-scale))}
 .page-title{margin:0 0 28px}
-/* единая ось: когда текстовые секции центрированы (700px), заголовок и крошки — по той же колонке */
+
 .crumbs.t-axis,.page-title.t-axis,.album-count.t-axis{max-width:700px;margin-left:auto;margin-right:auto}
 .album-count{margin:-12px 0 26px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-/* длинные слова и ссылки без пробелов не распирают колонку текста (аудит 1.9.78) */
+
 .wysiwyg{overflow-wrap:break-word}
 .wysiwyg>:first-child{margin-top:0}
 .wysiwyg>:last-child{margin-bottom:0}
 .wysiwyg p{margin:0 0 1em}
-/* старые тексты могли сохраниться с абзацами-<div> (Chrome так делил Enter в редакторе) —
-   даём им тот же отступ, чтобы не слипались */
+
 .wysiwyg div{margin:0 0 1em}
 .wysiwyg ul,.wysiwyg ol{padding-left:1.3em;margin:0 0 1em}
 .wysiwyg blockquote{margin:1.4em 0;padding-left:1.2em;border-left:2px solid var(--line);color:var(--muted)}
 .wysiwyg a{text-decoration:underline;text-decoration-thickness:1px}
 .t-center{text-align:center}
 
-/* секции */
+
 .sec{margin-top:var(--sp,48px)}
 .sec:first-child,.album>.vh+.sec,main>h1+.sec{margin-top:0}
-/* ритм чуть собраннее (1.9.28): 96px оставлен только крупным композиционным разрывам */
+
 .sp-none{--sp:0}.sp-sm{--sp:20px}.sp-md{--sp:40px}.sp-lg{--sp:80px}
 .sec-text.w-narrow{max-width:700px;margin-left:auto;margin-right:auto}
 .sec-text.w-medium{max-width:920px;margin-left:auto;margin-right:auto}
 .sec-text.w-wide{max-width:none}
 .sec-buttons{display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-start}
 .sec-buttons.t-center{justify-content:center}
-/* min-height вместо фиксированной высоты: длинная подпись в 2–3 строки раньше
-   вылезала за рамку (ревизия 1.9.35, п.15) */
+
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.7em;height:auto;min-height:50px;padding:12px 32px;border:1px solid var(--text);border-radius:0;background:transparent;color:var(--text);font-size:13px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:background .2s,color .2s}
 .btn-outline:hover,.btn-solid{background:var(--text);color:var(--bg)}
 .btn-solid:hover{background:transparent;color:var(--text)}
 .ic{flex:none}
 
-/* фото */
+
 .ph{position:relative;display:block;aspect-ratio:var(--ar);background:var(--c,#ddd);overflow:hidden}
 .ph picture,.ph img{width:100%;height:100%}
 .ph img{object-fit:cover;transition:transform .5s ease,opacity .45s ease}
 a.ph{cursor:zoom-in}
-a.ph-link{cursor:pointer} /* фото-ссылка (1.9.52): клик ведёт на страницу, а не в лайтбокс */
-a.ph:hover img{transform:scale(1.015)} /* единый сдержанный zoom во всех сетках (1.9.28) */
-/* плавное появление поверх цветного placeholder'а — чистый CSS, без зависимости от JS:
-   раньше img стартовали с opacity:0 и ждали класс is-loaded из site.js, и любая ошибка
-   скрипта до регистрации обработчиков оставляла ВСЕ фотографии невидимыми */
+a.ph-link{cursor:pointer}
+a.ph:hover img{transform:scale(1.015)}
+
 @keyframes imgfade{from{opacity:0}to{opacity:1}}
 .ph img,.li-media img,.bp-thumb img,.rel-media img{animation:imgfade .45s ease both}
-/* перестройка колонок masonry при resize пересобирает DOM — не даём фото «мигать» заново */
+
 .masonry.no-fade img{animation:none}
 .masonry{display:flex;gap:var(--gap);align-items:flex-start}
-/* сервер рисует десктопные колонки, на телефоне скрипт перестраивает под мобильные:
-   прячем раскладку до перестройки, но не дольше 0,6 с (без JS/при ошибке она проявится сама) */
+
 @keyframes mshow{to{visibility:visible}}
 .masonry{animation:mshow 0s .6s forwards;visibility:hidden}
 .masonry.ready{animation:none;visibility:visible}
-/* на десктопе серверная раскладка уже финальная — LCP-кадр не должен ждать defer-скрипт
-   (ревизия 1.9.35, п.10); скрытие до перестройки актуально только для телефона */
+
 @media (min-width:701px){.masonry{visibility:visible;animation:none}}
-/* описание альбома не прилипает к галерее (любой раскладки — 1.9.76) */
+
 .album .sec + .masonry, .album .sec + .grid-gallery, .album .sec + .lineup{margin-top:var(--sp,48px)}
 .mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:var(--gap)}
 .grid-gallery{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:var(--gap)}
 .grid-gallery .ph{aspect-ratio:1/1}
-/* на телефоне — мобильная настройка колонок, как у masonry (ревизия 1.9.35, п.5):
-   раньше оставались десктопные 3–6 колонок, кадры сжимались до 60–90 px */
+
 @media (max-width:700px){.grid-gallery{grid-template-columns:repeat(var(--cols-m,2),1fr)}}
 .lineup{display:flex;flex-direction:column;gap:var(--gap)}
-/* «в столбик»: высота кадра ограничена высотой окна (ширина из пропорций --r),
-   портрет 2:3 больше не уходит в 1,5–2 экрана (ревизия 1.9.35, п.8) */
+
 .lineup .ph{width:min(100%,calc(92vh * var(--r,1.5)));margin-inline:auto}
 
-/* лента-слайдшоу (1.9.34): крупные кадры в один ряд, соседние «подглядывают» по краям;
-   десктоп — фиксированная высота, ширина из пропорций кадра (aspect-ratio у .ph) */
-.strip-wrap{position:relative;container-type:inline-size} /* 100cqw в .strip .ph: кадр не шире ленты (ревизия 1.9.35, п.4) */
+
+.strip-wrap{position:relative;container-type:inline-size}
 .strip{display:flex;align-items:center;gap:calc(var(--gap) + 4px);overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;cursor:grab}
 .strip::-webkit-scrollbar{display:none}
 .strip.is-drag{cursor:grabbing;scroll-snap-type:none}
 .strip.is-drag a.ph{cursor:grabbing}
-/* кадр ленты наследует grab у трека: zoom-in намекал на клик, а лента прежде всего листается
-   (ревизия 1.9.35, п.15) */
+
 .strip a.ph{cursor:inherit}
-/* высота единая для всех кадров ленты (1.9.92): лента — горизонтальный скроллер,
-   ширина из пропорций кадра (aspect-ratio у .ph), широкие кадры просто листаются;
-   раньше высоту резал терм «100cqw / --r», и широкие кадры стояли ниже соседних */
+
 .strip .ph{flex:0 0 auto;scroll-snap-align:center;height:min(clamp(300px,60vh,640px))}
-/* стрелки по нижним углам ленты — как в редакционных слайдшоу; с 1.9.36 — SVG-иконки
-   (ревизия 1.9.35, п.15) и тап-цель 44 px (там же, п.14) */
+
 .strip-btn{position:absolute;bottom:12px;z-index:2;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.9);color:#111;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);opacity:.85;transition:opacity .2s,transform .2s;-webkit-tap-highlight-color:transparent;display:grid;place-items:center}
 .strip-btn:hover{opacity:1;transform:scale(1.06)}
 .strip-btn:disabled{opacity:.3;cursor:default;transform:none}
@@ -176,20 +152,16 @@ a.ph:hover img{transform:scale(1.015)} /* единый сдержанный zoom
 .strip-prev{left:12px}
 .strip-next{right:12px}
 @media (max-width:700px){
-  /* на телефоне та же единая высота (1.9.92): раньше была фиксированная ширина 82vw,
-     и кадры разных пропорций стояли ниже/выше друг друга */
+
   .strip .ph{height:min(56vh,460px);width:auto}
   .strip-btn{bottom:10px}
   .strip-prev{left:10px}
   .strip-next{right:10px}
 }
 
-/* полноэкранное слайдшоу (1.9.46): кадры сложены стопкой и сменяют друг друга по таймеру
-   (site.js). Секция живёт в контентной колонке, а слайдшоу должно идти во всю ширину окна —
-   поэтому классический full-bleed через 100vw и отрицательный margin. */
+
 .slides{position:relative;overflow:hidden;width:100vw;margin-left:calc(50% - 50vw);background:#111}
-/* в классической теме на десктопе колонка контента смещена сайдбаром (не по центру окна):
-   full-bleed через 50%−50vw уехал бы за правый край — там слайдшоу во всю ширину колонки */
+
 @media (min-width:901px){
   body:not(.theme-apple) .slides{width:100%;margin-left:0}
 }
@@ -198,18 +170,18 @@ a.ph:hover img{transform:scale(1.015)} /* единый сдержанный zoom
 .slides-h-half{height:55vh;height:55svh}
 .slides-item{position:absolute;inset:0;z-index:1;opacity:0;background:var(--c,#111)}
 .slides-item picture,.slides-item img{width:100%;height:100%}
-.slides-item img{object-fit:cover;animation:none} /* imgfade тут мешает: кадры сменяются классом */
+.slides-item img{object-fit:cover;animation:none}
 .slides-item.was{z-index:1}
 .slides-item.on{opacity:1;z-index:2}
-/* эффект «плавное наложение»: новый кадр проявляется поверх старого */
+
 .slides-fx-fade .slides-item{transition:opacity .8s ease}
-/* эффект «сдвиг»: новый кадр наезжает справа поверх старого */
+
 .slides-fx-slide .slides-item{opacity:1;visibility:hidden;transform:translateX(100%);transition:transform .7s ease,visibility 0s .7s}
 .slides-fx-slide .slides-item.on{visibility:visible;transform:translateX(0);transition:transform .7s ease}
 .slides-fx-slide .slides-item.was{visibility:visible;transform:translateX(0);transition:none}
-/* эффект «резкая смена»: без переходов */
+
 .slides-fx-cut .slides-item{transition:none}
-/* стрелки — по бокам на середине высоты; вид — как у ленты */
+
 .slides-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.9);color:#111;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);opacity:.85;transition:opacity .2s;-webkit-tap-highlight-color:transparent;display:grid;place-items:center}
 .slides-btn:hover{opacity:1}
 .slides-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -220,44 +192,39 @@ a.ph:hover img{transform:scale(1.015)} /* единый сдержанный zoom
   .slides-prev{left:10px}
   .slides-next{right:10px}
 }
-/* у людей с «уменьшить движение» смена мгновенная, автоплей не запускает site.js */
+
 @media (prefers-reduced-motion:reduce){
   .slides-item{transition:none!important}
 }
 
-/* список карточек */
+
 .listing{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:28px var(--gap)}
-/* заголовок над сеткой карточек (1.9.68): пара к кикеру, по центру, как у прочих секций */
+
 .listing-h{margin:0 0 .5em;font-family:var(--font-head);font-weight:400;text-align:center}
 .li{display:block;text-decoration:none}
 .li-media{position:relative;display:block;aspect-ratio:var(--ar);background:var(--c,#ddd);overflow:hidden}
 .li-media picture,.li-media img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease,opacity .45s ease}
-.li:hover img{transform:scale(1.015)} /* сдержанный zoom: фото — объект просмотра, не UI-анимация (1.9.28) */
-/* градиент усилен и добавлена тень текста: на светлых кадрах белый заголовок раньше терялся (1.9.28) */
+.li:hover img{transform:scale(1.015)}
+
 .li-title{position:absolute;left:0;right:0;bottom:0;padding:48px 18px 18px;color:#fff;font:400 clamp(16px,1.6vw,22px)/1.33 var(--font-head);background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.42) 55%,rgba(0,0,0,0) 100%);text-shadow:0 1px 2px rgba(0,0,0,.35)}
-/* бейдж со счётчиком фото на карточке альбома (правый верхний угол) */
+
 .li-count{position:absolute;top:12px;right:12px;padding:4px 10px;color:#fff;font:400 12px/1.2 var(--font-body);letter-spacing:.04em;background:rgba(0,0,0,.6);border-radius:20px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-/* бейдж страницы на карточке (1.9.77): плашка в левом верхнем углу обложки —
-   «35 мм плёнка», «новое»; оформлена как счётчик фото, но слева. Запас по ширине
-   (100% − 90px) и многоточие: длинный бейдж не наезжает на счётчик фото справа (1.9.78) */
+
 .li-badge{position:absolute;top:12px;left:12px;padding:4px 10px;color:#fff;font:400 12px/1.2 var(--font-body);letter-spacing:.04em;background:rgba(0,0,0,.6);border-radius:20px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);max-width:calc(100% - 90px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* короткое описание под заголовком карточки (поле «Короткое описание» страницы) */
+
 .li-sub{display:block;margin-top:4px;font:400 14px/1.4 var(--font-body);opacity:.85}
-/* карточка без обложки (1.9.60): белый текст поверх серой заглушки не читался.
-   Делаем «пустую» карточку осознанной: нейтральная заливка, заголовок цветом текста по центру */
+
 .li-empty .li-media{background:var(--line)}
 .li-empty .li-title{top:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;color:var(--text);background:none;text-shadow:none}
 .li-empty:hover .li-media{background:var(--bg)}
 .related-title{margin:0;font-size:20px}
-/* «Другие работы» — тихая полоса горизонтальных карточек, отделённая линией:
-   вертикальные 2:3 во всю ширину визуально «перекрикивали» сам альбом, а одна-две
-   карточки растягивались в огромный баннер. Заголовок под фото, без градиента поверх кадра */
+
 .related{border-top:1px solid var(--line);padding-top:44px}
 .related-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;margin-bottom:22px}
 .related-all{font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--muted)}
 .related-all:hover{color:var(--text)}
 .rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px 16px}
-/* карточек мало (1–2) — не даём им растягиваться на всю строку */
+
 @media (min-width:701px){.rel-grid{grid-template-columns:repeat(auto-fill,minmax(200px,300px))}}
 .rel{display:block;text-decoration:none}
 .rel-media{position:relative;display:block;aspect-ratio:3/2;background:var(--c,#ddd);overflow:hidden}
@@ -267,28 +234,23 @@ a.ph:hover img{transform:scale(1.015)} /* единый сдержанный zoom
 .rel:hover .rel-title{text-decoration:underline;text-underline-offset:.18em}
 .rel-meta{display:block;margin-top:3px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 
-/* лайтбокс */
+
 .lb{position:fixed;inset:0;z-index:1000;background:rgba(8,8,8,.94);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s}
 .lb.on{opacity:1}
-/* 100dvh после 100vh: на iOS vh включает область за адресной строкой, нижний край кадра
-   и подпись уезжали под тулбар (ревизия 1.9.35, п.7) */
+
 .lb img{max-width:100vw;max-height:100vh;max-height:100dvh;width:auto;height:auto;object-fit:contain;user-select:none;transition:opacity .25s ease,filter .35s ease}
-/* превью-кадр blur-up: миниатюра на весь экран с лёгким блюром, пока едет большой вариант (тест 1.9.50);
-   scale чуть больше 1 — размытые края не просвечивают фон */
+
 .lb img.lb-low{filter:blur(16px);transform:scale(1.04)}
-/* круглая подложка кнопкам: на светлом кадре у края экрана «голая» стрелка терялась (1.9.28).
-   Подложка плотнее и без полупрозрачности самой кнопки (аудит 1.9.78): rgba(0,0,0,.28) с
-   opacity:.7 давал белой иконке контраст ~1.6:1 на светлых фото — ниже нормы WCAG для UI */
+
 .lb button{position:absolute;width:52px;height:52px;padding:12px;border-radius:50%;background:rgba(0,0,0,.55);border:0;color:#fff;cursor:pointer}
 .lb button:hover{background:rgba(0,0,0,.75)}
 .lb-close{top:0;right:0}.lb-prev{left:0;top:50%;transform:translateY(-50%)}.lb-next{right:0;top:50%;transform:translateY(-50%)}
-/* «Скачать» (1.9.58): слева сверху, зеркально крестику; те же подложка и поведение, что у кнопок просмотра */
+
 .lb-dl{position:absolute;top:0;left:0;width:52px;height:52px;padding:12px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none}
 .lb-dl:hover{background:rgba(0,0,0,.75)}
-/* выключенное скачивание (1.9.59): фото нельзя перетащить на рабочий стол,
-   а на iOS долгий тап не открывает меню «Сохранить изображение» */
+
 body[data-no-save] .ph img,body[data-no-save] .lb img,body[data-no-save] .slides-item img{-webkit-user-drag:none;-webkit-touch-callout:none}
-/* тень у белого текста: на светлых кадрах подпись и счётчик не читались (ревизия 1.9.35, п.7) */
+
 .lb-count{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;opacity:.6;font-size:12px;letter-spacing:.1em;text-shadow:0 1px 3px rgba(0,0,0,.85)}
 body.lb-open{overflow:hidden}
 
@@ -296,21 +258,16 @@ body.lb-open{overflow:hidden}
 .to-top:not([hidden]){display:flex}
 .admin-link{position:fixed;left:12px;bottom:12px;z-index:30;background:#111;color:#fff;font:12px/1 system-ui,sans-serif;padding:9px 12px;border-radius:0;text-decoration:none;opacity:.85}
 
-/* блог (wiki-заметки) */
-/* крошки успокоены (1.9.28): капс+разрядка оставлены только меню и мелким мета-лейблам,
-   на русском читается заметно легче */
+
+
 .crumbs{font-size:12px;letter-spacing:.04em;text-transform:none;color:var(--muted);margin-bottom:14px}
 .crumbs a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
 .crumbs a:hover{color:var(--text);border-color:var(--text)}
 .crumbs span{margin:0 .4em}
 .post,.blog-list{max-width:700px;margin:0 auto}
-/* шапка раздела и хлебные крошки выровнены по колонке текста */
+
 .type-blog .crumbs,.type-post .crumbs,.type-blog .page-title,.blog-desc{max-width:700px;margin-left:auto;margin-right:auto}
-/* 1.9.16: на десктопе колонка блога центрировалась в .main — между меню и текстом возникала
-   мёртвая полоса в ~260 px, и левая «зона меню» на глаз становилась шире, чем на страницах
-   галерей, где контент начинается сразу после сайдбара. Прижимаем колонку к общей левой оси —
-   той, по которой начинаются галереи и тексты страниц: меню выглядит одинаково везде.
-   На экранах ≤900 px (планшет/телефон) центрирование сохраняется. */
+
 @media (min-width:901px){
   .post,.blog-list,.backlinks,.post-nav,.post-back,.pager,.share,
   .type-blog .crumbs,.type-post .crumbs,.type-blog .page-title,.blog-desc{margin-left:0;margin-right:0}
@@ -322,14 +279,12 @@ body.lb-open{overflow:hidden}
 .post-body>.sec:first-child{margin-top:var(--sp,48px)}
 .post-body h2{margin-top:1.8em}.post-body h3{margin-top:1.5em}
 .post-meta{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:-16px 0 26px}
-/* мета-строка над заголовком (1.9.77, blog_post_meta): чипс рубрики + дата, как в крупных блогах */
+
 .post-meta-top{margin:0 0 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .pm-chip{display:inline-block;padding:5px 12px;font:400 11px/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--text);background:var(--line);border-radius:20px;text-decoration:none;transition:background .2s}
 .pm-chip:hover{background:var(--muted);color:var(--bg)}
 .pm-sep{opacity:.5}
-/* кнопки «Поделиться» (1.9.77, share_buttons). Блок ограничен текстовой колонкой 700px:
-   при выключенной мета-строке он выводится ПОСЛЕ </article> и раньше тянулся на всю
-   ширину (аудит 1.9.78); на десктопе классической темы отступы сбрасывает медиа-запрос выше */
+
 .share{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:700px;margin:0 auto 26px;font:400 12px/1.2 var(--font-body);color:var(--muted)}
 article.post + .share{margin:26px auto 0}
 .share-l{letter-spacing:.04em}
@@ -350,20 +305,15 @@ article.post + .share{margin:26px auto 0}
 .bp-ex{margin:0;color:var(--muted)}
 .post-body code{background:var(--line);padding:.1em .4em;border-radius:0;font-size:.9em}
 .post-body hr{border:0;border-top:1px solid var(--line);margin:2em 0}
-/* поля одиночного фото: в заметках — ритм текста (1.4em), в секциях страниц — только
-   классы sp-*: иначе sp-none не давал нулевого зазора, а первое фото страницы стояло
-   ниже заголовка на лишние ~22 px (ревизия 1.9.35, п.12). Горизонтальное auto — центрирование
-   вариантов «Среднее/Компактное» — сохраняется в обоих контекстах. */
+
 .post-body .pp{margin:1.4em auto}
 .sec-photo .pp{margin:0 auto}
 .sec-photo{display:flow-root}
 .post-body .pg{margin:1.4em 0;gap:var(--gap)}
-/* одиночное фото: готовые варианты размещения (единые для блога и страниц) */
+
 .pp--medium{max-width:72%}
 .pp--small{max-width:50%}
-/* обтекание — только на широком экране и ПОСЛЕ базовых полей (порядок решает при равной
-   специфичности 0,2,0): раньше .pp--left{margin-right:…} (0,1,0) проигрывало
-   .post-body .pp{margin:1.4em auto} (0,2,0), и текст лип к фото вплотную (ревизия 1.9.35, п.1) */
+
 @media (min-width:701px){
   .sec-photo.sec-photo-float{display:block;clear:both}
   .sec-photo-float + .sec:not(.sec-text){clear:both}
@@ -372,7 +322,7 @@ article.post + .share{margin:26px auto 0}
   .post-body .pp--right,.sec-photo .pp--right{float:right;margin:.2em 0 .8em 1.6em}
 }
 .pp figcaption{margin-top:8px;font-size:13px;color:var(--muted);text-align:center}
-/* полноширинные варианты и заголовки не «наезжают» на боковые фото */
+
 .pp--wide,.pp--medium,.pp--small,.post-body h2,.post-body h3,.post-body h4,.post-body .pg{clear:both}
 main::after,.post-body::after{content:'';display:block;clear:both}
 @media (max-width:700px){
@@ -396,51 +346,46 @@ a.wiki-new{cursor:pointer}
 .pager a{padding:10px 18px;border:1px solid var(--text);text-decoration:none;font-size:12px;letter-spacing:.12em;text-transform:uppercase;transition:background .2s,color .2s}
 .pager a:hover{background:var(--text);color:var(--bg)}
 .pager-now{color:var(--muted);font-size:12px;letter-spacing:.08em}
-/* номера страниц между стрелками: компактные, без рамок и верхнего регистра */
+
 .pager-nums{display:flex;align-items:center;gap:4px}
 .pager-nums a{padding:6px 9px;border:1px solid var(--line-ui);font-size:13px;letter-spacing:0;text-transform:none}
 .pager-nums a:hover{background:var(--text);color:var(--bg);border-color:var(--text)}
 .pager-nums .pager-now{padding:6px 9px;font-size:13px;color:var(--text);font-weight:600}
 .pager-gap{color:var(--muted)}
-/* узкие экраны: номера уезжают на свою строку, иначе «← Новее» + 7 номеров + «Раньше →»
-   распирают блок на 360–420px (переполнение найдено аудитом дизайна 1.9.38) */
+
 @media (max-width:620px){
   .pager-nums{order:3;flex-basis:100%;justify-content:center;margin-top:4px}
 }
-/* содержание длинной заметки */
+
 .toc{margin:0 0 2em;padding:16px 22px;border:1px solid var(--line);font-size:15px;line-height:1.5}
 .toc-title{font:400 11px/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .toc ul{margin:0;padding:0;list-style:none}.toc li{margin:5px 0}.toc li.l3{margin-left:1.2em;font-size:14px}.toc li.l3::before{content:'— ';color:var(--muted)}
 .toc a{text-decoration:none;border-bottom:1px solid var(--line)}.toc a:hover{border-color:var(--text)}
-/* список рядом с плавающим фото не уходит под него вместе с маркерами */
+
 .post-body ol,.post-body ul{padding-left:1.4em;display:flow-root}
 .post-body .toc ul{padding-left:0}
 .post-body li{margin:.25em 0}
 
-/* --- типографика (ревизия 1.9.35): пп. 6 и 11 ---
-   Служебные подписи — не мельче 12 px: кириллица капсом с разрядкой при 10,5–11 px
-   читалась тяжело. Селекторы те же, что у базовых правил выше, но позже — побеждают. */
+
 .fcol-title,.post-meta,.related-all,.rel-meta,.pn span,.toc-title,.album-count{font-size:var(--fs-label)}
-/* колонка 700 px при 18 px даёт ~70–75 знаков в строке — комфортный ритм чтения */
+
 .sec-text.w-narrow .wysiwyg,.post-body{font-size:calc(18px * var(--t-scale));line-height:1.7}
-/* настоящее начертание 600 (подключено в fonts.css с 1.9.36) вместо синтетического
-   «утолщения» 500 — грязные размазанные штрихи в выделениях (ревизия 1.9.35, п.6) */
+
 .wysiwyg strong,.wysiwyg b{font-weight:600}
 
-/* планшет и телефон */
+
 @media (max-width:900px){
   .layout{display:block}
   .sidebar{position:sticky;top:0;z-index:40;width:auto;max-height:none;padding:10px 16px;overflow:visible;background:var(--bg);border-bottom:1px solid var(--line)}
-  /* 100dvh: адресная строка мобильного браузера съедала часть 100vh, и нижние пункты
-     меню уходили за край. 100vh оставлен как запасной вариант для старых браузеров */
+
   .nav-open .sidebar{max-height:100vh;max-height:100dvh;overflow:auto}
-  body.nav-open{overflow:hidden} /* страница под открытым меню не прокручивается */
+  body.nav-open{overflow:hidden}
   .nav-open .nav{max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
-  /* якоря (содержание заметки) не должны прятаться под липкой шапкой ~60px */
+
   [id]{scroll-margin-top:84px}
   .sb-bar{display:flex;align-items:center;justify-content:space-between}
   .brand{margin:0}
-  /* в липкой шапке телефона логотип прижат к высоте строки, рядом с надписью — в одну линию */
+
   .brand-logo{max-height:40px}
   .brand-both{display:flex;align-items:center;gap:12px}
   .brand-both .brand-logo{margin-bottom:0}
@@ -448,22 +393,20 @@ a.wiki-new{cursor:pointer}
   .burger{display:inline-flex;background:none;border:0;padding:10px;margin:-4px -8px -4px 0;color:var(--text);cursor:pointer}
   .nav{display:none;padding:12px 0 6px}
   .nav-open .nav{display:block}
-  /* открытое меню — карточка с фоном, тенью и разделителями, а не «голый» список под логотипом (1.9.23) */
+
   .nav-open .nav{margin:10px 0 6px;padding:8px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.14)}
-  /* без частых разделителей: длинное меню выглядело «настройками приложения»;
-     editorial-вариант — воздух вместо линеек (визуальный аудит 1.9.28, находка 4) */
+
   .nav-open .menu li+li{border-top:0}
   .nav-open .menu a{display:block}
-  .menu a,.menu .cat{font-size:15px;padding:14px 0} /* тап-цель ~47px + вертикальный воздух */
-  .main{padding:16px 16px 0} /* заголовок и крошки не липнут к шапке (ревизия 1.9.35, п.15) */
+  .menu a,.menu .cat{font-size:15px;padding:14px 0}
+  .main{padding:16px 16px 0}
   .listing{grid-template-columns:repeat(2,1fr)}
   .li-title{font-size:18px;padding:32px 12px 12px}
   .sec-text{padding:0 2px}
   .sp-lg{--sp:56px}
   .footer-cols{gap:20px 24px}
   .fcol{flex:0 0 calc(50% - 12px);min-width:0}
-  /* тач-цели (аудит 1.9.78): чипсы рубрик, кнопки «Поделиться», номера страниц
-     и ссылки подвала были ~22–30 px высоты — увеличиваем отступы под палец */
+
   .pm-chip{padding:10px 14px}
   .share-b{padding:11px 16px}
   .pager-nums a{padding:10px 12px}
@@ -475,41 +418,38 @@ a.wiki-new{cursor:pointer}
   .post-nav{grid-template-columns:1fr}.pn-next{grid-column:auto}
   .post-body{font-size:calc(16.5px * var(--t-scale))}
   .to-top{right:12px;bottom:12px}
-  /* крошки переносятся по строкам вместо горизонтальной прокрутки внутри страницы (1.9.28) */
+
   .crumbs{white-space:normal;line-height:1.5}
   .crumbs [aria-current]{max-width:100%;overflow:visible;text-overflow:clip}
 }
 @media (max-width:480px){
   .listing{grid-template-columns:1fr}
-  /* «Другие работы»: по две компактные карточки в ряд */
+
   .rel-grid{grid-template-columns:repeat(2,1fr);gap:16px 12px}
   .rel-title{font-size:14px}
   .btn{min-height:46px;padding:10px 24px}
 }
-/* reduced-motion: анимации выключены → mshow никогда не сработает, и галерея осталась бы
-   невидимой без JS — показываем принудительно (визуальный аудит 1.9.28, находка 1) */
+
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}.masonry{visibility:visible!important}}
 
-/* лайтбокс: плавная подмена кадра, скрытые стрелки у одиночного фото */
+
 .lb img{touch-action:pan-y pinch-zoom}
 .lb button[hidden],.lb-count[hidden]{display:none}
 .lb button:focus-visible,.lb-dl:focus-visible{outline:2px solid #fff;outline-offset:-4px}
-/* тап по фото прячет/возвращает управление (у портретных кадров чёрного фона почти нет).
-   visibility в transition — с задержкой: скрытый UI уходит из таб-порядка после затухания (1.9.78) */
+
 .lb button,.lb-count,.lb-cap,.lb-dl{transition:opacity .2s,visibility 0s .2s}
 .lb-ui-off button,.lb-ui-off .lb-count,.lb-ui-off .lb-cap,.lb-ui-off .lb-dl{opacity:0;pointer-events:none}
-/* opacity:0 сам по себе фокусируемость не отменяет: скрытые кнопки не должны оставаться
-   в таб-порядке (аудит 1.9.78). Счётчик и подпись (aria-live) не трогаем — они не фокусируемы */
+
 .lb-ui-off button,.lb-ui-off .lb-dl{visibility:hidden}
 .lb-cap{position:absolute;left:0;right:0;bottom:38px;text-align:center;color:#fff;opacity:.9;font-size:14px;padding:0 48px;text-shadow:0 1px 3px rgba(0,0,0,.85)}
-/* спиннер загрузки: при медленной сети чёрный экран не выглядит «зависшим» (1.9.23) */
+
 .lb-spin{position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
   border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:lbspin .8s linear infinite}
 .lb-spin[hidden]{display:none}
 @keyframes lbspin{to{transform:rotate(360deg)}}
 .lb-cap:empty{display:none}
 
-/* ---------- форма связи, вопросы и ответы, видео (1.9.48) ---------- */
+
 .sec-contact,.sec-faq{max-width:700px;margin-left:auto;margin-right:auto}
 .cf-h,.faq-h{margin:0 0 .5em;font-family:var(--font-head);font-weight:400;text-align:center}
 .cf-intro{margin:0 0 1.6em;color:var(--muted);text-align:center}
@@ -521,7 +461,7 @@ a.wiki-new{cursor:pointer}
 .cform textarea{resize:vertical}
 .cform .btn{justify-self:center;margin-top:4px}
 .cf-hint{margin:0;font-size:13px;color:var(--muted)}
-/* ловушка для ботов: поле «company» вынесено за экран — люди его не видят и не заполняют */
+
 .cf-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .cf-note{margin:0 0 20px;padding:14px 18px;border:1px solid var(--line);text-align:center}
 .cf-note.err{border-color:#b23b2e;color:#b23b2e}
@@ -534,59 +474,49 @@ a.wiki-new{cursor:pointer}
 .faq-q::after{content:'+';position:absolute;right:4px;top:14px;font-size:24px;line-height:1;color:var(--muted)}
 .faq-i[open] .faq-q::after{content:'−'}
 .faq-a{padding:0 34px 20px 0;color:var(--muted);line-height:1.65}
-/* Пакеты и цены (1.9.63) */
+
 .sec-pricing{max-width:900px;margin-left:auto;margin-right:auto}
 .pricing-h{margin:0 0 .5em;font-family:var(--font-head);font-weight:400;text-align:center}
 .pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
 .price-card{display:flex;flex-direction:column;gap:10px;padding:22px 22px 24px;border:1px solid var(--line);color:var(--text);text-decoration:none;transition:border-color .2s}
 a.price-card:hover{border-color:var(--text)}
-/* фото карточки (1.9.69): на всю ширину поверх отступов, кадр 4:5 с фокусной точкой.
-   picture тоже растягиваем (1.9.71): иначе height:100% у img считается от строчного
-   <picture> без высоты и пейзажный кадр занимает только верх контейнера */
+
 .price-img{margin:-22px -22px 4px;display:block;aspect-ratio:4/5;overflow:hidden;background:var(--line)}
 .price-img picture,.price-img img{width:100%;height:100%}
 .price-img img{object-fit:cover}
 .price-name{font-family:var(--font-head);font-size:19px;line-height:1.3}
 .price-val{font-size:15px;letter-spacing:.04em}
-/* длительность пакета рядом с ценой (1.9.76): «от 30 000 ₽ · 8 часов» — приглушённым, как описание */
+
 .price-dur{color:var(--muted);letter-spacing:0}
 .price-desc{font-size:13px;line-height:1.6;color:var(--muted)}
 .sec-video video{display:block;width:100%;height:auto;aspect-ratio:var(--ar,16/9);background:#000}
 .sec-video .pp{margin:0 auto}
 
-/* «Углы у фотографий» → «Прямые» (настройка оформления, 1.9.70): нулевой радиус
-   на всех фото и обложках. Радиус в яблочной теме обнуляет theme-apple.css через
-   --radius. Рамку специально не рисуем (1.9.71): без неё чище и на фото, и на пакетах. */
+
 body.corners-square .ph,
 body.corners-square .li-media,
 body.corners-square .bp-thumb,
 body.corners-square .rel-media,
 body.corners-square .sec-video video{border-radius:0}
 
-/* ===== «Отпечаток» (1.9.83): несовершенство как следы печати, а не плёнки =====
-   Зерно на фото убрано: сканы с настоящей плёнки уже зернистые, имитировать её
-   поверх значит подделывать настоящее. Остаются бумага на фоне и карточки-
-   отпечатки с неровными полями; случайность стабильна (fx_vars в app/render.php),
-   никакой анимации шума и JS. */
 
-/* — бумага: тёплый тон + неравномерная экспозиция + зерно. Слой ПОЗАДИ контента
-     (z-index:-1: фон body уходит на canvas, слой лежит над ним и под контентом),
-     скроллится вместе со страницей, текст и фото не затрагивает. */
+
+
 body.fx-grain{
   --grain-paper:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E");
   position:relative;
   background:var(--bg);
-  background:color-mix(in srgb,var(--bg) 94%,#d9c49b);   /* тёплая бумага от вашего --bg */
+  background:color-mix(in srgb,var(--bg) 94%,#d9c49b);
 }
 body.fx-grain::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(120% 55% at 15% 0,rgba(255,255,255,.55),transparent 60%),   /* пересвет */
-    radial-gradient(90% 50% at 92% 100%,rgba(110,80,30,.07),transparent 60%),   /* недосвет */
+    radial-gradient(120% 55% at 15% 0,rgba(255,255,255,.55),transparent 60%),
+    radial-gradient(90% 50% at 92% 100%,rgba(110,80,30,.07),transparent 60%),
     var(--grain-paper);
   background-size:auto,auto,320px 320px;
   mix-blend-mode:multiply}
 
-/* — «Отпечаток»: карточки как отпечатки на фотобумаге с неровными белыми полями */
+
 body.fx-lofi{--kr:0}
 body.fx-lofi-print{--kr:1}
 body.fx-lofi .listing{counter-reset:fr;gap:34px 22px}
@@ -598,8 +528,8 @@ body.fx-lofi .li{
   box-shadow:0 1px 1px rgba(70,50,20,.10),0 8px 16px -8px rgba(70,50,20,.28);
   transform:rotate(calc(var(--jr,0deg) * var(--kr)));
   transition:transform .35s ease,box-shadow .35s ease}
-body.fx-lofi .li .li-media{border-radius:0}   /* скруглённого фото на квадратном листе не бывает */
-/* карандашный номер на нижнем поле; alt-текст "" — скринридер не читает */
+body.fx-lofi .li .li-media{border-radius:0}
+
 body.fx-lofi .li::after{
   content:"№ " counter(fr,decimal-leading-zero);
   content:"№ " counter(fr,decimal-leading-zero) / "";
@@ -612,7 +542,7 @@ body.fx-lofi .li::after{
 @media (max-width:700px){body.fx-lofi .li{margin-top:0}}
 @media (prefers-reduced-motion:reduce){body.fx-lofi .li{transition:none}}
 
-/* — «Печать»: восковой карандаш вокруг кнопок с контурным стилем (цвет из --fx-pencil, 1.9.86) */
+
 body.fx-lofi-print .btn-outline{position:relative;border-color:transparent;padding-left:34px;padding-right:34px}
 body.fx-lofi-print .btn-outline::after{
   content:"";position:absolute;inset:-9px -16px;pointer-events:none;
@@ -623,13 +553,13 @@ body.fx-lofi-print .btn-outline::after{
 @media print{body.fx-grain::before{display:none}
   body.fx-lofi .li{box-shadow:none;transform:none}body.fx-lofi .li::after{display:none}}
 
-/* ===== Регуляторы «Экспериментов» (1.9.84) ===== */
 
-/* — тон бумаги: чистая и кремовая отклонения от тёплой по умолчанию */
+
+
 body.fx-tone-clean{background:color-mix(in srgb,var(--bg) 97%,#d9c49b)}
 body.fx-tone-cream{background:color-mix(in srgb,var(--bg) 88%,#d9c49b)}
 
-/* — сила зернистости бумаги */
+
 body.fx-gs-soft::before{opacity:.6}
 body.fx-gs-strong::before{background:
     radial-gradient(120% 55% at 15% 0,rgba(255,255,255,.55),transparent 60%),
@@ -637,39 +567,36 @@ body.fx-gs-strong::before{background:
     var(--grain-paper),var(--grain-paper);
   background-size:auto,auto,320px 320px,260px 260px}
 
-/* — отключённые детали отпечатка */
+
 body.fx-lofi.fx-nonum .li::after{display:none}
 @media (hover:hover){
   body.fx-lofi.fx-nohover .li:hover{transform:rotate(calc(var(--jr,0deg) * var(--kr)));box-shadow:0 1px 1px rgba(70,50,20,.10),0 8px 16px -8px rgba(70,50,20,.28)}}
 
-/* — рамки-отпечатки у фото в текстах и штатных одиночных фото-секциях.
-     Галереи оформляет fx-gp, контактные листы и лайтбокс здесь не трогаем. */
+
 body.fx-pf :is(.wysiwyg,.sec-photo) img{
   background:#fffdf9;padding:var(--pt,8px) var(--pr,8px) var(--pb,32px) var(--pl,8px);border-radius:0;
   box-shadow:0 1px 1px rgba(70,50,20,.10),0 8px 16px -8px rgba(70,50,20,.28);
-  transform:rotate(calc(var(--jr,0deg) * .6))}   /* лёгкий наклон рамок в текстах (1.9.86) */
+  transform:rotate(calc(var(--jr,0deg) * .6))}
 @media print{body.fx-pf :is(.wysiwyg,.sec-photo) img{padding:0;box-shadow:none}}
 
-/* ===== Эксперименты 1.9.85: галереи-отпечатки, маркер, карандашные ссылки, рукописный шрифт ===== */
+
 
 /* рукописный шрифт пометок (Neucha, OFL) */
 body.fx-hand-neucha{--fx-hand:"Neucha",cursive}
 body.fx-hand-neucha .li::after{font-size:16px;font-style:normal}
 
-/* — галереи-отпечатки: каждое фото в альбоме — отпечаток с белыми полями и тенью.
-     Поля/наклон из seed фото (fx_vars в photo_html), наклон только в режиме «Печать».
-     Без номеров кадров (ревизия владельца 1.9.85): в галерее они шумели. */
+
 body.fx-gp :is(.grid-gallery,.lineup,.masonry) .ph{
   position:relative;
   background:#fffdf9;
   padding:var(--pt,8px) var(--pr,8px) var(--pt,8px) var(--pl,8px);
   box-shadow:0 1px 1px rgba(70,50,20,.10),0 8px 16px -8px rgba(70,50,20,.28);
   transform:rotate(calc(var(--jr,0deg) * var(--kr,0)))}
-/* радиус у яблочной темы задан позже и с той же специфичностью — бьём через :is() */
+
 body.fx-gp :is(.grid-gallery,.lineup,.masonry) .ph{border-radius:0}
 body.fx-gp .ph img{border-radius:0}
 
-/* — заголовки, выделенные маркером (H2/H3 в текстах страниц и заметках) */
+
 body.fx-marker-red{--fx-marker:rgba(196,64,42,.20)}
 body.fx-marker-graphite{--fx-marker:rgba(60,60,60,.14)}
 body.fx-marker :is(.wysiwyg,.post-body) :is(h2,h3){
@@ -677,17 +604,16 @@ body.fx-marker :is(.wysiwyg,.post-body) :is(h2,h3){
   background-position:0 .68em;background-size:100% .48em;background-repeat:no-repeat;
   padding:0 .12em}
 
-/* — карандашное волнистое подчёркивание ссылок в текстах (цвет из --fx-pencil, 1.9.86) */
+
 body.fx-lp :is(.wysiwyg,.post-body) a:not([class]){
   text-decoration:underline wavy var(--fx-pencil,#c4402a) 1.5px;text-underline-offset:3px}
 
 @media print{
   body.fx-gp .ph{box-shadow:none;transform:none}}
 
-/* ===== Эксперименты 1.9.86: плёночная тема, скотч, засветка, LED-дата, контактный лист ===== */
 
-/* — скотч с рваными краями на карточках и фото галерей (--tape из seed, у ~1/5).
-     С 1.9.97 работает на любой теме, без зависимости от «отпечатков» */
+
+
 body.fx-tape .li::before,
 body.fx-tape :is(.grid-gallery,.lineup,.masonry) .ph::before{
   content:"";position:absolute;top:-9px;left:50%;width:74px;height:22px;z-index:2;
@@ -695,27 +621,25 @@ body.fx-tape :is(.grid-gallery,.lineup,.masonry) .ph::before{
   background:linear-gradient(rgba(255,246,205,.8),rgba(244,232,180,.72));
   box-shadow:0 1px 2px rgba(0,0,0,.18);
   clip-path:polygon(0 0,100% 0,98% 25%,100% 50%,98% 75%,100% 100%,0 100%,2% 75%,0 50%,2% 25%)}
-/* базовый .ph режет выступающее (overflow:hidden): со скотчем отпускаем край,
-   а hover-zoom фото гасим, чтобы оно не вылезало за поля отпечатка (1.9.93) */
+
 body.fx-tape :is(.grid-gallery,.lineup,.masonry) .ph{overflow:visible}
 body.fx-tape :is(.grid-gallery,.lineup,.masonry) a.ph:hover img{transform:none}
 
-/* — засветка плёнки: тёплый уголок на обложках и фото галерей (--leak из seed, у ~1/5) */
+
 body.fx-leak.fx-lofi .li-media::before,
 body.fx-leak.fx-gp :is(.grid-gallery,.lineup,.masonry) .ph::after{
   content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:var(--leak,0);
   background:linear-gradient(105deg,transparent 55%,rgba(255,180,90,.55) 78%,rgba(255,120,40,.75) 92%,rgba(255,200,120,.5))}
 body.fx-leak.fx-gp :is(.grid-gallery,.lineup,.masonry) .ph::after{inset:var(--pt,8px) var(--pr,8px) var(--pt,8px) var(--pl,8px)}
 
-/* — LED-штамп даты съёмки (fx_datestamp). Отступы считаются от полей отпечатка
-     (--pr/--pt), чтобы штамп стоял НА изображении, а не съезжал на белое поле (1.9.87) */
+
 .ph-date{
   position:absolute;right:calc(var(--pr,0px) + 6px);bottom:calc(var(--pt,0px) + 5px);z-index:2;pointer-events:none;
   font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;
   color:#ff9d3c;text-shadow:0 0 3px rgba(255,120,0,.5)}
-/* контактный лист: собственные поля рамки плёнки (16px снизу) */
+
 .contactsheet .ph-date{right:10px;bottom:19px}
-/* угол штампа (1.9.87) */
+
 body.fx-ds-lb .ph-date{right:auto;left:calc(var(--pl,0px) + 6px)}
 body.fx-ds-lb .contactsheet .ph-date{left:10px}
 body.fx-ds-rt .ph-date{bottom:auto;top:calc(var(--pt,0px) + 5px)}
@@ -723,17 +647,16 @@ body.fx-ds-lt .ph-date{right:auto;left:calc(var(--pl,0px) + 6px);bottom:auto;top
 body.fx-ds-lt .contactsheet .ph-date{left:10px}
 body.fx-ds-rt .contactsheet .ph-date,
 body.fx-ds-lt .contactsheet .ph-date{top:19px}
-/* размер и цвет (1.9.87) */
+
 body.fx-ds-small .ph-date{font-size:9px}
 body.fx-ds-large .ph-date{font-size:14px}
 body.fx-ds-red .ph-date{color:#ff5a3c;text-shadow:0 0 3px rgba(255,60,20,.5)}
 body.fx-ds-yellow .ph-date{color:#ffd23c;text-shadow:0 0 3px rgba(255,190,0,.5)}
 body.fx-ds-white .ph-date{color:rgba(255,255,255,.92);text-shadow:0 0 3px rgba(0,0,0,.4)}
-/* одиночные фото в текстах с рамкой-отпечатком (fx-pf): белые поля заданы padding'ом
-   самого img, нижнее поле крупное (--pb) — штамп поднимаем над ним, на изображение (1.9.93) */
+
 body.fx-pf :is(.wysiwyg,.sec-photo) .ph .ph-date{bottom:calc(var(--pb,32px) + 5px)}
 
-/* — раскладка «контактный лист»: плотная сетка миниатюр в рамках плёнки с перфорацией */
+
 .contactsheet{display:grid;grid-template-columns:repeat(var(--cols,5),1fr);gap:8px;counter-reset:cs}
 @media (max-width:700px){.contactsheet{grid-template-columns:repeat(var(--cols-m,3),1fr)}}
 .contactsheet .ph{
@@ -748,25 +671,22 @@ body.fx-pf :is(.wysiwyg,.sec-photo) .ph .ph-date{bottom:calc(var(--pb,32px) + 5p
   position:absolute;top:1px;right:8px;z-index:2;pointer-events:none;
   font:500 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.15em;
   color:rgba(255,157,60,.9)}
-/* галереи-отпечатки и скотч/засветка на контактном листе не действуют: рамка плёнки важнее */
+
 body.fx-gp .contactsheet .ph{background-color:#141414;padding:16px 5px;box-shadow:none;transform:none}
 body.fx-tape .contactsheet .ph::before{content:counter(cs,decimal-leading-zero) "A" / ""}
 @media print{.contactsheet .ph{background-color:#fff;background-image:none;padding:0}}
 
-/* ===== Эксперименты 1.9.91: неряшливость заголовков =====
-   Лёгкие наклоны только заголовков H1–H4, как неровная печать.
-   Абзацы, списки и цитаты не наклоняются: мелкий текст от поворота размывается (1.9.95). */
+
 body.fx-td-soft{--tdr:.2deg;--tdx:1px}
 body.fx-td-wild{--tdr:.35deg;--tdx:2px}
-/* Неряшливость — только заголовки (1.9.95): наклонный мелкий текст размывается
-   субпиксельно, поэтому абзацы, списки и цитаты всегда остаются ровными и чёткими */
+
 body.fx-td .page-title{transform:rotate(calc(var(--tdr) * -.6))}
 body.fx-td :is(.wysiwyg,.post-body) h2{transform:rotate(calc(var(--tdr) * -1))}
 body.fx-td :is(.wysiwyg,.post-body) h3{transform:rotate(var(--tdr))}
 body.fx-td :is(.wysiwyg,.post-body) h4{transform:rotate(calc(var(--tdr) * -.5)) translateX(var(--tdx))}
 @media print{body.fx-td :is(.page-title,.wysiwyg,.post-body) :is(h2,h3,h4){transform:none}}
 
-/* ===== 1.9.96: данные съёмки под заголовком альбома и раскладка «Развеска» ===== */
+
 .shoot-note{margin:-6px 0 18px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   letter-spacing:.04em;color:var(--muted)}
 

@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
-/**
- * Импорт сайта с конструктора wfolio по сохранённым HTML-страницам.
- *
- *   php tools/import_wfolio.php /путь/к/папке_с_html [--dry-run] [--force] [--skip-images]
- *
- * Что делает:
- *  - читает страницы (главная, разделы, альбомы), их title/description, тексты, кнопки, карточки;
- *  - скачивает самые крупные версии всех фотографий и кладёт на ВАШ сервер (storage/originals),
- *    дальше сайт отдаёт их только со своего домена, в нужных размерах и в WebP;
- *  - строит страницы, меню, родителей альбомов, ссылки на соцсети, favicon и картинку для соцсетей.
- * Сначала установите сайт через install.php. Запуск повторно пропускает уже существующие страницы (без --force).
- */
+
+
+
+
+
+
+
+
+
+
+
+
 if (PHP_SAPI !== 'cli') {
     exit('Запускайте из командной строки: php tools/import_wfolio.php <папка с html>');
 }
@@ -85,7 +85,7 @@ function http_get(string $url, int $tries = 3): ?string
                 CURLOPT_USERAGENT => 'Mozilla/5.0 (site-migration)',
                 CURLOPT_MAXREDIRS => 5,
             ]);
-            /* только http/https (в том числе при редиректах): без этого curl согласится и на file://, ftp:// и т. п. */
+
             if (defined('CURLPROTO_HTTP') && defined('CURLPROTO_HTTPS')) {
                 curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
                 curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
@@ -93,13 +93,13 @@ function http_get(string $url, int $tries = 3): ?string
             curl_setopt($ch, CURLOPT_MAXFILESIZE, 200 * 1048576);
             $body = curl_exec($ch);
             $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            unset($ch); // curl_close() объявлен deprecated в PHP 8.5; с 8.0 дескриптор — объект и освобождается сам (аудит 1.9.40, п.19)
+            unset($ch);
             if ($body !== false && $code === 200 && $body !== '') {
                 return (string)$body;
             }
         } else {
-            /* fallback без curl: только http(s) — иначе file_get_contents согласился бы и на
-               file:// (чтение локальных файлов через «адрес» из источника) (аудит 1.9.48, п.15) */
+
+
             if (!preg_match('~^https?://~i', $url)) {
                 return null;
             }
@@ -118,9 +118,9 @@ $imgCache = [];
 $imgFail = [];
 $imgCount = 0;
 
-/* slug заглушки из чужого path может быть невалидным для CMS (верхний регистр, кириллица,
-   точки): такая страница создалась бы недоступной по адресу (аудит 1.9.48, п.15) —
-   нормализуем, а при коллизии добавляем короткий суффикс */
+
+
+
 function imp_slug(string $raw, string $fallback): string
 {
     $s = valid_slug($raw) ? $raw : slugify($raw);
@@ -166,7 +166,7 @@ function imp_image(string $url, string $alt, string $name = ''): ?int
     return $imgCache[$url] = $id;
 }
 
-/** Из data-gallery-versions берём версию с наибольшим разрешением. */
+
 function best_version(DOMElement $a): ?string
 {
     $v = json_decode($a->getAttribute('data-gallery-versions'), true);
@@ -192,7 +192,7 @@ function pieces_of(DOMXPath $xp, DOMNode $root): array
         $img = $xp->query('.//img', $piece)->item(0);
         $alt = $img ? trim($img->getAttribute('alt')) : '';
         if (strpos($alt, ' | ') !== false) {
-            $alt = ''; // конструктор подставляет в alt заголовок страницы целиком — это не описание фото
+            $alt = '';
         }
         $list[] = ['src' => $src, 'alt' => $alt];
     }
@@ -275,7 +275,7 @@ function parse_page(string $file): ?array
         'favicon' => '',
     ];
 
-    // иконки
+
     foreach ($xp->query('//link[contains(@rel,"apple-touch-icon")]') as $l) {
         $pg['favicon'] = norm_url($l->getAttribute('href'));
     }
@@ -285,7 +285,7 @@ function parse_page(string $file): ?array
         }
     }
 
-    // разделы
+
     foreach ($xp->query('//section[' . has_class('section-container') . ']') as $s) {
         $cls = $s->getAttribute('class');
         if (strpos($cls, 'text-section') !== false) {
@@ -302,7 +302,7 @@ function parse_page(string $file): ?array
                 $ic = $xp->query('.//i', $a)->item(0);
                 $btns[] = [
                     'label' => trim($a->textContent),
-                    'url' => normalize_url(trim($a->getAttribute('href'))), // javascript:/data: из чужой вёрстки отбрасываются
+                    'url' => normalize_url(trim($a->getAttribute('href'))),
                     'icon' => $ic ? icon_from_class($ic->getAttribute('class')) : '',
                     'newtab' => $a->getAttribute('target') === '_blank',
                 ];
@@ -336,7 +336,7 @@ function parse_page(string $file): ?array
         }
     }
 
-    // альбом
+
     if ($pg['type'] === 'album') {
         $g = $xp->query('//div[' . has_class('album-grid') . ']')->item(0);
         if ($g) {
@@ -344,7 +344,7 @@ function parse_page(string $file): ?array
         }
     }
 
-    // меню (берём с любой страницы, где оно есть)
+
     $menu = $xp->query('//ul[' . has_class('menu-list') . ']')->item(0);
     if ($menu) {
         foreach ($xp->query('./li', $menu) as $li) {
@@ -360,7 +360,7 @@ function parse_page(string $file): ?array
         }
     }
 
-    // подвал
+
     foreach ($xp->query('//ul[' . has_class('social-links') . ']//a') as $a) {
         $pg['socials'][] = trim($a->getAttribute('href'));
     }
@@ -380,7 +380,7 @@ function rewrite_internal_links(string $html, string $host): string
     );
 }
 
-/* ---------- 1. читаем файлы ---------- */
+
 $files = [];
 foreach ($paths as $p) {
     if (is_dir($p)) {
@@ -419,7 +419,7 @@ foreach ($parsed as $pg) {
     break;
 }
 
-// меню, соцсети, подвал — с первой страницы, где они есть
+
 $menuSrc = [];
 $socials = [];
 $footerText = '';
@@ -439,7 +439,7 @@ if (isset($parsed['/'])) {
     $ogDefault = $parsed['/']['og_image'];
 }
 
-// заголовки страниц (для меню и списков)
+
 $menuTitles = [];
 foreach ($menuSrc as $n) {
     $p = $n['href'] ? path_of($n['href'], $host) : null;
@@ -494,7 +494,7 @@ if ($dry) {
     exit(0);
 }
 
-/* ---------- 2. создаём страницы ---------- */
+
 out("\nСоздаю страницы и скачиваю фотографии (точка = фото)…");
 $pos = (int)db_val('SELECT COALESCE(MAX(position), 0) FROM pages');
 $idBySlug = [];
@@ -507,8 +507,8 @@ usort($order, static fn($a, $b) => ($a === '/' ? 0 : 1) <=> ($b === '/' ? 0 : 1)
 
 foreach ($order as $path) {
     $pg = $parsed[$path];
-    /* адрес из чужой вёрстки приводим к правилам этой CMS: вложенные пути, заглавные буквы и служебные слова
-       дали бы недоступную или конфликтующую страницу */
+
+
     if (!$pg['is_home'] && (strpos($pg['slug'], '/') !== false || !valid_slug($pg['slug']))) {
         $skipped[] = $pg['path'] . ' (адрес недопустим для этой CMS: вложенный путь, заглавные буквы или служебное слово)';
         continue;
@@ -547,7 +547,7 @@ foreach ($order as $path) {
         }
     }
 
-    // чистим прежнее содержимое (для повторного запуска с --force)
+
     foreach (db_all("SELECT id FROM sections WHERE owner_type = 'page' AND page_id = ?", [$pid]) as $s) {
         db_run("DELETE FROM gallery_items WHERE owner_type = 'section' AND owner_id = ?", [$s['id']]);
     }
@@ -555,7 +555,7 @@ foreach ($order as $path) {
     db_run("DELETE FROM gallery_items WHERE owner_type = 'page' AND owner_id = ?", [$pid]);
 
     db_run(
-        'UPDATE pages SET type = ?, title = ?, seo_title = ?, seo_description = ?, updated_at = ? WHERE id = ?', /* is_published не трогаем: --force не должен публиковать черновики */
+        'UPDATE pages SET type = ?, title = ?, seo_title = ?, seo_description = ?, updated_at = ? WHERE id = ?',
         [$pg['type'], $title, $pg['title_tag'], $pg['description'], $t, $pid]
     );
     $idBySlug[$pg['slug']] = $pid;
@@ -612,7 +612,7 @@ foreach ($order as $path) {
     $created[] = $pg['path'];
 }
 
-/* ---------- 3. карточки разделов, заглушки для страниц, которых не было среди файлов ---------- */
+
 $stubs = [];
 foreach ($pendingListings as $pl) {
     $ids = [];
@@ -656,7 +656,7 @@ foreach ($pendingListings as $pl) {
     db_run('UPDATE sections SET data = ? WHERE id = ?', [json_encode($d, JSON_UNESCAPED_UNICODE), $pl['section']]);
 }
 
-/* ---------- 4. меню ---------- */
+
 function menu_target(string $href, string $host, array &$idBySlug, array &$stubs, string $title): array
 {
     $p = path_of($href, $host);
@@ -710,7 +710,7 @@ if ($menuSrc) {
     out("\nМеню перенесено: " . count($menuSrc) . ' пунктов верхнего уровня.');
 }
 
-/* ---------- 5. настройки сайта ---------- */
+
 $map = ['vk.' => 'social_vk', 'vkontakte' => 'social_vk', 't.me' => 'social_telegram', 'telegram' => 'social_telegram', 'instagram' => 'social_instagram', 'wa.me' => 'social_whatsapp', 'whatsapp' => 'social_whatsapp', 'youtube' => 'social_youtube'];
 foreach ($socials as $url) {
     foreach ($map as $needle => $key) {
@@ -744,7 +744,7 @@ if ($ogDefault !== '' && setting('default_og_image_id') === '') {
     }
 }
 
-/* ---------- итог ---------- */
+
 out("\n==================== ГОТОВО ====================");
 out('Страниц создано/обновлено: ' . count($created) . ', фото скачано на ваш сервер: ' . $imgCount);
 foreach ($skipped as $s) {

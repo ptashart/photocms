@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */ ?>
+<?php  ?>
 <section class="<?= sec_classes($sec, 'sec-html') ?>" id="s<?= (int)$sec['id'] ?>">
   <?= public_custom_code((string)$d['code']) ?>
 </section>

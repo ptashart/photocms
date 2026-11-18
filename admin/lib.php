@@ -5,7 +5,7 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
@@ -15,7 +15,7 @@ function a_url(string $p, array $q = []): string
     return admin_base() . '?' . http_build_query(['p' => $p] + $q);
 }
 
-/** Одноразовое значение для CSP: inline-скрипты админки без этого nonce браузер не выполнит. */
+
 function admin_csp_nonce(): string
 {
     static $n = null;
@@ -25,12 +25,12 @@ function admin_csp_nonce(): string
     return $n;
 }
 
-/**
- * Ключ логина для login_log: хэш, а не набранная строка. В поле «логин» люди по ошибке
- * вставляют и пароль — открытым текстом в базе ему не место (ревизия 1.9.34, п.12).
- * Счётчики по логину работают как раньше: одна строка → один хэш. Служебные ключи
- * («pwchange:ID» из Аккаунта) пишутся как есть — это не пользовательский ввод.
- */
+
+
+
+
+
+
 function login_log_key(string $login): string
 {
     return $login === '' ? '' : 'lh:' . hash('sha256', $login);
@@ -71,43 +71,43 @@ function login_attempt_reserve(string $ip, string $loginKey, string $login): boo
 function admin_login(): void
 {
     $err = '';
-    /* куда вернуться после входа: только внутренний путь админки, иначе open redirect */
+
     $returnRaw = $_GET['return'] ?? $_POST['return'] ?? '';
-    $return = is_string($returnRaw) ? $returnRaw : ''; // ?return[]=x — иначе «Array to string conversion» в журнал
+    $return = is_string($returnRaw) ? $returnRaw : '';
     $ab = admin_base();
     if (strncmp($return, $ab, strlen($ab)) !== 0 || strncmp($return, $ab . '/', strlen($ab) + 1) === 0) {
         $return = '';
     }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
-        /* IP берём через client_ip(): за прокси/Cloudflare REMOTE_ADDR — это адрес прокси, и чужие неудачи
-           блокировали бы вход всем (включая владельца). Заголовкам верим только от доверенных прокси (config.php). */
+
+
         $ip = substr(login_ip_key(client_ip()), 0, 64);
         $loginRaw = $_POST['login'] ?? '';
-        $login = mb_strtolower(mb_substr(trim(is_string($loginRaw) ? $loginRaw : ''), 0, 64)); // ?login[]=x — иначе warning в журнал
-        $loginKey = login_log_key($login); // в журнал пишем хэш, а не сам набранный логин (п.12)
-        /* Попытка резервируется атомарно до проверки пароля; успешный вход удаляет запись позже. */
+        $login = mb_strtolower(mb_substr(trim(is_string($loginRaw) ? $loginRaw : ''), 0, 64));
+        $loginKey = login_log_key($login);
+
         if (!login_attempt_reserve($ip, $loginKey, $login)) {
             $err = 'Слишком много попыток входа. Подождите 15 минут.';
         } else {
             $pwRaw = $_POST['password'] ?? '';
-            $pw = is_string($pwRaw) ? $pwRaw : ''; // ?password[]=x — иначе warning в журнал
-            /* bcrypt читает только первые 72 байта пароля: длинный хвост молча отрезается, и два пароля
-               с общими 72 байтами неотличимы. Отклоняем такие пароли явно, а не делаем вид, что они длинные. */
+            $pw = is_string($pwRaw) ? $pwRaw : '';
+
+
             if (strlen($pw) > 72) {
                 $err = 'Пароль длиннее 72 байт не поддерживается — задайте более короткий в настройках аккаунта.';
             } else {
-            /* COLLATE NOCASE: логин при установке может быть «Admin», а в форме вводят «admin» —
-               счётчик попыток и так работает с нижним регистром, пусть и поиск совпадает с ним */
+
+
             $u = db_one('SELECT * FROM users WHERE login = ? COLLATE NOCASE', [$login]);
-            /* логина нет — всё равно тратим столько же времени на bcrypt, иначе по скорости ответа
-               можно отличить существующий логин от несуществующего. Проверяем о готовый
-               dummy-хэш: password_hash() на каждый запрос плодил бы по дорогому
-               bcrypt-хэшу — бесплатный обогреватель CPU для атакующего. С 1.9.35 заглушка
-               генерируется на сервере (dummy_password_hash), а не зашита в пакете (ревизия 1.9.34, п.13) */
+
+
+
+
+
             $good = password_verify($pw, $u ? (string)$u['pass_hash'] : dummy_password_hash());
             if ($u && $good) {
-                /* Rehash только если проверенный ранее хеш не сменился параллельной сменой пароля. */
+
                 if (password_needs_rehash((string)$u['pass_hash'], PASSWORD_DEFAULT)) {
                     $oldHash = (string)$u['pass_hash'];
                     $newHash = password_hash($pw, PASSWORD_DEFAULT);
@@ -120,12 +120,12 @@ function admin_login(): void
                 }
                 if ($u) {
                     session_regenerate_id(true);
-                    unset($_SESSION['csrf']); // CSRF-токен анонимной сессии не должен пережить вход
+                    unset($_SESSION['csrf']);
                     $_SESSION['uid'] = (int)$u['id'];
                     $_SESSION['pwv'] = pass_version((string)$u['pass_hash']);
                     $_SESSION['t0'] = $_SESSION['last'] = time();
                     admin_session_ok(true);
-                    is_admin(true); // кэш is_admin() — тоже (аудит 1.9.40, п.11)
+                    is_admin(true);
                     db_run('DELETE FROM login_log WHERE ip = ? AND (login = ? OR login = ?)', [$ip, $loginKey, $login]);
                     redirect($return !== '' ? $return : admin_base());
                 }
@@ -196,9 +196,9 @@ function admin_footer(): void
     <?php
 }
 
-/* ---------- мини-конструктор форм ---------- */
 
-/** Подсказка под полем: 'help' — текст (экранируется), 'help_html' — готовая разметка (выводится как есть). */
+
+
 function f_help(array $o): string
 {
     if (!empty($o['help'])) {
@@ -248,7 +248,7 @@ function f_check(string $name, string $label, bool $on, string $help = ''): stri
         . ($help !== '' ? '<small>' . e($help) . '</small>' : '') . '</label>';
 }
 
-/** Селект «Вставить заготовку JSON-LD» рядом с полем «Свой JSON-LD» (обработчик — admin.js). */
+
 function f_jsonld_presets(): string
 {
     $h = '<div class="f"><span class="fl">Заготовки микроразметки</span><select data-jsonld-preset><option value="">Вставить заготовку…</option>';

@@ -11,8 +11,7 @@ code{background:#eee;padding:1px 5px;border-radius:4px;font-size:.9em}
 .muted{color:var(--muted)}.grow{flex:1}.c{text-align:center}
 .top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:0 20px;height:54px;background:#111;color:#fff}
 .top a{color:#ddd;text-decoration:none;font-size:14px;white-space:nowrap}.top a:hover,.top a.on{color:#fff}
-/* «Открыть сайт» и «Выйти» справа не сжимаются и не переносятся на две строки —
-   при нехватке места многоточием ужимается только название сайта в .logo (1.9.20) */
+
 .top>a[href="/"],.top .inline,.top button.link{white-space:nowrap;flex-shrink:0}
 .top nav{display:flex;gap:16px}.top nav a.on{border-bottom:2px solid #fff;padding-bottom:2px}
 .logo{font-weight:700;color:#fff!important;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -23,12 +22,12 @@ button.link{background:none;border:0;color:#ddd;cursor:pointer;font:inherit;padd
 .bar{display:flex;align-items:center;gap:10px;margin:0 0 16px;flex-wrap:wrap}
 .bar.sticky{position:sticky;top:54px;z-index:40;background:var(--bg);padding:12px 0;margin-bottom:8px;border-bottom:1px solid var(--line)}
 .bar.sticky .pubchk{margin:0;white-space:nowrap;font-size:13px}.bar.sticky .pubchk input{margin:0}
-/* на узком экране липкая панель вместе с шапкой съедала до трети высоты — отключаем липкость */
+
 @media (max-width:600px){.bar.sticky{position:static}.bar.sticky h1{font-size:18px}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 16px}
 .card.narrow{max-width:520px}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px}
-/* подзаголовки и пояснения внутри вкладки настроек (1.9.95, группировка «Экспериментов») */
+
 .setsub{grid-column:1/-1;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:15px}
 .setsub:first-child{margin-top:0;padding-top:0;border-top:0}
 .setnote{grid-column:1/-1;margin:0 0 6px;color:var(--muted);font-size:13px;line-height:1.55;max-width:860px}
@@ -42,7 +41,7 @@ button.link{background:none;border:0;color:#ddd;cursor:pointer;font:inherit;padd
 .tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:#eee;color:#555;font-weight:400;vertical-align:middle}
 .tag.ok{background:#e7f5ea;color:#155c25}.tag.warn{background:#fdf3dc;color:#8a5a00}
 
-/* формы */
+
 .f{display:block;margin:0 0 14px}.fl{display:block;font-weight:600;font-size:13px;margin-bottom:4px}
 .f small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
 input:not([type=checkbox]):not([type=color]):not([type=hidden]),select,textarea{width:100%;padding:8px 10px;border:1px solid #bdbdb5;border-radius:7px;font:inherit;background:#fff;color:var(--text)}
@@ -52,23 +51,22 @@ input.xs{width:70px}
 .chk{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.chk input{margin-top:4px}.chk small{flex-basis:100%;margin-left:24px}
 .counter{font-size:12px;color:var(--muted);float:right}.counter.over{color:var(--err)}.counter.low{color:#c78a00}
 
-/* вкладки: nowrap + горизонтальный скролл — иначе не поместившиеся вкладки падали
-   на вторую строку НИЖЕ подчёркивающей линии и выглядели оторванными (аудит 1.9.15) */
+
 .tabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin:12px 0 16px;border-bottom:1px solid var(--line);scrollbar-width:thin}
 .tabs button{border:0;background:none;padding:10px 16px;font:inherit;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex:0 0 auto}
 .tabs button.on{color:var(--text);border-color:var(--text);font-weight:600}
 [hidden]{display:none!important}
 
-/* таблицы */
+
 .tbl{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tbl th,.tbl td{padding:9px 10px;text-align:left;border-bottom:1px solid #eee;vertical-align:middle}
 .tbl th{background:#fafaf8;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .tbl .acts{white-space:nowrap;text-align:right}.menu-tbl td input,.menu-tbl td select{min-width:110px}
 
-/* разделы страницы */
+
 .sec-head{display:flex;gap:6px;align-items:center;margin:-4px 0 12px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
 .addsec{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-/* подзаголовок «Разделы под фотографиями» в редакторе альбома (1.9.52) */
+
 .sechead{margin:26px 2px 4px}
 .sechead-note{margin:0 2px 12px}
 .btnrow{display:grid;grid-template-columns:1.2fr 2fr 1fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
@@ -76,49 +74,49 @@ input.xs{width:70px}
 .pricerow .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .pricerow textarea{margin-bottom:8px}
 
-/* редактор текста */
+
 .rte-wrap{border:1px solid #bdbdb5;border-radius:8px;background:#fff;margin-bottom:12px}
 .rte-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid var(--line);background:#fafaf8;border-radius:8px 8px 0 0}
 .rte-bar button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:3px 9px;cursor:pointer;font:13px system-ui}.rte-bar .right{margin-left:auto}
 .rte{min-height:140px;padding:12px 14px;outline:none;line-height:1.6}.rte:focus{box-shadow:inset 0 0 0 2px #c7d7fb}
 .rte h1{font-size:26px;margin:.3em 0}.rte h2{font-size:21px;margin:.3em 0}.rte h3{font-size:18px;margin:.3em 0}.rte-src{width:100%;border:0!important;border-radius:0 0 8px 8px!important}
 
-/* галерея в редакторе */
+
 .galed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-bottom:12px}
 .gi{position:relative;aspect-ratio:1;background:#ddd;border-radius:6px;overflow:hidden;cursor:grab}.gi img{width:100%;height:100%;object-fit:cover;pointer-events:none}
 .gi.drag{opacity:.35}
-/* кнопки по 36px — удобно попасть пальцем с планшета */
+
 .gi-del{position:absolute;top:4px;right:4px;width:36px;height:36px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;line-height:1;font-size:16px}
 .gi-mv{position:absolute;left:4px;bottom:4px;display:flex;gap:4px}
 .gi-mv button{width:36px;height:36px;border:0;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:14px;line-height:1}
 .gi-mv button:hover,.gi-del:hover{background:rgba(0,0,0,.8)}
-/* тост «Отменить» при уборе фото из галереи */
+
 .gi-undo{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:90;background:#111;color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .gi-undo button{background:#fff;color:#111;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px}
 .galed.over{outline:2px dashed #1d4ed8;outline-offset:4px}
 
-/* выбор картинки */
+
 .imgpick{display:flex;gap:12px;align-items:center}
 .imgpick-prev{width:84px;height:84px;background:#eee;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:12px}
 .imgpick-prev img{width:100%;height:100%;object-fit:cover}
 
-/* SERP */
+
 .serp{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:#fff;max-width:600px}
 .serp-url{color:#3c6e3c;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .serp-title{color:#1a0dab;font-size:19px;line-height:1.25;margin:2px 0}.serp-desc{color:#4d5156;font-size:14px}
 
-/* панель */
+
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
 .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}.stat b{display:block;font-size:28px}.stat span{color:var(--muted);font-size:13px}
 .todo{margin:0;padding-left:20px}.todo li{margin:6px 0}
 
-/* редактор заметок (wiki) */
+
 .wikihelp{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12.5px;color:var(--muted);margin-bottom:10px}
 .wikihelp code{background:#f0f0ea;padding:1px 6px;border-radius:4px}
 .wikihelp .btn{margin-left:auto}
 textarea.wiki{min-height:320px;font:14px/1.6 ui-monospace,Menlo,Consolas,monospace}
 
-/* медиа */
+
 .dropzone{border:2px dashed #c4c4bc;border-radius:10px;padding:22px;text-align:center;color:var(--muted);margin:0 0 16px;background:#fbfbf9}.dropzone.over{border-color:#1d4ed8;color:#1d4ed8;background:#eef3ff}
 .upl-status{font-size:13px;margin-top:6px}.upl-status .bad{color:var(--err)}
 .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
@@ -126,14 +124,14 @@ textarea.wiki{min-height:320px;font:14px/1.6 ui-monospace,Menlo,Consolas,monospa
 .mi input{margin-top:6px;font-size:13px;padding:5px 8px}.mi-meta{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);margin-top:5px;align-items:center}
 .mi-meta button{background:none;border:0;cursor:pointer;font:inherit;padding:0}
 .mi-err{color:var(--err);font-size:12px;margin-top:5px;line-height:1.4}
-/* выбор плиток для массового удаления (аудит 1.9.15) */
+
 .mi-sel{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;cursor:pointer}
 .mi.sel{outline:2px solid #1d4ed8;outline-offset:-2px}
 .pass{display:flex;gap:8px;align-items:center}.pass input{flex:1}
 .filterline{margin:0 0 12px}.filterline input{max-width:340px;width:100%}.filterline select{max-width:280px}
 .pager{display:flex;gap:6px;margin-top:18px;flex-wrap:wrap}.pager a{padding:5px 11px;border:1px solid var(--line);border-radius:6px;text-decoration:none;background:#fff;color:var(--text)}.pager a.on{background:#111;color:#fff;border-color:#111}
 
-/* модальное окно выбора фото */
+
 .pk{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
 .pk-panel{background:#fff;border-radius:12px;width:min(980px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden}
 .pk-opts{width:min(440px,100%)}
@@ -144,16 +142,16 @@ textarea.wiki{min-height:320px;font:14px/1.6 ui-monospace,Menlo,Consolas,monospa
 .pk-item.on{outline-color:#1d4ed8}.pk-item.on::after{content:"✓";position:absolute;top:4px;right:4px;background:#1d4ed8;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:13px}
 .pk-item.used{opacity:.4;cursor:not-allowed}.pk-item.used::after{content:"✓";position:absolute;top:4px;right:4px;background:#777;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:13px}
 
-/* вход */
+
 body.login{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px;width:min(340px, calc(100% - 32px))}.login-box h1{margin-bottom:16px;font-size:20px}.login-box label{display:block;margin-bottom:12px;font-size:13px;font-weight:600}.login-box input{margin-top:4px}
 
 @media (max-width:860px){.cols2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.btnrow{grid-template-columns:1fr}.tbl{font-size:13px}.wikihelp .btn{margin-left:0}
-  /* поля 16px — iOS не зумирует страницу при фокусе */
+
   input:not([type=checkbox]):not([type=color]):not([type=hidden]),select,textarea,.mi input{font-size:16px}
 }
 
-/* сенсорные экраны: цели 40–44px, чтобы попадать пальцем */
+
 @media (pointer:coarse){
   .btn{padding:10px 16px}
   .btn.sm{padding:8px 12px;font-size:14px}
@@ -163,7 +161,7 @@ body.login{display:flex;align-items:center;justify-content:center;min-height:100
   .mi-meta button{min-width:40px;min-height:40px}
 }
 
-/* кнопка-бургер: только на узких экранах */
+
 .anav-btn{display:none;background:none;border:0;padding:10px 6px;cursor:pointer}
 .anav-btn span{display:block;width:20px;height:2px;background:#fff;margin:4px 0;transition:transform .2s,opacity .2s}
 body.anav-open .anav-btn span:nth-child(1){transform:translateY(6px) rotate(45deg)}
@@ -184,14 +182,14 @@ body.anav-open .anav-btn span:nth-child(3){transform:translateY(-6px) rotate(-45
 .menu-tbl td.nowrap{white-space:nowrap}
 .menu-tbl tr.new-row{outline:2px solid #1d4ed8;outline-offset:-2px;background:#eef4ff}
 .pager.pg{display:flex}
-/* номер версии: подвал каждой страницы админки и низ формы входа (с 1.9.12) */
+
 .afoot{padding:18px 20px 26px;text-align:center;font-size:12px;color:var(--muted)}
 .login-ver{margin:16px 0 0;text-align:center;font-size:12px;color:var(--muted)}
 @media (max-width:860px){.bar.sticky{top:54px}.tbl{display:block;overflow-x:auto}}
 
-/* Страница настроек: слева липкий список групп с подсказками, справа одна группа */
+
 .setlay{display:grid;grid-template-columns:250px 1fr;gap:24px;align-items:start;margin-top:14px}
-.setnav{position:sticky;top:130px;display:flex;flex-direction:column;gap:4px} /* 130 = липкая панель .bar (54+64) + небольшой зазор */
+.setnav{position:sticky;top:130px;display:flex;flex-direction:column;gap:4px}
 .setnav button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;border:0;border-radius:12px;background:transparent;font:500 14px/1.35 system-ui,sans-serif;color:#243b63;cursor:pointer;text-align:left}
 .setnav button:hover{background:#eef2fa}
 .setnav button.on{background:#e3edff;color:#0057d8}
@@ -203,24 +201,23 @@ body.anav-open .anav-btn span:nth-child(3){transform:translateY(-6px) rotate(-45
 .setnav button{flex-shrink:0;white-space:nowrap}
 .setnav-h{display:none}}
 
-/* Индикация перетаскивания в галерее (1.9.23): курсор «руки» уже был на .gi —
-   добавляем grabbing в момент перетаскивания и пунктирную рамку зоны, куда упадёт фото */
+
 .gi[draggable="true"]{cursor:grab}
 .gi[draggable="true"]:active{cursor:grabbing}
 .galed-grid.dnd{outline:2px dashed #1d4ed8;outline-offset:4px;border-radius:8px}
 
-/* Тач-цели кнопок галереи на телефоне (1.9.23): 36px мелко для пальца — минимум 44×44 */
+
 @media (max-width:768px){
   .gi-del{width:44px;height:44px;font-size:20px;top:6px;right:6px}
   .gi-mv{left:6px;bottom:6px;gap:6px}
   .gi-mv button{width:44px;height:44px;font-size:16px}
 }
 
-/* Действия карточки медиатеки (1.9.25): «Точка кадра», «Оригинал», «удалить» — отдельной строкой */
+
 .mi-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .mi-actions .btn{flex:1;white-space:nowrap;text-align:center}
 
-/* Модалка фокусной точки (1.9.25) */
+
 .fx-modal{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .fx-box{background:#fff;border-radius:12px;max-width:min(920px,96vw);max-height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.35)}
 .fx-title{padding:12px 16px;font-size:14px;color:#444;border-bottom:1px solid var(--line)}

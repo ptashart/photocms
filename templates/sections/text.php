@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 ?>
-<?php /** @var array $sec @var array $d */
+<?php
 $w = in_array($d['width'], ['narrow', 'medium', 'wide'], true) ? $d['width'] : 'narrow';
 $al = $d['align'] === 'center' ? ' t-center' : '';
 ?>

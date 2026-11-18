@@ -5,7 +5,7 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-if (!defined('ROOT')) { // файл включается только из admin/index.php — прямой вызов запрещён
+if (!defined('ROOT')) {
     http_response_code(404);
     exit;
 }
@@ -26,13 +26,13 @@ function page_move(int $id, int $dir): void
         return;
     }
     [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]];
-    db_tx(static function () use ($ids): void { // перестановка — атомарно: обрыв посередине оставлял дубли position (аудит 1.9.48, п.12)
+    db_tx(static function () use ($ids): void {
         foreach ($ids as $pos => $pid) {
             db_run('UPDATE pages SET position = ? WHERE id = ?', [$pos + 1, $pid]);
         }
-        /* порядок страниц виден в меню и списках, но updated_at не меняется: без отметки
-           Last-Modified не двигался, и поисковик по If-Modified-Since получал 304 на
-           фактически изменившуюся страницу (аудит 1.9.48, п.8) */
+
+
+
         site_touch();
     });
 }
@@ -43,7 +43,7 @@ function page_delete(int $id): void
     if (!$p || (int)$p['is_home']) {
         return;
     }
-    db_tx(static function () use ($id, $p): void { // удаление страницы со всеми зависимостями — атомарно
+    db_tx(static function () use ($id, $p): void {
         foreach (db_all("SELECT id FROM sections WHERE owner_type = 'page' AND page_id = ?", [$id]) as $s) {
             db_run("DELETE FROM gallery_items WHERE owner_type = 'section' AND owner_id = ?", [$s['id']]);
         }
@@ -56,7 +56,7 @@ function page_delete(int $id): void
         db_run('DELETE FROM pages WHERE id = ?', [$id]);
     });
     site_touch();
-    page_sections_cache_flush($id); // секции страницы могли быть в кэше запроса (1.9.26)
+    page_sections_cache_flush($id);
 }
 
 function admin_pages(): void
@@ -64,7 +64,7 @@ function admin_pages(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         $aRaw = $_POST['action'] ?? '';
-        $a = is_string($aRaw) ? $aRaw : ''; // ?action[]=x — иначе «Array to string conversion» в журнал
+        $a = is_string($aRaw) ? $aRaw : '';
         $id = (int)($_POST['id'] ?? 0);
         if ($a === 'move') {
             page_move($id, ($_POST['dir'] ?? '') === 'up' ? -1 : 1);
@@ -79,7 +79,7 @@ function admin_pages(): void
         "SELECT p.*, (SELECT COUNT(*) FROM gallery_items g WHERE g.owner_type = 'page' AND g.owner_id = p.id) AS n_photos
          FROM pages p ORDER BY position, id"
     );
-    /* для честного подтверждения удаления: сколько разделов и пунктов меню уйдёт вместе со страницей */
+
     $extra = [];
     foreach (db_all("SELECT page_id, COUNT(*) c FROM sections WHERE owner_type = 'page' GROUP BY page_id") as $r) {
         $extra[(int)$r['page_id']]['sections'] = (int)$r['c'];
@@ -115,8 +115,8 @@ function admin_pages(): void
 
 function pages_rows(array $by, int $parent, int $depth, array $extra = []): void
 {
-    /* цикл parent_id через UI не создать, но при ручной правке базы/битом импорте рекурсия
-       уходила в бесконечную и роняла запрос — дешёвый guard (аудит 1.9.12, находка 8) */
+
+
     if ($depth > 32) {
         app_log_error('pages_rows: подозрение на цикл parent_id (глубина > 32), ветка обрезана');
         return;
@@ -124,7 +124,7 @@ function pages_rows(array $by, int $parent, int $depth, array $extra = []): void
     foreach ($by[$parent] ?? [] as $p) {
         $url = page_url($p);
         $seoOk = trim((string)$p['seo_description']) !== '' || trim((string)$p['seo_title']) !== '';
-        /* последствия удаления — прямо в подтверждении: иначе узнавали о них постфактум по 404 */
+
         $pid = (int)$p['id'];
         $consequences = [];
         if ((int)$p['n_photos'] > 0) {
@@ -179,7 +179,7 @@ function admin_page_new(): void
         $slugOk = $slugIn !== '' && valid_slug($slugIn) && !db_val('SELECT id FROM pages WHERE slug = ?', [$slugIn]);
         $slug = $slugOk ? $slugIn : unique_slug($title);
         if ($slugIn !== '' && !$slugOk) {
-            /* иначе пользователь вводит свой адрес, а получает сгенерированный — и не понимает, почему */
+
             flash('Адрес «' . $slugIn . '» недопустим или уже занят — придумали другой: «' . $slug . '».', 'err');
         }
         $parent = (int)($_POST['parent_id'] ?? 0);
@@ -187,7 +187,7 @@ function admin_page_new(): void
         $parent = ($pp && $pp['type'] === 'page') ? $parent : null;
         $pos = (int)db_val('SELECT COALESCE(MAX(position), 0) + 1 FROM pages') ;
         $t = now();
-        /* у альбомов show_title по умолчанию включаем: скрытый (vh) H1 Google обесценивает */
+
         $showTitle = $type === 'album' ? 1 : 0;
         try {
             $id = db_insert(
@@ -195,7 +195,7 @@ function admin_page_new(): void
                 [$type, $title, $slug, $parent, $pos, $showTitle, $t, $t]
             );
         } catch (PDOException $e) {
-            /* гонка двух созданий: адрес успели занять между проверкой и INSERT — придумаем следующий свободный */
+
             if (stripos($e->getMessage(), 'unique') === false) {
                 throw $e;
             }
@@ -205,7 +205,7 @@ function admin_page_new(): void
                 [$type, $title, $slug, $parent, $pos, $showTitle, $t, $t]
             );
         }
-        redirect_clear_from('/' . $slug); // старый редирект с этого адреса больше не нужен: здесь теперь страница
+        redirect_clear_from('/' . $slug);
         flash('Создано как черновик. Добавьте содержимое и отметьте «Опубликована».');
         redirect(a_url('page_edit', ['id' => $id]));
     }
@@ -223,7 +223,7 @@ function admin_page_new(): void
     admin_footer();
 }
 
-/* ---------- сохранение разделов ---------- */
+
 
 function section_collect(string $type, array $f): array
 {
@@ -240,12 +240,12 @@ function section_collect(string $type, array $f): array
             $d['layout'] = in_array($f['layout'] ?? '', ['masonry', 'grid', 'lineup', 'strip', 'slides', 'contactsheet'], true) ? $f['layout'] : 'masonry';
             $d['columns'] = max(0, min(6, (int)($f['columns'] ?? 0)));
             $d['lightbox'] = in_array($f['lightbox'] ?? '', ['', '1', '0'], true) ? (string)($f['lightbox'] ?? '') : '';
-            /* автопрокрутка ленты (1.9.45): скорость — фиксированный список, чтобы в data-атрибут
-               не попало произвольное значение */
+
+
             $d['autoplay'] = ($f['autoplay'] ?? '') === '1' ? '1' : '0';
             $d['autoplay_dir'] = ($f['autoplay_dir'] ?? '') === 'back' ? 'back' : 'fwd';
             $d['autoplay_speed'] = in_array((string)($f['autoplay_speed'] ?? ''), ['3', '4', '5', '6', '8', '10', '15'], true) ? (string)$f['autoplay_speed'] : '5';
-            /* полноэкранное слайдшоу (1.9.46): эффект, темп и высота — тоже фиксированные списки */
+
             $d['fx'] = in_array($f['fx'] ?? '', ['fade', 'cut', 'slide'], true) ? $f['fx'] : 'fade';
             $d['speed'] = in_array((string)($f['speed'] ?? ''), ['3', '4', '5', '6', '8', '10', '15'], true) ? (string)$f['speed'] : '5';
             $d['height'] = in_array($f['height'] ?? '', ['full', 'tall', 'half'], true) ? $f['height'] : 'full';
@@ -255,7 +255,7 @@ function section_collect(string $type, array $f): array
             $d['size'] = array_key_exists((string)($f['size'] ?? ''), photo_size_presets()) ? (string)$f['size'] : 'wide';
             $d['lightbox'] = in_array($f['lightbox'] ?? '', ['', '1', '0'], true) ? (string)($f['lightbox'] ?? '') : '';
             $d['caption'] = clip((string)($f['caption'] ?? ''), 300);
-            /* своя ссылка по клику (1.9.52): normalize_url отсекает javascript:/data: и дописывает https:// голому домену */
+
             $d['link'] = clip(normalize_url((string)($f['link'] ?? '')), 500);
             $d['link_new_tab'] = !empty($f['link_new_tab']);
             break;
@@ -268,7 +268,7 @@ function section_collect(string $type, array $f): array
                 $icon = (string)($b['icon'] ?? '');
                 $items[] = [
                     'label' => clip((string)$b['label'], 80),
-                    /* адрес кнопки проходит ту же проверку схем, что и меню/соцсети: javascript:, data: отбрасываются */
+
                     'url' => clip(normalize_url((string)($b['url'] ?? '')), 500),
                     'icon' => array_key_exists($icon, button_icons()) ? $icon : '',
                     'newtab' => !empty($b['newtab']),
@@ -307,17 +307,17 @@ function section_collect(string $type, array $f): array
                 $q = clip((string)($it['q'] ?? ''), 300);
                 $a = clip((string)($it['a'] ?? ''), 2000);
                 if ($q === '' && $a === '') {
-                    continue; // совсем пустые строки не храним
+                    continue;
                 }
                 $items[] = ['q' => $q, 'a' => $a];
-                if (count($items) >= 50) { // предохранитель от бесконечного списка
+                if (count($items) >= 50) {
                     break;
                 }
             }
             $d['items'] = $items;
             break;
         case 'video':
-            /* чужой/удалённый ролик не принимаем: ссылка обнуляется, как у фото-секций */
+
             $vid = (int)($f['video_id'] ?? 0);
             $d['video_id'] = $vid > 0 && video_get($vid) ? $vid : 0;
             break;
@@ -333,25 +333,25 @@ function section_collect(string $type, array $f): array
                 }
                 $name = clip((string)($it['name'] ?? ''), 120);
                 $desc = clip((string)($it['desc'] ?? ''), 600);
-                /* цены храним цифрами («15000»): в разметку Offer уходят как есть,
-                   а при выводе форматируем с разрядами */
+
+
                 $from = clip((string)preg_replace('~\D~', '', (string)($it['price_from'] ?? '')), 9);
                 $to = clip((string)preg_replace('~\D~', '', (string)($it['price_to'] ?? '')), 9);
-                /* длительность пакета (1.9.76): «8 часов», «2 часа» — выводится рядом с ценой
-                   в стиле «от 30 000 ₽ · 8 часов» */
+
+
                 $dur = clip((string)($it['duration'] ?? ''), 60);
                 $url = clip(normalize_url((string)($it['url'] ?? '')), 500);
-                /* фото карточки (1.9.69): чужое/удалённое не принимаем — как у фото- и видео-секций */
+
                 $iid = (int)($it['image_id'] ?? 0);
                 $iid = $iid > 0 && image_get($iid) ? $iid : 0;
                 if ($name === '' && $desc === '' && $from === '' && $iid === 0) {
-                    continue; // совсем пустые строки не храним
+                    continue;
                 }
                 if ($to !== '' && $from !== '' && (int)$to < (int)$from) {
-                    $to = $from; // перепутанная вилка: «до» не может быть меньше «от»
+                    $to = $from;
                 }
                 $items[] = ['name' => $name, 'desc' => $desc, 'price_from' => $from, 'price_to' => $to, 'duration' => $dur, 'url' => $url, 'image_id' => $iid];
-                if (count($items) >= 12) { // предохранитель, как у остальных списков
+                if (count($items) >= 12) {
                     break;
                 }
             }
@@ -367,20 +367,20 @@ function page_save(array $page): bool
     $isHome = (int)$page['is_home'] === 1;
     $isAlbum = $page['type'] === 'album';
 
-    /* PHP обрезает POST по лимиту max_input_vars: у большой галереи «хвост» формы (включая скрытый
-       маркер form_end) просто не доходит. Сохранять половину данных нельзя — честно отказываем. */
+
+
     if (!isset($_POST['form_end'])) {
         flash('Форма пришла не полностью: хостинг обрезал её по лимиту max_input_vars. '
             . 'Ничего не сохранено — увеличьте max_input_vars в настройках PHP (например, до 5000) и повторите.', 'err');
         return false;
     }
 
-    /* Параллельная правка в другой вкладке/на другом устройстве (аудит 1.9.40, п.3):
-       form_updated_at — updated_at записи на момент открытия формы. Разошлись — на сервере
-       уже более новая версия, и запись поверх молча затирала бы её («last write wins»
-       с запоздалым предупреждением). Теперь отказываем: набранный текст не пропадёт —
-       черновики лежат в браузере (localStorage) и предложатся при переоткрытии редактора
-       с пометкой, что после них запись уже сохраняли. */
+
+
+
+
+
+
     $formUpd = (int)($_POST['form_updated_at'] ?? 0);
     if ($formUpd > 0 && (int)$page['updated_at'] !== $formUpd) {
         throw new RuntimeException('page_edit_conflict');
@@ -411,20 +411,20 @@ function page_save(array $page): bool
 
     $parent = (int)($_POST['parent_id'] ?? 0);
     $pp = $parent > 0 ? page_get($parent) : null;
-    /* родителем нельзя сделать себя или своего потомка на любой глубине (раньше проверялось только 2 уровня,
-       а цепочка A→C→B→A «терялась»: такие страницы пропадали из списка админки) */
+
+
     if ($isHome || !$pp || $pp['type'] !== 'page' || $parent === $id || page_is_ancestor($id, $parent)) {
         $parent = null;
     }
     $pub = $isHome ? 1 : (empty($_POST['is_published']) ? 0 : 1);
 
     $canonical = post_str('canonical', 500);
-    $rejected = 0; // сколько полей отклонила валидация — итоговое сообщение не должно врать про «всё сохранено»
-    /* Допустимы: пусто, путь «/page» (но не protocol-relative «//host» — он указывал бы
-       на ЧУЖОЙ сайт, проходя прежнюю проверку по первому слэшу; аудит 1.9.26) или полный
-       URL на этом же сайте. Чужой домен под запретом: страница с 200 OK + index, чей canonical
-       уводит на другой хост, — противоречивое состояние и способ случайно «подарить» страницу
-       чужому дому в поиске. */
+    $rejected = 0;
+
+
+
+
+
     if ($canonical !== '') {
         $canonErr = '';
         if (preg_match('~^https?://~i', $canonical)) {
@@ -439,29 +439,29 @@ function page_save(array $page): bool
             $canonErr = 'Canonical должен быть путём вида /page или полным адресом этого сайта (https://…). Поле очищено.';
         }
         if ($canonErr !== '') {
-            $_SESSION['old']['canonical'] = $canonical; // набранное вернётся в поле после редиректа
+            $_SESSION['old']['canonical'] = $canonical;
             $canonical = '';
             $rejected++;
             flash($canonErr, 'err');
         }
     }
 
-    // тип микроразметки страницы
+
     $schemaType = post_str('schema_type');
     if (!array_key_exists($schemaType, page_schema_types())) {
         $schemaType = '';
     }
 
-    // свой JSON-LD: принимаем только валидный JSON
+
     $jsonldExtra = post_str('jsonld_extra');
     if ($jsonldExtra !== '' && !jsonld_extra_blocks($jsonldExtra)) {
-        $_SESSION['old']['jsonld_extra'] = $jsonldExtra; // набранное вернётся в поле после редиректа
+        $_SESSION['old']['jsonld_extra'] = $jsonldExtra;
         $jsonldExtra = (string)($page['jsonld_extra'] ?? '');
         $rejected++;
         flash('Свой JSON-LD не сохранён: это не JSON-объект. Проверьте запятые, кавычки и скобки.', 'err');
     }
 
-    // страница-услуга (1.9.42): разметка Service. Цену чистим до цифр — «от 30 000 ₽» → «30000»
+
     $isService = !$isHome && !empty($_POST['is_service']) ? 1 : 0;
     $serviceName = post_str('service_name', 200);
     $servicePrice = preg_replace('~\D~', '', post_str('service_price'));
@@ -472,7 +472,7 @@ function page_save(array $page): bool
     $serviceDesc = post_str('service_desc', 300);
     $serviceArea = post_str('service_area', 200);
 
-    // раскладка галереи альбома (1.9.76): только известные режимы, '' = masonry по умолчанию
+
     $albumLayout = post_str('album_layout');
     if (!in_array($albumLayout, ['', 'masonry', 'grid', 'lineup', 'contactsheet', 'hung'], true)) {
         $albumLayout = '';
@@ -517,9 +517,9 @@ function page_save(array $page): bool
     try {
         $st = db_run($saveSql, $saveParams);
     } catch (PDOException $e) {
-        /* гонка двух сохранений: параллельный запрос успел занять адрес между нашей проверкой
-           и записью — уникальность гарантирует сама SQLite. Откатываем slug на прежний,
-           остальные правки сохраняем, а не роняем всё с ошибкой 500 */
+
+
+
         if ($slug !== (string)$page['slug'] && stripos($e->getMessage(), 'unique') !== false) {
             flash('Адрес «' . $in . '» только что заняла другая страница. Оставлен прежний.', 'err');
             $slug = (string)$page['slug'];
@@ -534,7 +534,7 @@ function page_save(array $page): bool
     }
 
     if ($slug !== $page['slug'] && !$isHome) {
-        /* сначала убираем редирект С нового адреса (иначе возврат на прежний адрес давал бы петлю), потом ставим со старого */
+
         redirect_clear_from('/' . $slug);
         if ((int)$page['is_published']) {
             $rerr = redirect_add('/' . $page['slug'], '/' . $slug);
@@ -548,22 +548,22 @@ function page_save(array $page): bool
         }
     }
 
-    // настройки разделов (с 1.9.52 — и у альбомов: секции выводятся под галереей)
+
     foreach (post_arr('sec') as $sid => $f) {
         $s = db_one("SELECT * FROM sections WHERE id = ? AND owner_type = 'page' AND page_id = ?", [(int)$sid, $id]);
         if ($s && is_array($f)) {
             db_run('UPDATE sections SET data = ? WHERE id = ?', [json_db(section_collect((string)$s['type'], $f)), $s['id']]);
         }
     }
-    page_sections_cache_flush($id); // данные секций изменились — кэш запроса протух (1.9.26)
+    page_sections_cache_flush($id);
 
-    // фотографии (порядок = порядок в форме)
+
     $allowed = $isAlbum ? ['page'] : [];
     foreach (db_all("SELECT id FROM sections WHERE owner_type = 'page' AND page_id = ? AND type = ?", [$id, 'gallery']) as $s) {
         $allowed[] = 's' . $s['id'];
     }
-    /* JS отдаёт порядок одним JSON-полем gal_json[ключ]: сотни скрытых gal[…][] упирались бы
-       в max_input_vars и молча обрезали «хвост» галереи. Без JS работает прежний массив gal. */
+
+
     $galPost = post_arr('gal');
     $galJsonRaw = $_POST['gal_json'] ?? [];
     $galJson = is_array($galJsonRaw) ? $galJsonRaw : [];
@@ -585,7 +585,7 @@ function page_save(array $page): bool
         }
     }
 
-    // структурные действия с разделами (с 1.9.52 — и у альбомов)
+
     $act = post_str('action') ?: 'save';
     if (strpos($act, ':') !== false) {
         [$verb, $arg] = explode(':', $act, 2);
@@ -611,7 +611,7 @@ function page_save(array $page): bool
                 $_SESSION['scroll_to'] = 's' . (int)$arg;
             }
         }
-        page_sections_cache_flush($id); // состав/порядок секций изменился — кэш запроса протух (1.9.26)
+        page_sections_cache_flush($id);
     }
     flash($rejected ? 'Сохранено, кроме отклонённых полей — исправьте их (значения возвращены в поля) и сохраните ещё раз.' : 'Сохранено.', $rejected ? 'err' : 'ok');
     return true;
@@ -630,7 +630,7 @@ function admin_page_edit(): void
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
         try {
-            $saved = db_tx(static function () use ($page): bool { // все изменения страницы — одним пакетом: либо всё, либо ничего
+            $saved = db_tx(static function () use ($page): bool {
                 return page_save($page);
             });
         } catch (RuntimeException $e) {
@@ -658,7 +658,7 @@ function admin_page_edit(): void
     $tab = is_string($tabGet) && in_array($tabGet, ['content', 'settings', 'seo'], true) ? $tabGet : 'content';
     $scroll = $_SESSION['scroll_to'] ?? '';
     unset($_SESSION['scroll_to']);
-    /* вернём в поля значения, отклонённые валидацией при прошлом сохранении */
+
     if (!empty($_SESSION['old']) && is_array($_SESSION['old'])) {
         foreach (['canonical', 'jsonld_extra'] as $oldKey) {
             if (isset($_SESSION['old'][$oldKey]) && is_string($_SESSION['old'][$oldKey])) {
@@ -668,9 +668,9 @@ function admin_page_edit(): void
         unset($_SESSION['old']);
     }
 
-    /* Подсчёт H1 в содержимом (аудит 1.9.26): CMS следит, чтобы H1 существовал (иначе добавляет
-       автоматический), но пользователь мог вставить в текст ДВА <h1> — и страница жила бы с двумя.
-       Молча править чужой HTML нельзя — показываем предупреждение. */
+
+
+
     $h1Count = 0;
     foreach (page_sections($id) as $hs) {
         $hsrc = $hs['type'] === 'text' ? (string)$hs['data']['html'] : ($hs['type'] === 'html' ? (string)$hs['data']['code'] : '');
@@ -679,7 +679,7 @@ function admin_page_edit(): void
             $h1Count += count($hm[0]);
         }
     }
-    if ($isAlbum) { // у альбома свой H1 может жить ещё и в описании над галереей
+    if ($isAlbum) {
         preg_match_all('~<h1(?:\s|>)~i', (string)$page['body_html'], $hm);
         $h1Count += count($hm[0]);
     }
@@ -692,7 +692,7 @@ function admin_page_edit(): void
 <form method="post" id="pageForm" data-scroll="<?= e($scroll) ?>">
 <?= csrf_field() ?>
 <input type="hidden" name="tab" value="<?= e($tab) ?>" id="tabField">
-<?php /* метка версии: если страницу сохранили в другой вкладке, пока эта была открыта, — предупредим при сохранении */ ?>
+<?php  ?>
 <input type="hidden" name="form_updated_at" value="<?= (int)$page['updated_at'] ?>">
 <div class="bar sticky">
   <h1><?= e($page['title']) ?> <span class="tag"><?= $isAlbum ? 'альбом' : ($isHome ? 'главная' : 'страница') ?></span><?= (int)($page['is_service'] ?? 0) ? ' <span class="tag ok">услуга</span>' : '' ?>
@@ -710,7 +710,7 @@ function admin_page_edit(): void
   <button type="button" data-tab="seo" class="<?= $tab === 'seo' ? 'on' : '' ?>">SEO</button>
 </div>
 
-<!-- ===== СОДЕРЖИМОЕ ===== -->
+
 <section data-pane="content" <?= $tab === 'content' ? '' : 'hidden' ?>>
   <?php if ($isAlbum): ?>
     <div class="card">
@@ -723,7 +723,7 @@ function admin_page_edit(): void
       <p class="muted">Перетаскивайте миниатюры, чтобы менять порядок. Первое фото станет обложкой в списках, если не выбрана другая на вкладке «Страница».</p>
       <?= gallery_editor('page', gallery_images('page', $id)) ?>
     </div>
-    <?php /* с 1.9.52 у альбомов есть разделы под галереей: текст, кнопки, FAQ, форма и т.п. */ ?>
+    <?php  ?>
     <h2 class="sechead">Разделы под фотографиями</h2>
     <p class="muted sechead-note">Необязательно. Текст соображений, кнопка «Обсудить съёмку», форма связи — выводятся на странице альбома под галереей.</p>
     <?php foreach (page_sections($id) as $n => $sec): section_editor($sec, $n, 'page:' . $id, (int)$page['updated_at']); endforeach; ?>
@@ -744,7 +744,7 @@ function admin_page_edit(): void
   <?php endif; ?>
 </section>
 
-<!-- ===== НАСТРОЙКИ СТРАНИЦЫ ===== -->
+
 <section data-pane="settings" <?= $tab === 'settings' ? '' : 'hidden' ?>>
   <div class="card cols2">
     <div>
@@ -784,7 +784,7 @@ function admin_page_edit(): void
   <?php endif; ?>
 </section>
 
-<!-- ===== SEO ===== -->
+
 <section data-pane="seo" <?= $tab === 'seo' ? '' : 'hidden' ?>>
   <div class="card cols2">
     <div>
@@ -828,7 +828,7 @@ function admin_page_edit(): void
     <?php endif; ?>
   </div>
 </section>
-<?php /* маркер конца формы: при обрезке POST лимитом max_input_vars его не будет — откажемся сохранять половину данных */ ?>
+<?php  ?>
 <input type="hidden" name="form_end" value="1">
 </form>
 <?php if (!$isHome): ?>
@@ -838,10 +838,10 @@ function admin_page_edit(): void
     admin_footer();
 }
 
-/** Предпросмотр страницы без сохранения: правки из POST применяются во временной транзакции,
- *  страница рендерится боевым шаблоном (со всеми стилями темы, меню и подвалом), затем
- *  транзакция откатывается — в базе ничего не меняется. Только POST + CSRF
- *  (кнопка «Предпросмотр» в редакторе отправляет форму в новую вкладку). */
+
+
+
+
 function admin_page_preview(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -860,17 +860,17 @@ function admin_page_preview(): void
         admin_footer();
         return;
     }
-    session_write_close(); // дальше только чтение настроек/картинок — не держим блокировку сессии
+    session_write_close();
     $id = (int)$page['id'];
     $isAlbum = $page['type'] === 'album';
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        /* поля самой страницы — только то, что видно посетителю */
+
         $albumLayoutRaw = $_POST['album_layout'] ?? (string)($page['album_layout'] ?? '');
         $albumLayout = is_string($albumLayoutRaw) ? $albumLayoutRaw : '';
-        /* whitelist — как при настоящем сохранении (page_save); без album_layout и badge
-           предпросмотр расходился бы с результатом сохранения (аудит 1.9.78) */
+
+
         if (!in_array($albumLayout, ['', 'masonry', 'grid', 'lineup', 'contactsheet', 'hung'], true)) {
             $albumLayout = '';
         }
@@ -886,14 +886,14 @@ function admin_page_preview(): void
             post_str('shoot_note', 80),
             $id,
         ]);
-        /* данные разделов — тем же сборщиком, что и при настоящем сохранении */
+
         foreach (post_arr('sec') as $sid => $f) {
             $s = db_one("SELECT * FROM sections WHERE id = ? AND owner_type = 'page' AND page_id = ?", [(int)$sid, $id]);
             if ($s && is_array($f)) {
                 db_run('UPDATE sections SET data = ? WHERE id = ?', [json_db(section_collect((string)$s['type'], $f)), $s['id']]);
             }
         }
-        /* порядок и состав фотографий (как в page_save: gal_json от JS, gal — запасной вариант) */
+
         $allowed = $isAlbum ? ['page'] : [];
         foreach (db_all("SELECT id FROM sections WHERE owner_type = 'page' AND page_id = ? AND type = ?", [$id, 'gallery']) as $s) {
             $allowed[] = 's' . $s['id'];
@@ -918,19 +918,19 @@ function admin_page_preview(): void
                 gallery_replace('section', (int)substr($key, 1), $ids);
             }
         }
-        page_sections_cache_flush($id); /* рендер должен увидеть правки из временной транзакции,
-            а не кэш, который мог наполниться до неё в этом же запросе (1.9.26) */
+        page_sections_cache_flush($id);
+
         $fresh = page_get($id);
         $html = render_page($fresh ?: $page);
     } finally {
         if ($pdo->inTransaction()) {
-            $pdo->rollBack(); // предпросмотр не должен ничего менять в базе
+            $pdo->rollBack();
         }
-        page_sections_cache_flush($id); // кэш успел наполниться данными из откаченной транзакции
+        page_sections_cache_flush($id);
     }
     header('Content-Type: text/html; charset=utf-8');
     header('X-Robots-Tag: noindex, nofollow');
-    /* жёлтая плашка поверх боевой вёрстки: сразу видно, что это не опубликованная страница */
+
     $style = '<style>.preview-note{position:sticky;top:0;z-index:90;background:#fff8d6;border-bottom:1px solid #e0d28a;padding:10px 16px;font:14px/1.4 sans-serif;text-align:center}</style>';
     $note = '<div class="preview-note">Это предпросмотр несохранённой страницы — её видите только вы. Чтобы опубликовать правки, вернитесь в редактор и нажмите «Сохранить».</div>';
     $html = (string)preg_replace('~</head>~i', $style . '</head>', $html, 1);
@@ -938,26 +938,26 @@ function admin_page_preview(): void
     echo public_csp_send($html);
 }
 
-/* ---------- компоненты редактора ---------- */
+
 
 function rte_field(string $name, string $html, string $draftKey = '', int $draftUpdated = 0, string $taId = '', string $wcTarget = ''): string
 {
-    /* data-draft-key включает автосохранение черновика в браузере (admin.js),
-       data-draft-updated — сверку с версией на сервере (черновик с другого устройства не затрёт свежее молча) */
+
+
     $draft = $draftKey !== '' ? ' data-draft-key="' . e($draftKey) . '"' . ($draftUpdated > 0 ? ' data-draft-updated="' . $draftUpdated . '"' : '') : '';
     $extra = ($taId !== '' ? ' id="' . e($taId) . '"' : '') . ($wcTarget !== '' ? ' data-wc="' . e($wcTarget) . '"' : '');
     return '<div class="rte-wrap" data-rte>'
         . '<div class="rte-bar"><button type="button" data-cmd="bold"><b>B</b></button><button type="button" data-cmd="italic"><i>I</i></button>'
-        /* H1 в тулбаре нет намеренно: заголовок первого уровня на странице один — её название */
+
         . '<button type="button" data-cmd="h2">H2</button><button type="button" data-cmd="h3">H3</button>'
         . '<button type="button" data-cmd="insertUnorderedList">• список</button><button type="button" data-cmd="insertOrderedList">1. список</button>'
         . '<button type="button" data-cmd="blockquote">цитата</button><button type="button" data-cmd="createLink">ссылка</button>'
         . '<button type="button" data-cmd="unlink">без ссылки</button><button type="button" data-cmd="removeFormat">очистить</button>'
         . '<button type="button" data-cmd="html" class="right">&lt;/&gt; HTML</button></div>'
-        /* Редактор печатается ПУСТЫМ — наполняет его admin.js из скрытой textarea
-           (ревизия 1.9.34, п.18): раньше HTML вставлялся в разметку админки как есть,
-           и битый фрагмент (незакрытый тег, чужой <form>) ломал саму страницу редактора.
-           В textarea значение экранировано — это текст, а не разметка. */
+
+
+
+
         . '<div class="rte" contenteditable="true"></div>'
         . '<textarea name="' . e($name) . '" class="rte-src code" rows="10"' . $draft . $extra . ' hidden>' . e($html) . '</textarea></div>';
 }
@@ -975,7 +975,7 @@ function gallery_editor(string $key, array $items): string
 
 function gallery_tile(string $key, array $img): string
 {
-    /* ◀ ▶ — порядок без перетаскивания (с планшета/телефона dnd неудобен) */
+
     return '<div class="gi" draggable="true" data-id="' . (int)$img['id'] . '"><img src="' . e(thumb_url($img)) . '" alt="" loading="lazy">'
         . '<div class="gi-mv"><button type="button" data-mv="-1" title="Раньше" aria-label="Переместить раньше">◀</button>'
         . '<button type="button" data-mv="1" title="Позже" aria-label="Переместить позже">▶</button></div>'
@@ -985,9 +985,9 @@ function gallery_tile(string $key, array $img): string
 
 function section_editor(array $sec, int $n, string $draftNs, int $pageUpdated = 0): void
 {
-    /* $draftNs — пространство ключей черновиков браузера ('page:ID' / 'post:ID'): у страниц
-       и заметок общая таблица секций, и без разных префиксов черновик текстовой секции
-       заметки мог бы «всплыть» в редакторе страницы (и наоборот) */
+
+
+
     $sid = (int)$sec['id'];
     $d = $sec['data'];
     $pfx = 'sec[' . $sid . ']';
@@ -1014,13 +1014,13 @@ function section_editor(array $sec, int $n, string $draftNs, int $pageUpdated = 
             echo '<div class="row">' . f_select($pfx . '[layout]', 'Вид', ['masonry' => 'Кирпичики (сохраняет пропорции)', 'grid' => 'Сетка (квадраты)', 'lineup' => 'В одну колонку', 'strip' => 'Лента (слайдшоу)', 'slides' => 'Слайдшоу на весь экран', 'contactsheet' => 'Контактный лист (плёнка с перфорацией)'], $d['layout'])
                 . f_select($pfx . '[columns]', 'Колонок', [0 => 'как в настройках', 1 => '1', 2 => '2', 3 => '3', 4 => '4', 5 => '5', 6 => '6'], (int)$d['columns'])
                 . f_select($pfx . '[lightbox]', 'По щелчку', ['' => 'как в настройках сайта', '1' => 'открывать крупно', '0' => 'просто показывать'], (string)$d['lightbox']) . '</div>';
-            /* автопрокрутка — только для ленты: admin.js прячет строку при других видах (data-strip-only) */
+
             echo '<div class="row" data-strip-only>'
                 . f_select($pfx . '[autoplay]', 'Лента: автопрокрутка', ['0' => 'выключена', '1' => 'включена'], (string)$d['autoplay'])
                 . f_select($pfx . '[autoplay_dir]', 'Лента: направление', ['fwd' => 'вперёд (кадры едут справа налево)', 'back' => 'назад (кадры едут слева направо)'], (string)$d['autoplay_dir'])
                 . f_select($pfx . '[autoplay_speed]', 'Лента: секунд на кадр', ['3' => '3', '4' => '4', '5' => '5', '6' => '6', '8' => '8', '10' => '10', '15' => '15'], (string)$d['autoplay_speed'])
                 . '</div>';
-            /* полноэкранное слайдшоу (1.9.46) — только для вида «Слайдшоу»: admin.js прячет строку (data-slides-only) */
+
             echo '<div class="row" data-slides-only>'
                 . f_select($pfx . '[fx]', 'Слайдшоу: смена кадра', ['fade' => 'плавное наложение', 'cut' => 'резкая смена', 'slide' => 'сдвиг'], (string)$d['fx'])
                 . f_select($pfx . '[speed]', 'Слайдшоу: секунд на кадр', ['3' => '3', '4' => '4', '5' => '5', '6' => '6', '8' => '8', '10' => '10', '15' => '15'], (string)$d['speed'])
@@ -1046,7 +1046,7 @@ function section_editor(array $sec, int $n, string $draftNs, int $pageUpdated = 
             echo '<p class="muted">Для звонка укажите ссылку вида <code>tel:+79990001122</code>, для почты — <code>mailto:name@site.ru</code>.</p>';
             break;
         case 'listing':
-            /* поля прячутся по режиму (admin.js, data-listing-*): в «выбранных» не нужен раздел, во «вложенных» — список страниц */
+
             echo f_input($pfx . '[kicker]', 'Надзаголовок (необязательно)', (string)($d['kicker'] ?? ''), ['maxlength' => 80, 'placeholder' => 'Избранные работы']);
             echo f_input($pfx . '[heading]', 'Заголовок (необязательно)', (string)($d['heading'] ?? ''), ['maxlength' => 150]);
             echo '<div class="row">' . f_select($pfx . '[mode]', 'Источник', ['pages' => 'Выбранные страницы', 'children' => 'Все вложенные страницы раздела'], $d['mode']) . '</div>';
@@ -1118,8 +1118,8 @@ function button_row(string $pfx, string $i, array $b): string
     return $h . '<button type="button" class="ico danger" data-del-btn title="Убрать">✕</button></div>';
 }
 
-/** Строка «вопрос — ответ» в редакторе раздела «Вопросы и ответы» (1.9.48). Порядок на
-    сервере — как в DOM: admin.js переставляет строки стрелками ↑↓ (data-faq-mv). */
+
+
 function faq_row(string $pfx, string $i, array $it): string
 {
     $n = $pfx . '[qa][' . $i . ']';
@@ -1132,8 +1132,8 @@ function faq_row(string $pfx, string $i, array $it): string
     return $h . '</div>';
 }
 
-/** Строка пакета в разделе «Пакеты и цены» (1.9.63): название, вилка цены, описание, своя ссылка,
-    фото карточки (1.9.69). Разметка imgpick дублируется в admin.js (добавление строки) — держать синхронно. */
+
+
 function pricing_row(string $pfx, string $i, array $it): string
 {
     $n = $pfx . '[price][' . $i . ']';

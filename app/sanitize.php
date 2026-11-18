@@ -5,11 +5,11 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
 
-/** Чистит HTML из визуального редактора: оставляет только безопасные теги и атрибуты. */
+
 function sanitize_html(string $html): string
 {
-    /* NUL-байт: DOMDocument на нём обрывал разбор (libxml режет строку по \0) — хвост HTML
-       молча терялся при сохранении (ревизия 1.9.34, п.18) */
+
+
     $html = trim(str_replace("\0", '', $html));
     if ($html === '') {
         return '';
@@ -23,12 +23,12 @@ function sanitize_html(string $html): string
     $dropWithContent = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'noscript', 'template', 'link', 'meta'];
 
     $dom = new DOMDocument('1.0', 'UTF-8');
-    /* флаг глобальный: возвращаем прежнее значение, чтобы не менять поведение libxml для остального кода */
+
     $prevLibxml = libxml_use_internal_errors(true);
-    /* Обёртка — <body>, а не <div> (аудит 1.9.40, п.2): <div> — разрешённый тег, и лишний
-       закрывающий </div> во вставке из Word/Google Docs закрывал обёртку раньше времени —
-       весь хвост после него молча терялся при сохранении (тест: 'a</div><p>b</p>' → 'a').
-       <body> в пользовательском HTML не бывает, и libxml отбрасывает лишние закрывающие теги. */
+
+
+
+
     $dom->loadHTML('<?xml encoding="utf-8" ?><body>' . $html . '</body>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     libxml_clear_errors();
     libxml_use_internal_errors($prevLibxml);
@@ -66,7 +66,7 @@ function sanitize_html(string $html): string
             }
             if ($tag === 'a') {
                 $href = trim($child->getAttribute('href'));
-                /* «/» разрешён, но НЕ «//» и «/\» — это protocol-relative URL на чужой домен */
+
                 if ($href !== '' && !preg_match('~^(https?:|mailto:|tel:|/(?![/\\\\])|#)~i', $href)) {
                     $child->removeAttribute('href');
                 }

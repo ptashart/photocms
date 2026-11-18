@@ -3,26 +3,26 @@
  * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
-/** @var array $meta @var string $content @var array $page @var array $menu @var string $bodyClass */
+
 $favId = (int)setting('favicon_image_id');
 $fav = $favId ? image_get($favId) : null;
 $socials = social_links();
 ?>
 <!DOCTYPE html>
-<html lang="<?= e(trim(setting('lang')) !== '' ? trim(setting('lang')) : 'ru') /* fallback: пустая/повреждённая настройка не должна давать lang="" (аудит 1.9.26) */ ?>">
+<html lang="<?= e(trim(setting('lang')) !== '' ? trim(setting('lang')) : 'ru')  ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="<?= e(safe_color(setting('color_bg'), '#ffffff')) ?>">
-<?php /* сайт только светлый: без этой метки Chrome на Android мог принудительно затемнить
-   страницу в тёмном режиме системы (ревизия 1.9.35, рекомендация 5) */ ?>
+<?php
+ ?>
 <meta name="color-scheme" content="light">
 <title><?= e($meta['title']) ?></title>
 <?php if ($meta['description'] !== ''): ?>
 <meta name="description" content="<?= e($meta['description']) ?>">
 <?php endif; ?>
-<?php /* noindex без nofollow: намеренно закрытая страница обязана пускать робота по своим
-       ссылкам — иначе noindex-хаб со временем глушит внутреннюю перелинковку (SEO-аудит 1.9.17) */ ?>
+<?php
+ ?>
 <meta name="robots" content="<?= e($meta['robots'] ?? ($meta['noindex'] ? 'noindex,follow,max-image-preview:large,max-snippet:-1' : 'index,follow,max-image-preview:large,max-snippet:-1')) ?>">
 <?php if ($meta['canonical'] !== ''): ?>
 <link rel="canonical" href="<?= e($meta['canonical']) ?>">
@@ -39,7 +39,7 @@ $socials = social_links();
 <?php endif; ?>
 <?php if (!empty($meta['og_image'])): $og = $meta['og_image']; ?>
 <meta property="og:image" content="<?= e($og['url']) ?>">
-<?php /* MIME по расширению URL — у og:image:type узкий набор допустимых значений (аудит 1.9.26) */
+<?php
 $ogType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif'][strtolower(pathinfo((string)parse_url($og['url'], PHP_URL_PATH), PATHINFO_EXTENSION))] ?? ''; ?>
 <?php if ($ogType !== ''): ?><meta property="og:image:type" content="<?= $ogType ?>"><?php endif; ?>
 <?php if (str_starts_with($og['url'], 'https://')): ?>
@@ -51,12 +51,12 @@ $ogType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 
 <meta name="twitter:image" content="<?= e($og['url']) ?>">
 <meta name="twitter:image:alt" content="<?= e($og['alt']) ?>">
 <?php endif; ?>
-<?php /* карточка объявляется всегда: раньше без og:image не было вообще никакой */ ?>
+<?php  ?>
 <meta name="twitter:card" content="<?= !empty($meta['og_image']) ? 'summary_large_image' : 'summary' ?>">
 <?php if (trim(setting('twitter_site')) !== ''): ?><meta name="twitter:site" content="@<?= e(ltrim(trim(setting('twitter_site')), '@')) ?>">
 <?php endif; ?>
 <meta name="twitter:title" content="<?= e($meta['title']) ?>">
-<?php if ($meta['canonical'] !== ''): ?><meta name="twitter:url" content="<?= e($meta['canonical']) ?>"><?php endif; /* карточке X не хватало адреса страницы (аудит 1.9.26) */ ?>
+<?php if ($meta['canonical'] !== ''): ?><meta name="twitter:url" content="<?= e($meta['canonical']) ?>"><?php endif;  ?>
 <?php if ($meta['description'] !== ''): ?>
 <meta name="twitter:description" content="<?= e($meta['description']) ?>">
 <?php endif; ?>
@@ -64,7 +64,7 @@ $ogType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 
 <meta property="article:published_time" content="<?= e($meta['article']['published']) ?>">
 <meta property="article:modified_time" content="<?= e($meta['article']['modified']) ?>">
 <?php endif; ?>
-<?php /* лента с 1.9.1 общесайтовая — подпись называем сайтом, как и <title> самого канала */ ?>
+<?php  ?>
 <link rel="alternate" type="application/rss+xml" title="<?= e(setting('site_name')) ?>" href="<?= e(abs_url('/feed.xml')) ?>">
 <?php if (trim(setting('verify_yandex')) !== ''): ?><meta name="yandex-verification" content="<?= e(setting('verify_yandex')) ?>">
 <?php endif; ?>
@@ -76,15 +76,15 @@ $ogType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 
 <link rel="icon" type="image/png" sizes="48x48" href="<?= e(image_url($fav, 48, 'png')) ?>">
 <link rel="apple-touch-icon" sizes="180x180" href="<?= e(image_url($fav, 180, 'png')) ?>">
 <?php endif; ?>
-<?php /* первое фото альбома (LCP) — начинаем грузить ещё до разбора body */
+<?php
 if (!empty($meta['preload_image'])): ?>
 <link rel="preload" as="image" href="<?= e($meta['preload_image']['src']) ?>" imagesrcset="<?= e($meta['preload_image']['srcset']) ?>" imagesizes="<?= e($meta['preload_image']['sizes']) ?>"<?php if (!empty($meta['preload_image']['type'])): ?> type="<?= e($meta['preload_image']['type']) ?>"<?php endif; ?> fetchpriority="high">
 <?php endif; ?>
-<?php /* основные кириллические начертания грузим заранее — текст не «прыгает» при смене шрифта */
+<?php
 if (str_starts_with(setting('lang'), 'ru')):
     foreach ([['font_body', 'Golos Text', 'golos-text-400-cyrillic'], ['font_heading', 'Tenor Sans', 'tenor-sans-400-cyrillic']] as [$fk, $fname, $ffile]):
-        /* в «Яблочной» теме тело по умолчанию — системный стек (см. theme_css()): preload
-           Golos там был бы «preloaded but not used» (ревизия 1.9.35, п.13) */
+
+
         if (setting($fk) === $fname && !(theme_is_apple_family() && $fk === 'font_body') && is_file(ROOT . '/assets/fonts/' . $ffile . '.woff2')): ?>
 <link rel="preload" href="/assets/fonts/<?= e($ffile) ?>.woff2" as="font" type="font/woff2" crossorigin>
 <?php   endif;
@@ -94,8 +94,8 @@ endif; ?>
 <link rel="stylesheet" href="<?= e(asset('assets/fonts/fonts.css')) ?>">
 <?php endif; ?>
 <link rel="stylesheet" href="<?= e(asset('assets/css/site.css')) ?>">
-<?php /* тема «Яблочная» — отдельным файлом после основного: кэшируется как статика,
-       а классическая тема не платит за него ни байтом (1.9.19) */
+<?php
+
 if (theme_is_apple_family()): ?>
 <link rel="stylesheet" href="<?= e(asset('assets/css/theme-apple.css')) ?>">
 <?php endif; ?>
@@ -109,18 +109,18 @@ if (theme_is_apple_family()): ?>
 <?= public_custom_code((string)setting('head_code')) ?>
 
 </head>
-<?php /* Скачивание фото (1.9.58/1.9.59): data-lb-dl — кнопка «Скачать» в лайтбоксе;
-     data-no-save — при выключенной настройке: блокировка правого клика, перетаскивания
-     и долгого тапа по фото (сдерживает случайное сохранение, абсолютной защиты не даёт) */ ?>
+<?php
+
+ ?>
 <body class="<?= e($bodyClass) ?>"<?= setting('lightbox_download') === '1' ? ' data-lb-dl' : ' data-no-save' ?>>
 <a class="skip" href="#main">К содержимому</a>
 <div class="layout">
   <aside class="sidebar">
     <header class="sb-bar">
       <?php
-      /* Над меню — надпись, логотип или и то и другое (настройка brand_mode).
-         Если выбранный режим невозможен (логотип не задан или надпись пуста),
-         показываем то, что есть — как и раньше, «ничего» тоже допустимо. */
+
+
+
       $brandText = trim(setting('menu_brand'));
       $logoImg = (($lid = (int)setting('logo_image_id')) > 0) ? image_get($lid) : null;
       $brandMode = setting('brand_mode');
@@ -134,9 +134,9 @@ if (theme_is_apple_family()): ?>
       <?php if ($showLogo || $showText): ?>
         <a class="brand<?= $showLogo && $showText ? ' brand-both' : '' ?>" href="/">
           <?php if ($showLogo):
-              /* png — у логотипов почти всегда прозрачный фон. Srcset до 900 px (1.9.25):
-                 раньше резали на 600 — на десктопной ретине (320 px × DPR 2 = 640) и на
-                 телефонах с DPR 3 браузеру не хватало ступени, логотип был мягким */
+
+
+
               $lw = image_widths($logoImg, 900);
               $lsrcset = [];
               foreach ($lw as $w) {
@@ -170,8 +170,8 @@ if (theme_is_apple_family()): ?>
         <nav class="footer-cols" aria-label="Карта сайта">
           <?php foreach ($fcols as $c): ?>
             <div class="fcol">
-              <?php /* заголовок выводим всегда (1.9.73): пустой занимает своё место,
-                       иначе ссылки колонки без заголовка поднимаются выше соседних */ ?>
+              <?php
+ ?>
               <div class="fcol-title"><?= $c['title'] !== '' ? e($c['title']) : '&nbsp;' ?></div>
               <?php foreach ($c['links'] as $l): $ext = (bool)preg_match('~^https?://~i', $l['url']); ?>
                 <a class="fcol-link" href="<?= e($l['url']) ?>"<?= $ext ? ' target="_blank" rel="noopener"' : '' ?>><?= e($l['text']) ?></a>
@@ -181,13 +181,13 @@ if (theme_is_apple_family()): ?>
         </nav>
       <?php endif; ?>
       <?php
-      /* Низ подвала — одной строкой (1.9.44): копирайт слева заподлицо с первой колонкой
-         ссылок, остальное (адрес, телефон, соцсети) — правее через разделитель « · ».
-         Копирайт отделён от $footParts — ему свой класс и своё место в flex-строке (1.9.44).
-         Адрес (1.9.43) — часть правила NAP: название-адрес-телефон на сайте должны
-         совпадать с карточками Яндекс.Бизнеса и справочников. Видимая ссылка RSS убрана
-         по просьбе владельца (1.9.35): сама лента /feed.xml и <link rel="alternate">
-         в <head> остаются. Пустой блок не выводим (аудит 1.9.15) */
+
+
+
+
+
+
+
       $footerText = trim(setting('footer_text'));
       $footParts = [];
       $napAddress = implode(', ', array_filter(array_map('trim', [setting('street_address'), setting('city'), setting('postal_code')])));

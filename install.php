@@ -4,23 +4,23 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 declare(strict_types=1);
-/** Веб-установщик: создаёт базу, администратора и стартовую главную. После установки можно удалить этот файл. */
+
 define('ROOT', __DIR__);
 require __DIR__ . '/app/helpers.php';
-/* перехватчик ошибок — как в bootstrap.php: фаталы в установке показываем текстом, а не пустым экраном */
+
 app_register_error_handlers();
 require __DIR__ . '/app/db.php';
 require __DIR__ . '/app/settings.php';
 require __DIR__ . '/app/images.php';
 require __DIR__ . '/app/content.php';
 
-/* mb_internal_encoding — только после проверки, что расширение есть (оно в списке ниже):
-   без mbstring установщик обязан показать диагностику, а не упасть с fatal error */
+
+
 if (extension_loaded('mbstring')) {
     mb_internal_encoding('UTF-8');
 }
 header('Content-Type: text/html; charset=utf-8');
-session_boot(); /* сессию поднимаем до любого вывода HTML, иначе кука с CSRF-токеном не устанавливается (output_buffering=0) */
+session_boot();
 
 if (is_installed()) {
     http_response_code(403);
@@ -32,8 +32,8 @@ try {
     $sqlite_ver = (string)(new PDO('sqlite::memory:'))->query('SELECT sqlite_version()')->fetchColumn();
 } catch (Throwable $ignore) {
 }
-/* В свежей распаковке zip пустых каталогов может не быть (архиваторы их теряют) — создаём те,
-   что движок всё равно создал бы сам при первой записи, и только потом проверяем права. */
+
+
 foreach (['storage/originals', 'storage/locks', 'storage/sessions', 'storage/tmp'] as $mk) {
     if (!is_dir(__DIR__ . '/' . $mk)) {
         @mkdir(__DIR__ . '/' . $mk, 0700, true);
@@ -43,8 +43,8 @@ $checks = [
     'PHP 8.0 или новее (сейчас ' . PHP_VERSION . ')' => version_compare(PHP_VERSION, '8.0.0', '>='),
     'Расширение pdo_sqlite' => extension_loaded('pdo_sqlite'),
     'SQLite 3.7 или новее (сейчас ' . ($sqlite_ver !== '' ? $sqlite_ver : 'не определена') . ')' => $sqlite_ver === '' || version_compare($sqlite_ver, '3.7.0', '>='),
-    /* движок обработки фото — любой из двух: с 1.9.30 CMS умеет работать и на Imagick,
-       поэтому отсутствие gd больше не блокирует установку (ревизия 1.9.34, п.21) */
+
+
     'Обработка фото (расширение gd или imagick)' => extension_loaded('gd') || extension_loaded('imagick'),
     'Расширение mbstring' => extension_loaded('mbstring'),
     'Расширение dom (очистка HTML)' => class_exists('DOMDocument'),
@@ -59,8 +59,8 @@ $warn = [
 $ok = !in_array(false, $checks, true);
 $errors = [];
 
-/* Адрес сайта для предзаполнения поля установки: на localhost / IP / технических .local-доменах
-   не подставляем (после переноса на хостинг canonical и sitemap указывали бы на них). */
+
+
 $host = request_host();
 $hostLocal = (bool)preg_match('~^(localhost|\[::1\]|\d{1,3}(\.\d{1,3}){3})(:\d+)?$~', $host)
     || (bool)preg_match('~\.(local|test|localhost)(:\d+)?$~', $host);
@@ -68,16 +68,16 @@ $detectedBase = $hostLocal ? '' : (is_https() ? 'https' : 'http') . '://' . $hos
 
 if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    /* храним логин в нижнем регистре: вход и счётчик попыток и так регистронезависимы (COLLATE NOCASE) */
+
     $login = mb_strtolower(trim(is_string($_POST['login'] ?? null) ? $_POST['login'] : ''));
     $pass = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
-    /* is_string-гард: из подделанной формы (site_name[]=x) поле приходит массивом —
-       (string) по массиву дал бы warning «Array to string conversion» (аудит 1.9.78) */
+
+
     $site = trim(is_string($_POST['site_name'] ?? null) ? $_POST['site_name'] : '');
-    /* Адрес сайта — из поля формы (аудит 1.9.40, п.7): раньше текущий хост записывался
-       молча, и при установке через технический домен хостера весь сайт потом уходил на него
-       301-редиректом, а очистить поле в настройках нельзя (аудит 1.9.22). Теперь владелец
-       видит и правит адрес до записи; пустое поле = не записывать (Настройки → Основное). */
+
+
+
+
     $baseIn = trim(is_string($_POST['base_url'] ?? null) ? $_POST['base_url'] : '');
     if ($baseIn !== '') {
         $baseIn = rtrim($baseIn, '/');
@@ -105,14 +105,14 @@ if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Укажите название сайта.';
     }
     if (!$errors) {
-        define('PTS_DB_CREATE', true); // db() создаёт файл базы только с этим флагом
+        define('PTS_DB_CREATE', true);
         install_schema();
-        /* Гонка двух установок (две вкладки/ретрай): вторая проходит is_installed() выше,
-           но упирается в «Сайт уже установлен» внутри транзакции — показываем текст ошибки,
-           а не необработанное исключение. */
+
+
+
         try {
-            /* Всё одной транзакцией: при сбое посередине не останется администратора без главной
-               страницы (и повторная попытка установки не упрётся в «такой логин уже есть»). */
+
+
             $uid = (int)db_tx(function () use ($login, $pass, $site, $baseIn): int {
                 if ((int)db_val('SELECT COUNT(*) FROM users') > 0) {
                     throw new RuntimeException('Сайт уже установлен.');
@@ -121,7 +121,7 @@ if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_setting('site_name', $site);
                 set_setting('home_title', $site);
                 set_setting('schema_v', (string)SCHEMA_V);
-                if ($baseIn !== '') { // проверен выше; пустое — адрес впишут позже в настройках
+                if ($baseIn !== '') {
                     set_setting('base_url', $baseIn);
                 }
 
@@ -138,8 +138,8 @@ if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 return $uid;
             });
             @file_put_contents(ROOT . '/storage/installed.lock', (string)time());
-            /* Установка завершена — отключаем инсталлятор, чтобы он не оставался публично доступным.
-               Файл переименовывается в install.php.off; вернуть можно по FTP (и .htaccess запрещает отдачу .off). */
+
+
             @rename(__FILE__, __FILE__ . '.off');
 
             session_boot();
@@ -147,14 +147,14 @@ if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['uid'] = $uid;
             $_SESSION['pwv'] = pass_version((string)db_val('SELECT pass_hash FROM users WHERE id = ?', [$uid]));
             $_SESSION['t0'] = $_SESSION['last'] = time();
-            /* .htaccess часто теряется при загрузке по FTP — создадим сами, если его нет */
+
             if (htaccess_missing()) {
                 htaccess_fix();
             }
             redirect(admin_base() . '?p=settings');
         } catch (Throwable $ex) {
-            /* подробности (пути, SQL, строки подключения) — только в журнал: на публичной странице
-               установки им не место */
+
+
             app_log_error('install: ' . $ex->getMessage() . ' в ' . $ex->getFile() . ':' . $ex->getLine());
             $errors[] = 'Во время установки произошла ошибка. Подробности записаны в storage/error.log.';
         }
