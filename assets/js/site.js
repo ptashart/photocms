@@ -6,6 +6,30 @@
 (function () {
   'use strict';
   var doc = document, body = doc.body;
+  var attribution = {};
+  try { attribution = JSON.parse(localStorage.getItem('photocms_attribution') || '{}') || {}; } catch (ignore) {}
+  var query = new URLSearchParams(location.search), marketing = {}, hasMarketing = false;
+  query.forEach(function (value, key) {
+    var name = key.toLowerCase();
+    if (name.indexOf('utm_') === 0 || ['yclid', 'ysclid', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'mc_cid', 'mc_eid', 'igshid', 'from'].indexOf(name) >= 0) {
+      marketing[name] = value.slice(0, 300);
+      hasMarketing = true;
+    }
+  });
+  var externalReferrer = '';
+  if (doc.referrer) {
+    try { if (new URL(doc.referrer).origin !== location.origin) externalReferrer = doc.referrer.slice(0, 1000); } catch (ignore) {}
+  }
+  if (hasMarketing || externalReferrer) {
+    attribution.params = Object.assign({}, attribution.params || {}, marketing);
+    attribution.landing = location.pathname + location.search;
+    attribution.referrer = externalReferrer || attribution.referrer || '';
+    attribution.at = new Date().toISOString();
+    try { localStorage.setItem('photocms_attribution', JSON.stringify(attribution)); } catch (ignore) {}
+  }
+  doc.querySelectorAll('input[data-attribution]').forEach(function (input) {
+    input.value = JSON.stringify(attribution);
+  });
 
 
   var burger = doc.querySelector('[data-burger]');

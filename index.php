@@ -48,25 +48,6 @@ if (str_starts_with($rawUri, '//')) {
 
 
 
-if ($qs0 = (string)($_SERVER['QUERY_STRING'] ?? '')) {
-    $kept = [];
-    $removed = false;
-    foreach (explode('&', $qs0) as $seg) {
-        $eq = strpos($seg, '=');
-        $name = strtolower(rawurldecode($eq === false ? $seg : substr($seg, 0, $eq)));
-        if (str_starts_with($name, 'utm_')
-            || in_array($name, ['fbclid', 'gclid', 'yclid', 'mc_cid', 'mc_eid', 'igshid'], true)) {
-            $removed = true;
-            continue;
-        }
-        $kept[] = $seg;
-    }
-    if ($removed) {
-        $rawPath = (string)parse_url($rawUri, PHP_URL_PATH);
-        redirect(($rawPath === '' ? '/' : $rawPath) . ($kept !== [] ? '?' . implode('&', $kept) : ''), 301);
-    }
-}
-
 $path = request_path();
 $qs = (string)($_SERVER['QUERY_STRING'] ?? '');
 if ($qs !== '') {
@@ -76,7 +57,7 @@ if ($qs !== '') {
     foreach (explode('&', $qs) as $seg) {
         $eq = strpos($seg, '=');
         $name = strtolower(rawurldecode($eq === false ? $seg : substr($seg, 0, $eq)));
-        if (!in_array($name, $allowedQuery, true)) {
+        if (!in_array($name, $allowedQuery, true) && !is_tracking_param($name)) {
             $removed = true;
             continue;
         }
@@ -120,19 +101,6 @@ switch ($path) {
         $txt = robots_txt();
         header('Content-Type: text/plain; charset=utf-8');
         header('Cache-Control: public, max-age=86400');
-        $etag = '"' . md5($txt) . '"';
-        header('ETag: ' . $etag);
-        if (etag_matches($etag)) {
-            http_response_code(304);
-            exit;
-        }
-        echo $txt;
-        exit;
-    case '/llms.txt':
-        $txt = xml_cache_fetch('llms.txt', 'llms_txt');
-        header('Content-Type: text/markdown; charset=utf-8');
-        header('Cache-Control: public, max-age=3600');
-        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', xml_content_lastmod()) . ' GMT');
         $etag = '"' . md5($txt) . '"';
         header('ETag: ' . $etag);
         if (etag_matches($etag)) {

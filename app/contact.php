@@ -149,6 +149,31 @@ function contact_old_read(): array
 }
 
 
+function contact_attribution(string $raw): string
+{
+    if ($raw === '' || strlen($raw) > 20000) {
+        return '';
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        return '';
+    }
+    $out = [];
+    if (is_array($data['params'] ?? null)) {
+        foreach (array_slice($data['params'], 0, 30, true) as $key => $value) {
+            if (is_string($key) && is_tracking_param($key) && is_scalar($value)) {
+                $out['params'][$key] = contact_clean((string)$value, 300);
+            }
+        }
+    }
+    foreach (['landing', 'referrer', 'at'] as $key) {
+        if (is_string($data[$key] ?? null)) {
+            $out[$key] = contact_clean($data[$key], $key === 'at' ? 40 : 1000);
+        }
+    }
+    return $out ? json_db($out) : '';
+}
+
 function contact_message_text(array $m): string
 {
     $lines = ['Имя: ' . $m['name']];
@@ -162,6 +187,18 @@ function contact_message_text(array $m): string
         $lines[] = 'Дата съёмки: ' . $m['date'];
     }
     $lines[] = 'Страница: ' . $m['page'];
+    $source = json_decode((string)($m['attribution'] ?? ''), true);
+    if (is_array($source)) {
+        foreach ((array)($source['params'] ?? []) as $key => $value) {
+            $lines[] = 'Метка ' . $key . ': ' . $value;
+        }
+        if (!empty($source['landing'])) {
+            $lines[] = 'Первая страница: ' . $source['landing'];
+        }
+        if (!empty($source['referrer'])) {
+            $lines[] = 'Источник перехода: ' . $source['referrer'];
+        }
+    }
     $lines[] = '';
     $lines[] = $m['message'];
     return implode("\n", $lines);
@@ -309,6 +346,7 @@ function contact_handle(): void
         'date' => contact_clean($raw('date'), 50),
         'message' => contact_clean($raw('message'), 5000, true),
         'page' => $pagePath,
+        'attribution' => contact_attribution($raw('attribution')),
     ];
     $valid = $m['name'] !== '' && $m['message'] !== ''
         && ($m['phone'] !== '' || $m['email'] !== '')
@@ -326,10 +364,10 @@ function contact_handle(): void
 
     try {
         $id = db_insert('INSERT INTO contact_messages
-            (created_at, name, phone, email, shoot_date, message, page_path, ip_hash, delivered)
-            VALUES (?,?,?,?,?,?,?,?,0)', [
+            (created_at, name, phone, email, shoot_date, message, page_path, ip_hash, source_json, delivered)
+            VALUES (?,?,?,?,?,?,?,?,?,0)', [
             time(), $m['name'], $m['phone'], $m['email'], $m['date'], $m['message'], $m['page'],
-            hash('sha256', client_ip() . '|' . form_secret()),
+            hash('sha256', client_ip() . '|' . form_secret()), $m['attribution'],
         ]);
     } catch (Throwable $e) {
         app_log_error('contact: не удалось сохранить заявку — ' . $e->getMessage());

@@ -1078,7 +1078,7 @@ function section_editor(array $sec, int $n, string $draftNs, int $pageUpdated = 
                 echo faq_row($pfx, (string)$i, is_array($it) ? $it : []);
             }
             echo '</div><button type="button" class="btn" data-add-faq>+ Вопрос</button>';
-            echo '<p class="muted">Вопросы и ответы попадают в микроразметку FAQPage — страница может получить расширенный сниппет в выдаче. На сайте ответы раскрываются по щелчку.</p>';
+            echo '<p class="muted">На сайте ответы раскрываются по щелчку. Секция нужна для удобства посетителей и не создаёт автоматическую разметку FAQPage.</p>';
             break;
         case 'pricing':
             echo f_input($pfx . '[kicker]', 'Надзаголовок (необязательно)', (string)($d['kicker'] ?? ''), ['maxlength' => 80]);

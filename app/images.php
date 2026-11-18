@@ -741,6 +741,9 @@ function gd_save_variant($im, int $w, string $ext, string $dest, bool $allowShar
     }
     if ($ok) {
         $ok = move_file_inplace($tmp, $dest);
+        if ($ok && !image_metadata_embed($dest, pathinfo($dest, PATHINFO_EXTENSION))) {
+            app_log_error('metadata: не удалось записать права автора в ' . $dest);
+        }
     }
     if (!$ok) {
         app_log_error('gd_save_variant: не удалось записать ' . $dest . ' (место на диске / права)');
@@ -971,6 +974,9 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
         $im->clear();
         if ($ok) {
             $ok = move_file_inplace($tmp, $dest);
+        if ($ok && !image_metadata_embed($dest, pathinfo($dest, PATHINFO_EXTENSION))) {
+            app_log_error('metadata: не удалось записать права автора в ' . $dest);
+        }
         }
         if (!$ok) {
             app_log_error('imagick_make_variant: не удалось записать ' . $dest);
@@ -1245,6 +1251,9 @@ function og_variant_write(string $blob, string $dest): bool
         return false;
     }
     $ok = move_file_inplace($tmp, $dest);
+        if ($ok && !image_metadata_embed($dest, pathinfo($dest, PATHINFO_EXTENSION))) {
+            app_log_error('metadata: не удалось записать права автора в ' . $dest);
+        }
     if (!$ok) {
         @unlink($tmp);
     }

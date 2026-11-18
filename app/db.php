@@ -215,6 +215,7 @@ function install_schema(): void
         message TEXT NOT NULL,
         page_path TEXT NOT NULL DEFAULT '',
         ip_hash TEXT NOT NULL DEFAULT '',
+        source_json TEXT NOT NULL DEFAULT '',
         delivered INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at);
@@ -362,7 +363,7 @@ function install_schema(): void
 
 
 
-const SCHEMA_V = 19;
+const SCHEMA_V = 20;
 
 
 function migrate(): void
@@ -697,6 +698,9 @@ function migrate_steps(int $v): void
             delivered INTEGER NOT NULL DEFAULT 0
         )");
         db()->exec('CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at)');
+    }
+    if ($v < 20 && db_column_exists('contact_messages', 'source_json') === false) {
+        db()->exec("ALTER TABLE contact_messages ADD COLUMN source_json TEXT NOT NULL DEFAULT ''");
     }
 }
 

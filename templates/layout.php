@@ -210,7 +210,7 @@ if (theme_is_apple_family()): ?>
           <?php if ($footParts): ?><span class="footer-rest"><?= implode('<span class="footer-sep" aria-hidden="true">·</span>', $footParts) ?></span><?php endif; ?>
         </p>
       <?php endif; ?>
-      <a class="author-credit" href="https://www.ptash.art" target="_blank" rel="author noopener nofollow">ptash.art</a>
+      <a class="author-credit" href="https://www.ptash.art" target="_blank" rel="noopener nofollow">ptash.art</a>
     </footer>
   </div>
 </div>

@@ -23,7 +23,7 @@ function setting_defaults(): array
         'verify_google' => '',
         'verify_bing' => '',
         'twitter_site' => '',
-        'schema_type' => 'Photographer',
+        'schema_type' => 'LocalBusiness',
         'business_name' => '',
 
         'business_legal_name' => '',
@@ -31,6 +31,10 @@ function setting_defaults(): array
         'business_ogrnip' => '',
         'person_name' => '',
         'person_job' => '',
+        'photo_author' => '',
+        'photo_copyright' => '',
+        'photo_credit' => '',
+        'photo_license' => '',
 
         'person_knows_about' => '',
         'person_awards' => '',

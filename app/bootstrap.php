@@ -226,7 +226,7 @@ define('ROOT', dirname(__DIR__));
 
 
 
-define('APP_VERSION', '1.9.105');
+define('APP_VERSION', '1.9.106');
 
 
 
@@ -242,6 +242,7 @@ app_register_error_handlers();
 security_headers();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/image_metadata.php';
 require_once __DIR__ . '/images.php';
 require_once __DIR__ . '/sanitize.php';
 require_once __DIR__ . '/content.php';

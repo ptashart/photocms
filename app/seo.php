@@ -204,12 +204,12 @@ function jsonld_logo(): ?array
         return null;
     }
     $w = (int)image_pick_width(image_widths($img), 600);
-    return [
+    return array_merge([
         '@type' => 'ImageObject',
         'url' => abs_url(image_url($img, $w, 'jpg')),
         'width' => $w,
         'height' => (int)$img['w'] > 0 ? (int)round((int)$img['h'] * $w / (int)$img['w']) : 0,
-    ];
+    ], image_metadata_schema());
 }
 
 
@@ -260,60 +260,37 @@ function opening_hours_schema(string $raw): array
 
 function jsonld_section_blocks(array $page, array $meta, ?array $sections = null): array
 {
-
-
-
-    $faq = [];
     $blocks = [];
     foreach (($sections ?? page_sections((int)$page['id'])) as $sec) {
         $d = (array)$sec['data'];
-        if ($sec['type'] === 'faq') {
-            foreach ((array)($d['items'] ?? []) as $it) {
-                if (!is_array($it)) {
-                    continue;
-                }
-                $q = trim((string)($it['q'] ?? ''));
-
-                $a = trim((string)preg_replace('/\s+/u', ' ', strip_tags((string)($it['a'] ?? ''))));
-                if ($q !== '' && $a !== '') {
-                    $faq[] = ['@type' => 'Question', 'name' => $q, 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $a]];
-                }
-            }
-        } elseif ($sec['type'] === 'video') {
-            $v = (int)($d['video_id'] ?? 0) > 0 ? video_get((int)$d['video_id']) : null;
-            if (!$v || trim((string)$v['file']) === '') {
-                continue;
-            }
-            $vo = [
-                '@context' => 'https://schema.org',
-                '@type' => 'VideoObject',
-                'name' => trim((string)$v['title']) !== '' ? trim((string)$v['title']) : $meta['title'],
-                'uploadDate' => (string)$v['created_at'],
-                'contentUrl' => abs_url(video_url($v)),
-            ];
-            if (trim((string)$v['description']) !== '') {
-                $vo['description'] = trim((string)$v['description']);
-            }
-            $poster = (int)($v['poster_image_id'] ?? 0) > 0 ? image_get((int)$v['poster_image_id']) : null;
-            if ($poster) {
-                $vo['thumbnailUrl'] = abs_url(image_url($poster, (int)image_pick_width(image_widths($poster), 1240), 'jpg'));
-            } elseif (!empty($meta['og_image']['url'])) {
-
-
-
-                $vo['thumbnailUrl'] = $meta['og_image']['url'];
-            }
-            $dur = video_duration_iso($v['duration'] ?? 0);
-            if ($dur !== '') {
-                $vo['duration'] = $dur;
-            }
-            $blocks[] = $vo;
+        if ($sec['type'] !== 'video') {
+            continue;
         }
-    }
-    if ($faq) {
-
-
-        $blocks[] = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $faq];
+        $v = (int)($d['video_id'] ?? 0) > 0 ? video_get((int)$d['video_id']) : null;
+        if (!$v || trim((string)$v['file']) === '') {
+            continue;
+        }
+        $vo = [
+            '@context' => 'https://schema.org',
+            '@type' => 'VideoObject',
+            'name' => trim((string)$v['title']) !== '' ? trim((string)$v['title']) : $meta['title'],
+            'uploadDate' => (string)$v['created_at'],
+            'contentUrl' => abs_url(video_url($v)),
+        ];
+        if (trim((string)$v['description']) !== '') {
+            $vo['description'] = trim((string)$v['description']);
+        }
+        $poster = (int)($v['poster_image_id'] ?? 0) > 0 ? image_get((int)$v['poster_image_id']) : null;
+        if ($poster) {
+            $vo['thumbnailUrl'] = abs_url(image_url($poster, (int)image_pick_width(image_widths($poster), 1240), 'jpg'));
+        } elseif (!empty($meta['og_image']['url'])) {
+            $vo['thumbnailUrl'] = $meta['og_image']['url'];
+        }
+        $dur = video_duration_iso($v['duration'] ?? 0);
+        if ($dur !== '') {
+            $vo['duration'] = $dur;
+        }
+        $blocks[] = $vo;
     }
     return $blocks;
 }
@@ -339,10 +316,10 @@ function jsonld_blocks(array $page, array $meta): array
 
 
 
-        $schemaType = setting('schema_type') !== '' ? setting('schema_type') : 'Photographer';
+        $schemaType = setting('schema_type') !== '' ? setting('schema_type') : 'LocalBusiness';
         $isPhotog = $schemaType === 'Photographer';
         if ($isPhotog) {
-            $schemaType = 'ProfessionalService';
+            $schemaType = 'LocalBusiness';
         }
         $biz = [
             '@context' => 'https://schema.org',
@@ -488,14 +465,14 @@ function jsonld_blocks(array $page, array $meta): array
 
 
             $w = (int)max(image_widths($img, 2520));
-            $imgs[] = [
+            $imgs[] = array_merge([
                 '@type' => 'ImageObject',
                 'contentUrl' => abs_url(image_url($img, $w, 'jpg')),
                 'thumbnailUrl' => abs_url(image_url($img, (int)image_pick_width(image_widths($img), 440), 'jpg')),
                 'name' => trim((string)$img['alt']) !== '' ? (string)$img['alt'] : $page['title'] . ' — фото ' . ($i + 1),
                 'width' => $w,
                 'height' => (int)$img['w'] > 0 ? (int)round((int)$img['h'] * $w / (int)$img['w']) : 0,
-            ];
+            ], image_metadata_schema());
         }
         if ($imgs) {
             $wp['image'] = $imgs;
@@ -955,9 +932,7 @@ function sitemap_xml(): string
             $x .= '    <image:image><image:loc>' . xml_e($base . image_large_url($img)) . '</image:loc>';
 
             $alt = trim((string)$img['alt']);
-            $x .= '<image:title>' . xml_e($alt !== '' ? $alt : $p['title']) . '</image:title>';
             if ($alt !== '') {
-                $x .= '<image:caption>' . xml_e($alt) . '</image:caption>';
             }
             $x .= "</image:image>\n";
         }
@@ -1040,9 +1015,7 @@ function sitemap_xml(): string
             }
             $x .= '    <image:image><image:loc>' . xml_e($base . image_large_url($img)) . '</image:loc>';
             $alt = trim((string)$img['alt']);
-            $x .= '<image:title>' . xml_e($alt !== '' ? $alt : (string)$p['title']) . '</image:title>';
             if ($alt !== '') {
-                $x .= '<image:caption>' . xml_e($alt) . '</image:caption>';
             }
             $x .= "</image:image>\n";
         }
@@ -1059,6 +1032,8 @@ function robots_txt(): string
 
 
     $t = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
+    $t .= "\nUser-agent: Yandex\nAllow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
+    $t .= 'Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&gbraid&wbraid&fbclid&mc_cid&mc_eid&igshid&from /' . "\n";
 
 
     $extra = trim(setting('robots_extra'));
@@ -1066,106 +1041,4 @@ function robots_txt(): string
         $t .= $extra . "\n\n";
     }
     return $t . 'Sitemap: ' . base_url() . "/sitemap.xml\n";
-}
-
-
-
-
-
-
-
-
-function llms_txt(): string
-{
-    $base = base_url();
-
-
-    $line = static function (string $s): string {
-        $s = trim(preg_replace('~\s+~u', ' ', strip_tags($s)));
-        return strtr($s, ['[' => '(', ']' => ')']);
-    };
-    $home = db_all("SELECT seo_description, short_text FROM pages WHERE is_home = 1 AND is_published = 1 LIMIT 1")[0] ?? null;
-    $summary = $line((string)($home['seo_description'] ?? '') !== '' ? (string)$home['seo_description'] : (string)($home['short_text'] ?? ''));
-    $t = '# ' . $line(setting('site_name')) . "\n\n";
-    if ($summary !== '') {
-        $t .= '> ' . $summary . "\n\n";
-    }
-
-
-
-    $about = [];
-    $person = trim(setting('person_name'));
-    if ($person !== '') {
-        $who = $person . (trim(setting('person_job')) !== '' ? ' — ' . trim(setting('person_job')) : '');
-        $geo = array_values(array_filter(array_map('trim', explode(',', setting('cities_served')))));
-        if (!$geo && trim(setting('city')) !== '') {
-            $geo = [trim(setting('city'))];
-        }
-        if ($geo) {
-            $who .= '. География работы: ' . implode(', ', $geo);
-        }
-        $about[] = '- ' . $line($who);
-    }
-    $knows = array_values(array_filter(array_map('trim', explode(',', setting('person_knows_about')))));
-    if ($knows) {
-        $about[] = '- Специализация: ' . $line(implode(', ', $knows));
-    }
-    $awards = array_values(array_filter(array_map('trim', explode(',', setting('person_awards')))));
-    if ($awards) {
-        $about[] = '- Награды и статусы: ' . $line(implode(', ', $awards));
-    }
-    $contacts = array_filter([trim(setting('phone')), trim(setting('email'))]);
-    if ($contacts) {
-        $about[] = '- Контакты: ' . $line(implode(', ', $contacts));
-    }
-    $profiles = [];
-    foreach (social_links() as $sl) {
-        $profiles[] = $sl['label'] . ' (' . $sl['url'] . ')';
-    }
-    if ($profiles) {
-        $about[] = '- Профили: ' . implode(', ', $profiles);
-    }
-    if ($about) {
-        $t .= "## О специалисте\n\n" . implode("\n", $about) . "\n\n";
-    }
-    $pages = db_all('SELECT type, title, slug, is_home, canonical, seo_description, short_text FROM pages WHERE is_published = 1 AND noindex = 0 ORDER BY is_home DESC, position, id');
-    $groups = ['page' => [], 'album' => []];
-    foreach ($pages as $p) {
-        $own = $base . page_url($p);
-        $canon = trim((string)$p['canonical']);
-        if ($canon !== '' && rtrim($canon, '/') !== rtrim($own, '/') && rtrim($canon, '/') !== rtrim(page_url($p), '/')) {
-            continue;
-        }
-        $desc = trim((string)$p['seo_description']) !== '' ? (string)$p['seo_description'] : (string)$p['short_text'];
-        $item = '- [' . $line((string)$p['title']) . '](' . $own . ')';
-        if (($desc = $line($desc)) !== '') {
-            $item .= ': ' . $desc;
-        }
-        $groups[$p['type'] === 'album' ? 'album' : 'page'][] = $item;
-    }
-    if ($groups['page']) {
-        $t .= "## Страницы\n\n" . implode("\n", $groups['page']) . "\n\n";
-    }
-    if ($groups['album']) {
-        $t .= "## Портфолио\n\n" . implode("\n", $groups['album']) . "\n\n";
-    }
-    $posts = db_all('SELECT title, slug, section, published_at, created_at, updated_at, canonical, excerpt, seo_description FROM posts WHERE is_published = 1 AND noindex = 0 ORDER BY ' . POST_TS_SQL . ' DESC, id DESC');
-    $items = [];
-    foreach ($posts as $p) {
-        $own = $base . post_url($p);
-        $canon = trim((string)($p['canonical'] ?? ''));
-        if ($canon !== '' && rtrim($canon, '/') !== rtrim($own, '/') && rtrim($canon, '/') !== rtrim(post_url($p), '/')) {
-            continue;
-        }
-        $desc = trim((string)($p['seo_description'] ?? '')) !== '' ? (string)$p['seo_description'] : (string)($p['excerpt'] ?? '');
-        $item = '- [' . $line((string)$p['title']) . '](' . $own . ')';
-        if (($desc = $line($desc)) !== '') {
-            $item .= ': ' . $desc;
-        }
-        $items[] = $item;
-    }
-    if ($items) {
-        $t .= "## Заметки\n\n" . implode("\n", $items) . "\n\n";
-    }
-    return $t;
 }

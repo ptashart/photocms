@@ -14,6 +14,12 @@ require_once __DIR__ . '/constants.php';
 
 
 
+function is_tracking_param(string $name): bool
+{
+    $name = strtolower($name);
+    return str_starts_with($name, 'utm_') || in_array($name, ['yclid', 'ysclid', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'mc_cid', 'mc_eid', 'igshid', 'from'], true);
+}
+
 function app_log_error(string $msg): void
 {
     $dir = defined('ROOT') ? ROOT . '/storage' : __DIR__ . '/../storage';
@@ -67,7 +73,6 @@ function security_headers(): void
     }
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('X-Frame-Options: SAMEORIGIN');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
     if (is_https()) {
         header('Strict-Transport-Security: max-age=31536000');
@@ -271,8 +276,20 @@ function public_csp(string $trustedHtml, string $nonce): string
     sort($media);
     $form = public_csp_origins($trustedHtml, 'form', 'action');
     $connect = $script;
-    if (preg_match('~(?:mc\.yandex\.|metrika|\bym\s*\()~i', $trustedHtml)) {
-        $connect = array_merge($connect, ['https://mc.yandex.ru', 'https://mc.yandex.com']);
+    $metrika = preg_match('~(?:mc\.yandex\.|metrika|\bym\s*\()~i', $trustedHtml);
+    if ($metrika) {
+        $connect = array_merge($connect, [
+            'https://mc.yandex.ru', 'https://mc.yandex.az', 'https://mc.yandex.by', 'https://mc.yandex.co.il',
+            'https://mc.yandex.com', 'https://mc.yandex.com.am', 'https://mc.yandex.com.ge', 'https://mc.yandex.com.tr',
+            'https://mc.yandex.ee', 'https://mc.yandex.fr', 'https://mc.yandex.kg', 'https://mc.yandex.kz',
+            'https://mc.yandex.lt', 'https://mc.yandex.lv', 'https://mc.yandex.md', 'https://mc.yandex.tj',
+            'https://mc.yandex.tm', 'https://mc.yandex.uz', 'https://mc.webvisor.com', 'https://mc.webvisor.org',
+            'https://yastatic.net', 'wss://mc.yandex.ru', 'wss://mc.yandex.az', 'wss://mc.yandex.by',
+            'wss://mc.yandex.co.il', 'wss://mc.yandex.com', 'wss://mc.yandex.com.am', 'wss://mc.yandex.com.ge',
+            'wss://mc.yandex.com.tr', 'wss://mc.yandex.ee', 'wss://mc.yandex.fr', 'wss://mc.yandex.kg',
+            'wss://mc.yandex.kz', 'wss://mc.yandex.lt', 'wss://mc.yandex.lv', 'wss://mc.yandex.md',
+            'wss://mc.yandex.tj', 'wss://mc.yandex.tm', 'wss://mc.yandex.uz', 'wss://mc.webvisor.com', 'wss://mc.webvisor.org',
+        ]);
     }
     if (preg_match('~(?:google-analytics\.com|googletagmanager\.com|gtag\s*\()~i', $trustedHtml)) {
         $connect = array_merge($connect, ['https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net']);
@@ -283,14 +300,16 @@ function public_csp(string $trustedHtml, string $nonce): string
     }
     $connect = array_values(array_unique($connect));
     sort($connect);
+    $ancestors = ' https://metrika.yandex.ru https://metrika.yandex.by https://metrika.yandex.com https://metrika.yandex.com.tr https://metrika.yandex.kz https://metrika.yandex.uz https://analytics.yandex.ru https://analytics.yandex.by https://analytics.yandex.com https://analytics.yandex.com.tr https://analytics.yandex.kz https://metr.yandex.ru https://metr.yandex.by https://metr.yandex.com https://metr.yandex.com.tr https://metr.yandex.kz https://metrica.ya.ru https://metrica.yandex https://metrica.yandex.by https://metrica.yandex.com https://metrica.yandex.com.tr https://metrica.yandex.kz https://metrica.yandex.ru https://metrika.ya.ru https://metrika.yandex https://webvisor.com https://*.webvisor.com';
     return "Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; "
         . "style-src 'self' 'unsafe-inline'" . $suffix($style)
         . "; script-src 'self' 'nonce-" . $nonce . "' 'strict-dynamic'" . $suffix($script)
         . "; font-src 'self' data:; connect-src 'self'" . $suffix($connect)
         . "; media-src 'self'" . $suffix($media)
-        . "; frame-src 'self'" . $suffix($frame)
+        . "; child-src 'self'" . ($metrika ? ' blob: https://mc.yandex.ru' : '')
+        . "; frame-src 'self'" . ($metrika ? ' blob: https://mc.yandex.ru' : '') . $suffix($frame)
         . "; object-src 'none'; base-uri 'self'; form-action 'self'" . $suffix($form)
-        . "; frame-ancestors 'self'";
+        . "; frame-ancestors 'self'" . ($metrika ? $ancestors : '');
 }
 
 

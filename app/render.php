@@ -145,7 +145,7 @@ function fx_stamp_text(?string $set = null): string
 
 function photo_html(array $img, int $index, string $sizes, bool $lightbox, string $fallbackAlt, bool $eager = false, bool $highPriority = false, string $caption = '', ?array $link = null): string
 {
-    $alt = trim((string)$img['alt']) !== '' ? (string)$img['alt'] : $fallbackAlt;
+    $alt = trim((string)$img['alt']) !== '' ? (string)$img['alt'] : trim($fallbackAlt . ' — фото ' . ($index + 1));
 
 
     $style = '--ar:' . max(1, (int)$img['w']) . ' / ' . max(1, (int)$img['h'])

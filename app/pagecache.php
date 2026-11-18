@@ -26,12 +26,19 @@ function pagecache_requestable(): bool
     if ($m !== 'GET' && $m !== 'HEAD') {
         return false;
     }
-    if (empty($_GET)) {
-        return empty($_COOKIE['ptsid']);
+    if (!empty($_COOKIE['ptsid'])) {
+        return false;
     }
-    $page = $_GET['page'] ?? null;
-    return count($_GET) === 1 && is_string($page) && ctype_digit($page) && (int)$page > 0
-        && empty($_COOKIE['ptsid']);
+    foreach ($_GET as $key => $value) {
+        if (is_tracking_param((string)$key)) {
+            continue;
+        }
+        if ($key === 'page' && is_string($value) && ctype_digit($value) && (int)$value > 0) {
+            continue;
+        }
+        return false;
+    }
+    return true;
 }
 
 function pagecache_rev(): string

@@ -19,6 +19,7 @@ if (!is_installed()) {
 migrate();
 header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
+header('X-Frame-Options: SAMEORIGIN');
 
 
 $previewRequest = in_array($_GET['p'] ?? '', ['page_preview', 'post_preview'], true);

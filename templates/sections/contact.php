@@ -22,6 +22,7 @@ $oldField = static fn(string $key): string => is_string($old[$key] ?? null) ? $o
     <input type="hidden" name="ct" value="<?= e(contact_token(page_url($page))) ?>">
     <input type="hidden" name="cp" value="<?= e(page_url($page)) ?>">
     <input type="hidden" name="back" value="<?= e($back) ?>">
+    <input type="hidden" name="attribution" data-attribution value="">
     <div hidden aria-hidden="true"><label>Не заполнять<input type="text" name="p48x2" tabindex="-1" autocomplete="new-password"></label></div>
     <label class="cf-f"><span>Ваше имя *</span><input type="text" name="name" maxlength="100" required autocomplete="name" value="<?= e($oldField('name')) ?>"></label>
     <div class="cf-row">

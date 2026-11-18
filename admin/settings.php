@@ -37,7 +37,7 @@ function settings_spec(): array
             'twitter_site' => ['text', 'Twitter/X: аккаунт сайта', 'Необязательно. Например @ivanov_foto — уйдёт в мета-тег twitter:site.'],
         ],
         'Организация (разметка)' => [
-            'schema_type' => ['select', 'Тип организации (schema.org)', 'Для главной страницы создаётся структурированная разметка. Для сайта фотографа подходит Photographer — в разметке это ProfessionalService (подтип LocalBusiness, понятен Яндексу и Google) с уточнением профессии через additionalType. Отдельного типа Photographer в schema.org нет.', ['Photographer' => 'Photographer (фотограф)', 'ProfessionalService' => 'ProfessionalService (услуги)', 'LocalBusiness' => 'LocalBusiness', 'Organization' => 'Organization']],
+            'schema_type' => ['select', 'Тип организации (schema.org)', 'Для фотографа по умолчанию используется LocalBusiness с профессией в additionalType. Photographer в schema.org не существует.', ['LocalBusiness' => 'LocalBusiness (локальный бизнес)', 'ProfessionalService' => 'ProfessionalService (старые установки)', 'Organization' => 'Organization']],
             'business_name' => ['text', 'Название для разметки', 'Если пусто — название сайта.'],
             'person_name' => ['text', 'Имя владельца', 'Например: Иван Петров.'],
             'person_job' => ['text', 'Профессия', 'Например: Свадебный и портретный фотограф.'],
@@ -105,6 +105,10 @@ function settings_spec(): array
             'fx_datestamp_color' => ['select', 'Штамп даты: цвет', 'Классический — оранжевый; у некоторых камер был красный или жёлтый.', ['orange' => 'Оранжевый', 'red' => 'Красный', 'yellow' => 'Жёлтый', 'white' => 'Белый']],
         ],
         'Фото' => [
+            'photo_author' => ['text', 'Автор фотографий', 'Имя автора записывается в метаданные создаваемых изображений и ImageObject JSON-LD. Например: Сергей Колесников.'],
+            'photo_copyright' => ['text', 'Копирайт фотографий', 'Например: © 2026 Sergei Kolesnikov. Все права на снимки принадлежат автору.'],
+            'photo_credit' => ['text', 'Кредит / источник', 'Текст кредита для поисковиков, например: ptash.art.'],
+            'photo_license' => ['text', 'Лицензия на использование', 'Например ссылка на условия использования фотографий: https://www.ptash.art/license.'],
             'jpg_quality' => ['number', 'Качество JPEG, %', '40–95. Действует на вновь создаваемые размеры; чтобы пересоздать старые, запустите tools/regen.php.'],
             'webp_quality' => ['number', 'Качество WebP, %', '40–95.'],
             'avif' => ['check', 'Формат AVIF', 'Дополнительные копии превью в AVIF — на 20–30% легче WebP при том же качестве. Создаются, когда выбранный движок (GD или Imagick) поддерживает AVIF; генерация заметно медленнее, места на диске нужно больше. Действует на вновь создаваемые размеры.'],

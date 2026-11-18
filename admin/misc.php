@@ -797,6 +797,14 @@ function admin_messages(): void
   <?php if ($r['shoot_date'] !== ''): ?><p>Дата съёмки: <?= e($r['shoot_date']) ?></p><?php endif; ?>
   <p><?= nl2br(e($r['message'])) ?></p>
   <p class="muted"><small>Страница: <?= e($r['page_path']) ?> · Внешняя доставка: <?= (int)$r['delivered'] ? 'да' : 'нет; заявка сохранена здесь' ?></small></p>
+  <?php $source = json_decode((string)($r['source_json'] ?? ''), true); ?>
+  <?php if (is_array($source) && $source): ?>
+  <details><summary>Источник заявки</summary><ul>
+    <?php foreach ((array)($source['params'] ?? []) as $key => $value): ?><li><?= e($key) ?>: <?= e($value) ?></li><?php endforeach; ?>
+    <?php if (!empty($source['landing'])): ?><li>Первая страница: <?= e($source['landing']) ?></li><?php endif; ?>
+    <?php if (!empty($source['referrer'])): ?><li>Переход: <?= e($source['referrer']) ?></li><?php endif; ?>
+  </ul></details>
+  <?php endif; ?>
   <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>"><button class="btn sm danger">Удалить</button></form>
 </div>
     <?php endforeach; ?>
