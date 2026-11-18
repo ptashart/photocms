@@ -475,6 +475,9 @@ function post_render_html(array $post): string
     $ctx = post_page_context($post);
     $html = '';
     foreach (post_content_sections((int)$post['id']) as $s) {
+        if (in_array($s['type'], ['contact', 'html'], true)) {
+            continue;
+        }
         $html .= render_section($s, $ctx);
     }
     return $html;

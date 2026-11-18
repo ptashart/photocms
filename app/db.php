@@ -205,6 +205,20 @@ function install_schema(): void
         created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS contact_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        shoot_date TEXT NOT NULL DEFAULT '',
+        message TEXT NOT NULL,
+        page_path TEXT NOT NULL DEFAULT '',
+        ip_hash TEXT NOT NULL DEFAULT '',
+        delivered INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at);
+
     CREATE TABLE IF NOT EXISTS images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         slug TEXT NOT NULL DEFAULT 'photo',
@@ -348,7 +362,7 @@ function install_schema(): void
 
 /** Актуальная версия схемы. Целый счётчик 1, 2, 3… — НЕ версия приложения (та — APP_VERSION в формате
     MAJOR.MINOR.PATCH, см. app/bootstrap.php). Поднимите число при изменении структуры и добавьте шаг в migrate(). */
-const SCHEMA_V = 18;
+const SCHEMA_V = 19;
 
 /** Догоняет схему старых установок до актуальной (вызывается после проверки is_installed()). */
 function migrate(): void
@@ -668,6 +682,21 @@ function migrate_steps(int $v): void
         if (!db_column_exists('pages', 'stamp_text')) {
             db()->exec("ALTER TABLE pages ADD COLUMN stamp_text TEXT NOT NULL DEFAULT ''");
         }
+    }
+    if ($v < 19) {
+        db()->exec("CREATE TABLE IF NOT EXISTS contact_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL DEFAULT '',
+            email TEXT NOT NULL DEFAULT '',
+            shoot_date TEXT NOT NULL DEFAULT '',
+            message TEXT NOT NULL,
+            page_path TEXT NOT NULL DEFAULT '',
+            ip_hash TEXT NOT NULL DEFAULT '',
+            delivered INTEGER NOT NULL DEFAULT 0
+        )");
+        db()->exec('CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at)');
     }
 }
 

@@ -24,7 +24,7 @@ session_boot(); /* сессию поднимаем до любого вывод�
 
 if (is_installed()) {
     http_response_code(403);
-    exit('<!doctype html><meta charset="utf-8"><p style="font:16px system-ui;padding:40px">Сайт уже установлен. Удалите файл <code>install.php</code> с сервера. <a href="' . admin_base() . '">Войти в админку</a></p>');
+    exit('<!doctype html><meta charset="utf-8"><p style="font:16px system-ui;padding:40px">Сайт уже установлен. Удалите файл <code>install.php</code> с сервера. Для входа используйте сохранённый адрес админки.</p>');
 }
 
 $sqlite_ver = '';
@@ -92,8 +92,8 @@ if ($ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Адрес сайта должен быть вида https://example.ru (без пути и слэша в конце) — или очистите поле и впишите адрес позже в настройках.';
         }
     }
-    if (!preg_match('/^[A-Za-z0-9_.@-]{3,40}$/', $login)) {
-        $errors[] = 'Логин: 3–40 символов, латиница, цифры и . _ @ -';
+    if (!preg_match('/^[A-Za-z0-9_.\-]{3,32}$/', $login)) {
+        $errors[] = 'Логин: 3–32 символа, латиница, цифры и . _ -';
     }
     if (mb_strlen($pass) < 8) {
         $errors[] = 'Пароль должен быть не короче 8 символов.';
@@ -188,9 +188,9 @@ button{margin-top:20px;padding:12px 22px;border:0;border-radius:6px;background:#
     <?= csrf_field() ?>
     <label>Название сайта</label><input name="site_name" value="<?= e(is_string($_POST['site_name'] ?? null) ? $_POST['site_name'] : '') ?>" required>
     <label>Адрес сайта (для canonical, sitemap и превью ссылок)</label>
-    <input name="base_url" value="<?= e($_POST['base_url'] ?? $detectedBase) ?>" placeholder="https://example.ru">
+    <input name="base_url" value="<?= e(is_string($_POST['base_url'] ?? null) ? $_POST['base_url'] : $detectedBase) ?>" placeholder="https://example.ru">
     <p class="hint">Проверьте адрес: если ставите сайт через технический домен хостера, очистите поле — боевой адрес впишете позже (Настройки → Основное). Иначе весь сайт будет перенаправлять на указанный здесь домен.</p>
-    <label>Логин администратора</label><input name="login" value="<?= e($_POST['login'] ?? '') ?>" autocomplete="username" required>
+    <label>Логин администратора</label><input name="login" value="<?= e(is_string($_POST['login'] ?? null) ? $_POST['login'] : '') ?>" autocomplete="username" required>
     <label>Пароль (от 8 символов)</label><input name="password" type="password" autocomplete="new-password" required>
     <button type="submit">Установить</button>
   </form>

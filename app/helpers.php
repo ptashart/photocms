@@ -69,6 +69,9 @@ function security_headers(): void
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('X-Frame-Options: SAMEORIGIN');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+    if (is_https()) {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
 }
 
 /** Ставится как можно раньше (в bootstrap.php сразу после подключения helpers.php). */
@@ -222,11 +225,8 @@ function public_custom_code(string $code): string
         return '';
     }
     $code = preg_replace_callback('~<script\b([^>]*)>~i', static function (array $m): string {
-        if (preg_match('~\bsrc\s*=~i', $m[1])) {
-            return $m[0];
-        }
         $attrs = preg_replace('~\s+nonce\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)~i', '', $m[1]);
-        return '<script nonce="__PHOTOCMS_CSP_NONCE__"' . $attrs . '>';
+        return '<script nonce="__PHOTOCMS_CSP_CUSTOM_NONCE__"' . $attrs . '>';
     }, $code) ?? $code;
     return '<!--PHOTOCMS_CSP_BEGIN-->' . $code . '<!--PHOTOCMS_CSP_END-->';
 }
@@ -270,10 +270,24 @@ function public_csp(string $trustedHtml, string $nonce): string
     )));
     sort($media);
     $form = public_csp_origins($trustedHtml, 'form', 'action');
+    $connect = $script;
+    if (preg_match('~(?:mc\.yandex\.|metrika|\bym\s*\()~i', $trustedHtml)) {
+        $connect = array_merge($connect, ['https://mc.yandex.ru', 'https://mc.yandex.com']);
+    }
+    if (preg_match('~(?:google-analytics\.com|googletagmanager\.com|gtag\s*\()~i', $trustedHtml)) {
+        $connect = array_merge($connect, ['https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net']);
+    }
+    $customConnect = cfg('csp_connect_origins', []);
+    if (is_array($customConnect)) {
+        $connect = array_merge($connect, array_values(array_filter(array_map('strval', $customConnect), static fn(string $v): bool => (bool)preg_match('~^https://[a-z0-9.-]+(?::\d+)?$~i', $v))));
+    }
+    $connect = array_values(array_unique($connect));
+    sort($connect);
     return "Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; "
         . "style-src 'self' 'unsafe-inline'" . $suffix($style)
-        . "; script-src 'self' 'nonce-" . $nonce . "'" . $suffix($script)
-        . "; font-src 'self' data:; media-src 'self'" . $suffix($media)
+        . "; script-src 'self' 'nonce-" . $nonce . "' 'strict-dynamic'" . $suffix($script)
+        . "; font-src 'self' data:; connect-src 'self'" . $suffix($connect)
+        . "; media-src 'self'" . $suffix($media)
         . "; frame-src 'self'" . $suffix($frame)
         . "; object-src 'none'; base-uri 'self'; form-action 'self'" . $suffix($form)
         . "; frame-ancestors 'self'";
@@ -282,14 +296,14 @@ function public_csp(string $trustedHtml, string $nonce): string
 /** Nonce подставляется после чтения pagecache, поэтому кэш и ETag не зависят от случайного значения. */
 function public_csp_send(string $html): string
 {
-    $trusted = '';
-    if (preg_match_all('~<!--PHOTOCMS_CSP_BEGIN-->(.*?)<!--PHOTOCMS_CSP_END-->~s', $html, $m)) {
-        $trusted = implode("\n", $m[1]);
-    }
-    $html = str_replace(['<!--PHOTOCMS_CSP_BEGIN-->', '<!--PHOTOCMS_CSP_END-->'], '', $html);
     $nonce = rtrim(strtr(base64_encode(random_bytes(16)), '+/', '-_'), '=');
-    $html = str_replace('__PHOTOCMS_CSP_NONCE__', $nonce, $html);
-    header(public_csp($trusted, $nonce));
+    $trustedParts = [];
+    $html = preg_replace_callback('~<!--PHOTOCMS_CSP_BEGIN-->(.*?)<!--PHOTOCMS_CSP_END-->~s', static function (array $m) use ($nonce, &$trustedParts): string {
+        $trustedParts[] = $m[1];
+        return str_replace('__PHOTOCMS_CSP_CUSTOM_NONCE__', $nonce, $m[1]);
+    }, $html) ?? $html;
+    $html = str_replace('__PHOTOCMS_CSP_CORE_NONCE__', $nonce, $html);
+    header(public_csp(implode("\n", $trustedParts), $nonce));
     return $html;
 }
 
@@ -649,7 +663,8 @@ function session_boot(): void
        кладём в storage/sessions (закрыто от веба), чтобы его не чистили системные скрипты хостинга. */
     $life = SESSION_LIFETIME;
     @ini_set('session.gc_maxlifetime', (string)$life);
-    $dir = (defined('ROOT') ? ROOT : dirname(__DIR__)) . '/storage/sessions';
+    $dir = cfg('session_path', (defined('ROOT') ? ROOT : dirname(__DIR__)) . '/storage/sessions');
+    $dir = is_string($dir) && $dir !== '' ? $dir : (defined('ROOT') ? ROOT : dirname(__DIR__)) . '/storage/sessions';
     if (!is_dir($dir)) {
         @mkdir($dir, 0700, true);
     }
@@ -755,7 +770,7 @@ function is_admin(bool $reset = false): bool
     if (session_status() !== PHP_SESSION_ACTIVE) {
         $sid = $_COOKIE['ptsid'] ?? '';
         if (!is_string($sid) || !preg_match('~^[A-Za-z0-9,-]{1,128}$~D', $sid)
-            || !is_file(ROOT . '/storage/sessions/sess_' . $sid)) {
+            || !is_file(cfg('session_path', ROOT . '/storage/sessions') . '/sess_' . $sid)) {
             return $cached = false;
         }
     }

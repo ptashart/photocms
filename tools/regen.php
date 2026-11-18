@@ -22,7 +22,6 @@ if (function_exists('set_time_limit')) {
 $warm = in_array('--warm', $argv, true);
 $imgs = db_all('SELECT * FROM images ORDER BY id');
 $errors = 0;
-$locks = [];
 $makeVariant = static function (array $img, int $w, string $ext, $loaded = null) use (&$errors): void {
     if (!image_get((int)$img['id'])) {
         return;
@@ -32,31 +31,20 @@ $makeVariant = static function (array $img, int $w, string $ext, $loaded = null)
         fwrite(STDERR, 'Не удалось создать ' . $ext . ' ' . $w . ' для фото #' . (int)$img['id'] . "\n");
     }
 };
+$canWebp = img_engine() === 'imagick' ? imagick_webp_supported() : webp_supported();
+$canAvif = avif_enabled();
 
-try {
-    foreach ($imgs as $img) {
-        $id = (int)$img['id'];
-        $lock = image_lock($id, true);
-        if ($lock === null || $lock === false) {
-            $errors++;
-            fwrite(STDERR, "Не удалось заблокировать фото #$id\n");
-            continue;
-        }
-        $locks[$id] = $lock;
-        rrmdir(media_dir() . '/' . $id);
+foreach ($imgs as $n => $img) {
+    $id = (int)$img['id'];
+    $lock = image_lock($id, true);
+    if ($lock === null || $lock === false) {
+        $errors++;
+        fwrite(STDERR, "Не удалось заблокировать фото #$id\n");
+        continue;
     }
-    echo 'Очищено вариантов для ' . count($imgs) . " фото.\n";
-
-    if ($warm) {
-        /* При GD крупные размеры делаем из одного декодированного оригинала, мелкие — из 1240.
-           Блокировка удерживается на всём цикле, чтобы удаление не гналось с regen. */
-        $canWebp = img_engine() === 'imagick' ? imagick_webp_supported() : webp_supported();
-        $canAvif = avif_enabled();
-        foreach ($imgs as $n => $img) {
-            $id = (int)$img['id'];
-            if (!isset($locks[$id]) || !image_get($id)) {
-                continue;
-            }
+    try {
+        rrmdir(media_dir() . '/' . $id);
+        if ($warm && image_get($id)) {
             if (img_engine() === 'imagick') {
                 foreach (image_widths($img) as $w) {
                     $makeVariant($img, $w, 'jpg');
@@ -97,16 +85,14 @@ try {
                     }
                 }
             }
-            echo ($n + 1) . '/' . count($imgs) . "\r";
         }
-        echo "\nГотово. Ошибок: $errors.\n";
-    }
-} finally {
-    foreach ($locks as $lock) {
+    } finally {
         image_unlock($lock);
     }
+    echo ($n + 1) . '/' . count($imgs) . "\r";
 }
+echo "\nГотово. Обработано фото: " . count($imgs) . ". Ошибок: $errors.\n";
 site_touch();
-if ($warm && $errors > 0) {
+if ($errors > 0) {
     exit(1);
 }

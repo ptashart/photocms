@@ -224,6 +224,6 @@ if (theme_is_apple_family()): ?>
 
 <?= public_custom_code((string)setting('body_code')) ?>
 
-<script src="<?= e(asset('assets/js/site.js')) ?>" defer></script>
+<script src="<?= e(asset('assets/js/site.js')) ?>" nonce="__PHOTOCMS_CSP_CORE_NONCE__" defer></script>
 </body>
 </html>

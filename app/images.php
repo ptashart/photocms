@@ -179,10 +179,7 @@ function image_existing_variant(array $img, string $fmt, int $wantW): ?string
 {
     $widths = array_values(array_filter(IMG_WIDTHS, static fn($w) => $w >= 280));
     usort($widths, static fn($a, $b) => abs($a - $wantW) <=> abs($b - $wantW));
-    foreach ([$fmt, 'jpg'] as $f) {
-        if ($f === 'jpg' && $fmt === 'jpg') {
-            continue; // jpg уже проверен первым проходом
-        }
+    foreach (array_unique([$fmt, 'jpg']) as $f) {
         foreach ($widths as $w) {
             $p = image_variant_path($img, $w, $f);
             if (is_file($p)) {
@@ -243,9 +240,9 @@ function img_throttle_bump(string $f, string $ip): int
 }
 
 /** Атомарная проверка и резервирование одного события. При ошибке хранилища работа запрещается. */
-function img_throttle_reserve(string $f, string $ip, int $max): bool
+function img_throttle_reserve(string $f, string $ip, int $max, bool $exactIp = false): bool
 {
-    $ip = img_throttle_key($ip);
+    $ip = $exactIp ? $ip : img_throttle_key($ip);
     $dir = dirname($f);
     if (!is_dir($dir) && !@mkdir($dir, 0700, true)) {
         return false;
@@ -443,10 +440,20 @@ function image_cache_flush(): void
 
 function image_url(array $img, int $w, string $ext = 'jpg'): string
 {
-    $url = '/media/' . (int)$img['id'] . '/' . $w . '/' . $img['slug'] . '.' . $ext;
-    $path = image_variant_path($img, $w, $ext);
-    if (is_file($path)) {
-        $url .= '?v=' . (int)@filemtime($path);
+    static $versions = [];
+    $id = (int)$img['id'];
+    if (!array_key_exists($id, $versions)) {
+        $versions[$id] = [];
+        foreach (glob(media_dir() . '/' . $id . '/*/*', GLOB_NOSORT) ?: [] as $file) {
+            if (is_file($file)) {
+                $versions[$id][basename(dirname($file)) . '/' . basename($file)] = (int)@filemtime($file);
+            }
+        }
+    }
+    $url = '/media/' . $id . '/' . $w . '/' . $img['slug'] . '.' . $ext;
+    $key = $w . '/' . $img['slug'] . '.' . $ext;
+    if (isset($versions[$id][$key])) {
+        $url .= '?v=' . $versions[$id][$key];
     }
     return $url;
 }
@@ -765,21 +772,9 @@ function gd_resample($src, int $tw, int $th, bool $keepAlpha)
     return $out;
 }
 
-/**
- * Источник для варианта. Мелкие размеры (≤ 900 px) у JPEG-оригиналов делаем из уже готового варианта 1240,
- * а не из оригинала в десятки мегапикселей: быстрее и почти без памяти. У PNG/WebP/GIF берём оригинал (там бывает прозрачность).
- */
+/** Все размеры создаются из оригинала, без повторного сжатия и повторного повышения резкости. */
 function image_source_for(array $img, int $w)
 {
-    if ($img['ext'] === 'jpg' && $w <= 900) {
-        $big = image_variant_path($img, 1240, 'jpg');
-        if (is_file($big)) {
-            $im = gd_load($big);
-            if ($im) {
-                return $im;
-            }
-        }
-    }
     return gd_load(image_original_path($img));
 }
 
@@ -874,16 +869,7 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
         set_time_limit(120);
     }
     try {
-        /* Источник: мелкие варианты (≤ 900 px) у JPEG-оригиналов делаем из уже готового
-           1240-го — как GD-путь в image_source_for(): чтение многомегапиксельного
-           оригинала в разы дороже, а визуально цепочка 1240→w неотличима (ревизия 1.9.34, п.9). */
         $src = image_original_path($img);
-        if ($img['ext'] === 'jpg' && $w <= 900) {
-            $big = image_variant_path($img, 1240, 'jpg');
-            if (is_file($big)) {
-                $src = $big;
-            }
-        }
         $im = new Imagick();
         /* Лимиты ресурсов декодера (аудит 1.9.40, п.4): у IM по умолчанию их нет, и «бомба
            распаковки» (PNG/GIF сверхбольших размеров) могла надолго занять процесс. */
@@ -1381,7 +1367,12 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     $im = null; // GD-объект оригинала; при Imagick-движке не используется (gd_free(null) безвреден)
     if (img_engine() === 'imagick') {
         try {
-            $probe = new Imagick($tmpPath . '[0]'); // [0] — только первый кадр GIF, как в GD-пути
+            $probe = new Imagick();
+            Imagick::setResourceLimit(Imagick::RESOURCETYPE_MEMORY, 268435456);
+            Imagick::setResourceLimit(Imagick::RESOURCETYPE_MAP, 536870912);
+            Imagick::setResourceLimit(Imagick::RESOURCETYPE_TIME, 60);
+            $decoder = ['jpg' => 'jpeg', 'png' => 'png', 'gif' => 'gif', 'webp' => 'webp'][$types[$info[2]]];
+            $probe->readImage($decoder . ':' . $tmpPath . '[0]');
             imagick_auto_orient($probe); // EXIF-поворот, как в gd_load: размеры ниже — уже повёрнутые
             $w = $probe->getImageWidth();
             $h = $probe->getImageHeight();
@@ -1484,12 +1475,18 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     foreach ([1240, 440] as $vw) {
         foreach ($formats as $format) {
             if (!image_make_variant($img, $vw, $format, $im)) {
+                image_unlock($slot);
+                $slot = null;
                 image_delete($id);
                 gd_free($im);
                 throw new RuntimeException('Не удалось создать ' . strtoupper($format) . '-превью ' . $vw . ' px: ' . $origName
                     . '. Проверьте свободное место на диске и права на media/.');
             }
         }
+    }
+    $ogDest = og_variant_path($img, 1200, 630);
+    if (!is_file($ogDest) && !og_variant_make($img, 1200, 630, $ogDest)) {
+        app_log_error('image_add_from_file: OG-кадр будет создан позже по запросу, фото #' . $id);
     }
     gd_free($im); // декодированный оригинал при пакетной загрузке десятков фото держал бы память до конца запроса
     return $img;

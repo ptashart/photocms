@@ -124,6 +124,30 @@ function contact_back_with(string $back, string $qs): string
     return $back . (str_contains($back, '?') ? '&' : '?') . $qs . $frag;
 }
 
+function contact_old_store(array $m): void
+{
+    session_boot();
+    $_SESSION['contact_old'] = [
+        'name' => $m['name'], 'phone' => $m['phone'], 'email' => $m['email'],
+        'date' => $m['date'], 'message' => $m['message'],
+    ];
+    session_write_close();
+}
+
+function contact_old_read(): array
+{
+    $sid = $_COOKIE['ptsid'] ?? '';
+    if (!is_string($sid) || !preg_match('~^[A-Za-z0-9,-]{1,128}$~D', $sid)
+        || !is_file(cfg('session_path', ROOT . '/storage/sessions') . '/sess_' . $sid)) {
+        return [];
+    }
+    session_boot();
+    $old = is_array($_SESSION['contact_old'] ?? null) ? $_SESSION['contact_old'] : [];
+    unset($_SESSION['contact_old']);
+    session_write_close();
+    return $old;
+}
+
 /** Текст заявки, общий для письма и Telegram. */
 function contact_message_text(array $m): string
 {
@@ -234,22 +258,19 @@ function contact_send_telegram(array $m): bool
 }
 
 /**
- * Приём POST формы связи. Порядок: ловушка для ботов → токен → троттлинг → валидация →
- * доставка. После любой ветки — редирект обратно на страницу (PRG: F5 не отправляет форму
- * повторно); успех = доставлено хотя бы в один канал.
+ * Приём POST: ловушка → токен → валидация → троттлинг по точному IP → сохранение → доставка.
+ * Ошибки возвращают введённые поля через короткоживущую сессию; заявка сначала пишется в базу.
  */
 function contact_handle(): void
 {
-    header('Cache-Control: no-store'); // ответ зависит от POST — прокси/браузер не должны его кэшировать
+    header('Cache-Control: no-store');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         redirect('/');
     }
     $backRaw = $_POST['back'] ?? '';
     $back = contact_back_url(is_string($backRaw) ? $backRaw : '');
 
-    /* Скрытое поле-ловушка «company»: люди его не видят (выносится за экран стилем),
-       заполняют только боты. Отвечаем как об успехе — бот не должен понять, что раскрыт. */
-    $hp = $_POST['company'] ?? '';
+    $hp = $_POST['p48x2'] ?? '';
     if (is_string($hp) && trim($hp) !== '') {
         redirect(contact_back_with($back, 'sent=1'));
     }
@@ -258,7 +279,6 @@ function contact_handle(): void
     $pagePath = is_string($pagePath) ? $pagePath : '';
     $token = $_POST['ct'] ?? '';
     $token = is_string($token) ? $token : '';
-    /* Токен не привязан к посетителю (сессия сломала бы pagecache): проверяем браузерный источник. */
     $source = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
     if ($source === '') {
         $source = trim((string)($_SERVER['HTTP_REFERER'] ?? ''));
@@ -278,14 +298,6 @@ function contact_handle(): void
         redirect(contact_back_with($back, 'err=1'));
     }
 
-    /* лимит 5 заявок в час с подсети (/24, как у генерации миниатюр): форма — типичная
-       точка спама, а каждая заявка — это письмо и сообщение в Telegram */
-    if (!img_throttle_reserve(contact_throttle_file(), client_ip(), 5)) {
-        contact_log_throttled('limit', 'contact: превышен лимит отправок или ошибка счётчика ' . client_ip());
-        http_response_code(503);
-        exit;
-    }
-
     $raw = static function (string $k): string {
         $v = $_POST[$k] ?? '';
         return is_string($v) ? $v : '';
@@ -299,21 +311,37 @@ function contact_handle(): void
         'page' => $pagePath,
     ];
     $valid = $m['name'] !== '' && $m['message'] !== ''
-        && ($m['phone'] !== '' || $m['email'] !== '') // иначе ответить некуда
+        && ($m['phone'] !== '' || $m['email'] !== '')
         && ($m['email'] === '' || filter_var($m['email'], FILTER_VALIDATE_EMAIL));
     if (!$valid) {
+        contact_old_store($m);
         redirect(contact_back_with($back, 'err=1'));
+    }
+
+    if (!img_throttle_reserve(contact_throttle_file(), client_ip(), 5, true)) {
+        contact_log_throttled('limit', 'contact: превышен лимит отправок или ошибка счётчика ' . client_ip());
+        contact_old_store($m);
+        redirect(contact_back_with($back, 'err=limit'));
+    }
+
+    try {
+        $id = db_insert('INSERT INTO contact_messages
+            (created_at, name, phone, email, shoot_date, message, page_path, ip_hash, delivered)
+            VALUES (?,?,?,?,?,?,?,?,0)', [
+            time(), $m['name'], $m['phone'], $m['email'], $m['date'], $m['message'], $m['page'],
+            hash('sha256', client_ip() . '|' . form_secret()),
+        ]);
+    } catch (Throwable $e) {
+        app_log_error('contact: не удалось сохранить заявку — ' . $e->getMessage());
+        contact_old_store($m);
+        redirect(contact_back_with($back, 'err=save'));
     }
 
     $okMail = contact_send_mail($m);
     $okTg = contact_send_telegram($m);
-    if ($okMail || $okTg) {
-        redirect(contact_back_with($back, 'sent=1'));
+    db_run('UPDATE contact_messages SET delivered = ? WHERE id = ?', [$okMail || $okTg ? 1 : 0, $id]);
+    if (!$okMail && !$okTg) {
+        app_log_error('contact: заявка #' . $id . ' сохранена в админке, но внешняя доставка не выполнена');
     }
-    /* оба канала молчат: настраиваемый случай — вообще не заданы почта/Telegram, остальное (сбой
-       mail(), отказ Telegram API) уже залогировано в contact_send_* — здесь фиксируем сам факт потери */
-    if (trim(setting('contact_email')) === '' && trim(setting('email')) === '' && trim(setting('tg_bot_token')) === '') {
-        app_log_error('contact: заявка потеряна — не настроен ни один канал доставки (Настройки → Контакты)');
-    }
-    redirect(contact_back_with($back, 'err=1'));
+    redirect(contact_back_with($back, 'sent=1'));
 }

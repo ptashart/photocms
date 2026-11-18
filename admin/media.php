@@ -133,23 +133,8 @@ function admin_image_alt(): void
     }
     db_run('UPDATE images SET alt = ? WHERE id = ?', [post_str('alt', 250), $id]);
     image_cache_flush(); // в кэше image_get() лежит прежняя строка — сбрасываем
-    /* alt попадает в image:title sitemap, JSON-LD и og:image:alt — бампаем updated_at владельцев,
-       иначе lastmod в sitemap протухает при правке подписей в медиатеке */
-    $ts = now();
-    db_run("UPDATE pages SET updated_at = ? WHERE id IN (
-        SELECT owner_id FROM gallery_items WHERE owner_type = 'page' AND image_id = ?
-        UNION SELECT s.page_id FROM gallery_items gi JOIN sections s ON s.id = gi.owner_id WHERE gi.owner_type = 'section' AND s.owner_type = 'page' AND gi.image_id = ?
-        UNION SELECT id FROM pages WHERE cover_image_id = ? OR og_image_id = ?
-        UNION SELECT page_id FROM sections WHERE type IN ('photo', 'pricing') AND owner_type = 'page'
-            AND (data LIKE '%\"image_id\":" . $id . ",%' OR data LIKE '%\"image_id\":" . $id . "}%'))", [$ts, $id, $id, $id, $id]);
-    db_run('UPDATE posts SET updated_at = ? WHERE og_image_id = ?', [$ts, $id]);
-    /* фото в секциях заметок: photo-секции по data, галереи — через gallery_items */
-    db_run("UPDATE posts SET updated_at = ? WHERE id IN (
-        SELECT page_id FROM sections WHERE owner_type = 'post' AND type = 'photo'
-            AND (data LIKE '%\"image_id\":" . $id . ",%' OR data LIKE '%\"image_id\":" . $id . "}%')
-        UNION SELECT s.page_id FROM gallery_items gi JOIN sections s ON s.id = gi.owner_id
-            WHERE gi.owner_type = 'section' AND s.owner_type = 'post' AND gi.image_id = ?)", [$ts, $id]);
-    /* alt виден в публичном HTML, включая pricing и глобальные логотип/og:image */
+    /* alt меняет публичный HTML и SEO-файлы через site_rev, но не является редактированием
+       страницы: updated_at не трогаем, чтобы не создавать ложный конфликт в открытом редакторе. */
     site_touch();
     json_out(['ok' => true]);
 }
@@ -284,7 +269,7 @@ function admin_media(): void
   <?= $noalt ? '<input type="hidden" name="noalt" value="1">' : '' ?>
   <input type="search" name="q" value="<?= e($q) ?>" placeholder="Поиск по имени файла или alt — по всей медиатеке…">
   <?php if ($albums): ?>
-  <select name="album" onchange="this.form.submit()" title="Показать фото одного альбома в его порядке">
+  <select name="album" data-auto-submit title="Показать фото одного альбома в его порядке">
     <option value="">Все фото</option>
     <?php foreach ($albums as $ab): ?>
     <option value="<?= (int)$ab['id'] ?>" <?= $album === (int)$ab['id'] ? 'selected' : '' ?>>Альбом: <?= e($ab['title']) ?> (<?= (int)$ab['photos'] ?>)</option>

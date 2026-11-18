@@ -1,9 +1,9 @@
-<!--
-PhotoCMS — photographer portfolio CMS.
-Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
-SPDX-License-Identifier: GPL-3.0-only
-Full license: LICENSE · Additional attribution terms: NOTICE.md.
--->
+<?php
+/* PhotoCMS — photographer portfolio CMS.
+ * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
+ * SPDX-License-Identifier: GPL-3.0-only
+ * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
+?>
 <?php /** @var array $sec @var array $d */
 /* Пакеты и цены (1.9.63): карточки с вилкой цены. Те же данные попадают в JSON-LD
    OfferCatalog — см. jsonld_pricing_offers() в app/seo.php. Публикуем карточку, если

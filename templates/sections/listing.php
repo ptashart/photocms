@@ -1,9 +1,9 @@
-<!--
-PhotoCMS — photographer portfolio CMS.
-Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
-SPDX-License-Identifier: GPL-3.0-only
-Full license: LICENSE · Additional attribution terms: NOTICE.md.
--->
+<?php
+/* PhotoCMS — photographer portfolio CMS.
+ * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
+ * SPDX-License-Identifier: GPL-3.0-only
+ * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
+?>
 <?php /** @var array $sec @var array $d @var array $page */
 $pages = listing_pages($d, $page);
 if (!$pages) { return; }

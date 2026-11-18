@@ -1,1 +1,14 @@
 .DS_Store
+config.php
+storage/site.sqlite*
+storage/error.log
+storage/.dummy-hash
+storage/installed.lock
+storage/sessions/
+storage/originals/
+storage/backups/
+storage/cache/
+storage/locks/
+storage/throttle/
+storage/tmp/
+/media/*/

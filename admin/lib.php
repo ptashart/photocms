@@ -36,6 +36,15 @@ function login_log_key(string $login): string
     return $login === '' ? '' : 'lh:' . hash('sha256', $login);
 }
 
+function login_ip_key(string $ip): string
+{
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        $bin = inet_pton($ip);
+        return $bin === false ? $ip : 'v6:' . bin2hex(substr($bin, 0, 8));
+    }
+    return $ip;
+}
+
 function login_attempt_reserve(string $ip, string $loginKey, string $login): bool
 {
     $pdo = db();
@@ -44,8 +53,7 @@ function login_attempt_reserve(string $ip, string $loginKey, string $login): boo
         db_run('DELETE FROM login_log WHERE ts < ?', [now() - LOGIN_WINDOW]);
         $byIp = (int)db_val('SELECT COUNT(*) FROM login_log WHERE ip = ?', [$ip]);
         $byLogin = $login === '' ? 0 : (int)db_val('SELECT COUNT(*) FROM login_log WHERE login = ? OR login = ?', [$loginKey, $login]);
-        $byLoginIp = $login === '' ? 0 : (int)db_val('SELECT COUNT(*) FROM login_log WHERE (login = ? OR login = ?) AND ip = ?', [$loginKey, $login, $ip]);
-        if ($byIp >= LOGIN_MAX_PER_IP || ($byLogin >= LOGIN_MAX_PER_LOGIN && $byLoginIp > 0)) {
+        if ($byIp >= LOGIN_MAX_PER_IP || $byLogin >= LOGIN_MAX_PER_LOGIN) {
             $pdo->exec('ROLLBACK');
             return false;
         }
@@ -74,7 +82,7 @@ function admin_login(): void
         csrf_check();
         /* IP берём через client_ip(): за прокси/Cloudflare REMOTE_ADDR — это адрес прокси, и чужие неудачи
            блокировали бы вход всем (включая владельца). Заголовкам верим только от доверенных прокси (config.php). */
-        $ip = substr(client_ip(), 0, 64);
+        $ip = substr(login_ip_key(client_ip()), 0, 64);
         $loginRaw = $_POST['login'] ?? '';
         $login = mb_strtolower(mb_substr(trim(is_string($loginRaw) ? $loginRaw : ''), 0, 64)); // ?login[]=x — иначе warning в журнал
         $loginKey = login_log_key($login); // в журнал пишем хэш, а не сам набранный логин (п.12)
@@ -118,7 +126,7 @@ function admin_login(): void
                     $_SESSION['t0'] = $_SESSION['last'] = time();
                     admin_session_ok(true);
                     is_admin(true); // кэш is_admin() — тоже (аудит 1.9.40, п.11)
-                    db_run('DELETE FROM login_log WHERE ip = ? OR login = ? OR login = ?', [$ip, $loginKey, $login]); // и хэш, и старые «сырые» записи
+                    db_run('DELETE FROM login_log WHERE ip = ? AND (login = ? OR login = ?)', [$ip, $loginKey, $login]);
                     redirect($return !== '' ? $return : admin_base());
                 }
             }
@@ -149,7 +157,7 @@ function admin_login(): void
 function admin_header(string $title, string $active = ''): void
 {
     $nav = [
-        'dashboard' => 'Панель', 'pages' => 'Страницы', 'posts' => 'Блог', 'sections' => 'Разделы', 'media' => 'Медиа', 'videos' => 'Видео', 'menu' => 'Меню',
+        'dashboard' => 'Панель', 'pages' => 'Страницы', 'posts' => 'Блог', 'sections' => 'Разделы', 'media' => 'Медиа', 'videos' => 'Видео', 'messages' => 'Заявки', 'menu' => 'Меню',
         'settings' => 'Настройки', 'redirects' => 'Редиректы', 'account' => 'Аккаунт',
     ];
     ?>
@@ -182,7 +190,7 @@ function admin_footer(): void
     ?>
 </main>
 <footer class="afoot">CMS · версия <?= e(APP_VERSION) ?> · © Sergei Kolesnikov</footer>
-<script nonce="<?= e(admin_csp_nonce()) ?>">window.ADMIN = {csrf: <?= json_encode(csrf_token()) ?>, base: <?= json_encode(admin_base()) ?>, mediaUrl: <?= json_encode(a_url('media_json')) ?>, uploadUrl: <?= json_encode(a_url('upload')) ?>, altUrl: <?= json_encode(a_url('image_alt')) ?>, delUrl: <?= json_encode(a_url('image_delete')) ?>, focusUrl: <?= json_encode(a_url('image_focus')) ?>, pingUrl: <?= json_encode(a_url('ping')) ?>, warmUrl: <?= json_encode(a_url('warm_thumbs')) ?>, albums: <?= json_encode(array_map(static fn($a) => ['id' => (int)$a['id'], 'title' => (string)$a['title'], 'photos' => (int)$a['photos']], albums_with_counts()), JSON_UNESCAPED_UNICODE) ?>};</script>
+<script nonce="<?= e(admin_csp_nonce()) ?>">window.ADMIN = {csrf: <?= json_encode(csrf_token(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, base: <?= json_encode(admin_base(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, mediaUrl: <?= json_encode(a_url('media_json'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, uploadUrl: <?= json_encode(a_url('upload'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, altUrl: <?= json_encode(a_url('image_alt'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, delUrl: <?= json_encode(a_url('image_delete'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, focusUrl: <?= json_encode(a_url('image_focus'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, pingUrl: <?= json_encode(a_url('ping'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, warmUrl: <?= json_encode(a_url('warm_thumbs'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, albums: <?= json_encode(array_map(static fn($a) => ['id' => (int)$a['id'], 'title' => (string)$a['title'], 'photos' => (int)$a['photos']], albums_with_counts()), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>};</script>
 <script src="<?= e(asset('assets/js/admin.js')) ?>"></script>
 </body></html>
     <?php

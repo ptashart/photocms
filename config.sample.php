@@ -5,7 +5,9 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 // Необязательный файл. Скопируйте в config.php, если нужно что-то переопределить.
 return [
-    // 'db'       => __DIR__ . '/storage/site.sqlite',
+    // Для большей безопасности базу и сессии можно вынести за пределы публичной папки сайта.
+    // 'db'       => '/home/account/private/site.sqlite',
+    // 'session_path' => '/home/account/private/sessions',
     // 'timezone' => 'Europe/Moscow',
     // 'debug'    => true,   // показывать ошибки PHP (только на время отладки!)
 
@@ -14,6 +16,10 @@ return [
     // считается по людям, а не по одному адресу прокси. Без этой настройки заголовкам не верим.
     // Актуальные диапазоны Cloudflare: https://www.cloudflare.com/ips/
     // 'trusted_proxies' => ['127.0.0.1', '173.245.48.0/20', '2400:cb00::/32'],
+
+    // Дополнительные HTTPS-адреса для fetch/XHR из владельческого кода (CSP connect-src).
+    // Метрика и Google Analytics распознаются автоматически.
+    // 'csp_connect_origins' => ['https://api.example.ru'],
 
     // Секретный адрес админки (1.9.27): вместо /admin/ панель будет открываться по адресу
     // /<эта строка>/, а /admin/ начнёт отвечать 404 для всех. Это дополнительный слой

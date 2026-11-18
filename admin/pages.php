@@ -935,7 +935,7 @@ function admin_page_preview(): void
     $note = '<div class="preview-note">Это предпросмотр несохранённой страницы — её видите только вы. Чтобы опубликовать правки, вернитесь в редактор и нажмите «Сохранить».</div>';
     $html = (string)preg_replace('~</head>~i', $style . '</head>', $html, 1);
     $html = (string)preg_replace('~<body([^>]*)>~i', '<body$1>' . $note, $html, 1);
-    echo $html;
+    echo public_csp_send($html);
 }
 
 /* ---------- компоненты редактора ---------- */

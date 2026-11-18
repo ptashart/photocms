@@ -26,42 +26,30 @@ function pagecache_requestable(): bool
     if ($m !== 'GET' && $m !== 'HEAD') {
         return false;
     }
-    /* любой query string — мимо кэша: ?page=2 у блога — другой документ, а рекламные
-       метки к этому моменту уже срезаны 301 в index.php */
-    if ((string)($_SERVER['QUERY_STRING'] ?? '') !== '') {
-        return false;
+    if (empty($_GET)) {
+        return empty($_COOKIE['ptsid']);
     }
-    return empty($_COOKIE['ptsid']);
+    $page = $_GET['page'] ?? null;
+    return count($_GET) === 1 && is_string($page) && ctype_digit($page) && (int)$page > 0
+        && empty($_COOKIE['ptsid']);
 }
 
-/**
- * Подпись версии контента. Основа — xml_fresh_key() (pages/posts: COUNT + MAX(updated_at),
- * images: COUNT + MAX(id), базовые настройки, эффективный хост, APP_VERSION).
- * Плюс своя структурная подпись: порядок страниц (page_move() меняет position без
- * updated_at и без site_touch) и фокусные точки фото (admin_image_focus() пишет
- * images.focus_x/focus_y таким же молчаливым UPDATE) — без них после таких правок
- * кэш отдавал бы старый порядок списков и старое кадрирование обложек.
- */
-function pagecache_fresh_key(): string
-{
-    $sig = db_one(
-        'SELECT (SELECT COALESCE(SUM(position * (id + 1)), 0) FROM pages) AS pp,'
-        . " (SELECT COALESCE(SUM(CAST(ROUND(focus_x * 997) AS INTEGER) + CAST(ROUND(focus_y * 991) AS INTEGER)), 0) FROM images) AS fi"
-    );
-    return xml_fresh_key() . "\n" . pagecache_rev() . '|' . (string)($sig['pp'] ?? '') . '|' . (string)($sig['fi'] ?? '');
-}
-
-/** Префикс ревизии из site_rev (только цифры — он часть имени файла). Пусто → '0'. */
 function pagecache_rev(): string
 {
     $rev = (string)preg_replace('~[^0-9]~', '', setting('site_rev'));
     return $rev !== '' ? $rev : '0';
 }
 
+/** Один счётчик изменений: все правки контента, меню, порядка и фокусных точек зовут site_touch(). */
+function pagecache_fresh_key(): string
+{
+    return pagecache_rev() . '|' . request_host() . '|' . APP_VERSION;
+}
+
 /** Пути к паре файлов кэша страницы: [<rev>-<sha1>.html, <rev>-<sha1>.meta]. */
 function pagecache_files(string $path): array
 {
-    $base = ROOT . '/storage/cache/pages/' . pagecache_rev() . '-' . sha1($path . "\n" . pagecache_fresh_key());
+    $base = ROOT . '/storage/cache/pages/' . pagecache_rev() . '-' . sha1($path . '|page=' . (int)($_GET['page'] ?? 0) . "\n" . pagecache_fresh_key());
     return [$base . '.html', $base . '.meta'];
 }
 
@@ -70,12 +58,12 @@ function pagecache_files(string $path): array
  * (тогда index.php рендерит как обычно). Чтение гонко-устойчиво: GC другого процесса мог
  * удалить файл между is_file() и чтением — молча считаем промахом, а не падаем фаталом.
  */
-function pagecache_lookup(string $path): ?array
+function pagecache_lookup(string $path, ?array $files = null): ?array
 {
     if (!pagecache_requestable()) {
         return null;
     }
-    [$file, $metaFile] = pagecache_files($path);
+    [$file, $metaFile] = $files ?? pagecache_files($path);
     if (!is_file($file)) {
         return null;
     }

@@ -308,7 +308,12 @@ function admin_dashboard(): void
        (img_tmp_gc, ревизия 1.9.34, п.16). Ошибки не должны ломать панель: только пишем в журнал */
     try {
         admin_db_autobackup();
-        img_tmp_gc();
+        $gcStamp = ROOT . '/storage/locks/tmp-gc.last';
+        if (!is_file($gcStamp) || (int)@filemtime($gcStamp) < time() - 86400) {
+            @touch($gcStamp);
+            @chmod($gcStamp, 0600);
+            img_tmp_gc();
+        }
     } catch (Throwable $e) {
         app_log_error('autobackup: ' . $e->getMessage());
     }
@@ -768,6 +773,37 @@ function admin_redirects(): void
     admin_footer();
 }
 
+function admin_messages(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        csrf_check();
+        if (post_str('action') === 'delete') {
+            db_run('DELETE FROM contact_messages WHERE id = ?', [(int)($_POST['id'] ?? 0)]);
+            flash('Заявка удалена.');
+        }
+        redirect(a_url('messages'));
+    }
+    $rows = db_all('SELECT * FROM contact_messages ORDER BY id DESC LIMIT 500');
+    admin_header('Заявки', 'messages');
+    ?>
+<h1>Заявки</h1>
+<p class="muted">Заявки сохраняются в базе даже при сбое почты и Telegram. Храните их только столько, сколько нужно для связи с клиентом; удаляйте обработанные записи.</p>
+    <?php if (!$rows): ?><div class="card"><p class="muted">Заявок пока нет.</p></div><?php endif; ?>
+    <?php foreach ($rows as $r): ?>
+<div class="card">
+  <div class="row"><strong>#<?= (int)$r['id'] ?> · <?= e($r['name']) ?></strong><span class="grow"></span><time><?= e(date('d.m.Y H:i', (int)$r['created_at'])) ?></time></div>
+  <p><?php if ($r['phone'] !== ''): ?><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $r['phone'])) ?>"><?= e($r['phone']) ?></a><?php endif; ?>
+     <?php if ($r['email'] !== ''): ?> · <a href="mailto:<?= e($r['email']) ?>"><?= e($r['email']) ?></a><?php endif; ?></p>
+  <?php if ($r['shoot_date'] !== ''): ?><p>Дата съёмки: <?= e($r['shoot_date']) ?></p><?php endif; ?>
+  <p><?= nl2br(e($r['message'])) ?></p>
+  <p class="muted"><small>Страница: <?= e($r['page_path']) ?> · Внешняя доставка: <?= (int)$r['delivered'] ? 'да' : 'нет; заявка сохранена здесь' ?></small></p>
+  <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>"><button class="btn sm danger">Удалить</button></form>
+</div>
+    <?php endforeach; ?>
+    <?php
+    admin_footer();
+}
+
 function account_attempt_reserve(string $failKey): bool
 {
     $pdo = db();
@@ -801,12 +837,12 @@ function admin_account(): void
         /* Счётчик привязан к конкретной admin-сессии, чтобы захваченная сессия не могла
            заблокировать восстановление пароля владельцем в другой сессии. */
         $failKey = 'pwchange:' . $uid . ':' . hash('sha256', session_id());
-        if (!account_attempt_reserve($failKey)) {
-            flash('Слишком много неверных попыток. Повторите через ' . intdiv(LOGIN_WINDOW, 60) . ' минут.', 'err');
-            redirect(a_url('account'));
-        }
         if (!$u || !password_verify($cur, (string)$u['pass_hash'])) {
-            flash('Текущий пароль указан неверно.', 'err');
+            if (!account_attempt_reserve($failKey)) {
+                flash('Слишком много неверных попыток. Повторите через ' . intdiv(LOGIN_WINDOW, 60) . ' минут.', 'err');
+            } else {
+                flash('Текущий пароль указан неверно.', 'err');
+            }
             redirect(a_url('account'));
         }
         if ($action === 'login') {

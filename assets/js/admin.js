@@ -972,4 +972,8 @@
       })(0);
     });
   }
+
+  $$('[data-auto-submit]').forEach(function (field) {
+    field.addEventListener('change', function () { field.form.submit(); });
+  });
 })();

@@ -21,9 +21,12 @@ header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store');
 /* CSP только для админки (на публичной части в «Своём коде» могут быть счётчики и виджеты): скрипты — свои и с nonce,
    чужие домены и вставленные в текст <script> не выполнятся даже при пропущенной XSS. */
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . admin_csp_nonce() . "'; "
-    . "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; "
-    . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+$previewRequest = in_array($_GET['p'] ?? '', ['page_preview', 'post_preview'], true);
+if (!$previewRequest) {
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . admin_csp_nonce() . "'; "
+        . "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; "
+        . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+}
 session_boot();
 
 $p = $_GET['p'] ?? 'dashboard';
@@ -78,6 +81,7 @@ switch ($p) {
     case 'section_edit': admin_section_edit(); break;
     case 'media': admin_media(); break;
     case 'videos': admin_videos(); break;
+    case 'messages': admin_messages(); break;
     case 'upload': admin_upload(); break;
     case 'media_json': admin_media_json(); break;
     case 'image_alt': admin_image_alt(); break;

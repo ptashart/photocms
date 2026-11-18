@@ -69,6 +69,23 @@ if ($qs0 = (string)($_SERVER['QUERY_STRING'] ?? '')) {
 
 $path = request_path();
 $qs = (string)($_SERVER['QUERY_STRING'] ?? '');
+if ($qs !== '') {
+    $allowedQuery = ['page', 'sent', 'err'];
+    $kept = [];
+    $removed = false;
+    foreach (explode('&', $qs) as $seg) {
+        $eq = strpos($seg, '=');
+        $name = strtolower(rawurldecode($eq === false ? $seg : substr($seg, 0, $eq)));
+        if (!in_array($name, $allowedQuery, true)) {
+            $removed = true;
+            continue;
+        }
+        $kept[] = $seg;
+    }
+    if ($removed) {
+        redirect($path . ($kept ? '?' . implode('&', $kept) : ''), 301);
+    }
+}
 
 if ($path === '/index.php') {
     redirect('/', 301);
@@ -143,7 +160,9 @@ switch ($path) {
         if ($fav) {
             $favPath = image_variant_path($fav, 48, 'png');
             $failMark = $favPath . '.fail';
-            if (is_file($failMark) && time() - (int)@filemtime($failMark) < 3600) {
+            if (is_file($favPath)) {
+                $favOk = true;
+            } elseif (is_file($failMark) && time() - (int)@filemtime($failMark) < 3600) {
                 $favOk = false; // негативный кэш: недавно не получилось — не дёргаем GD на каждый запрос иконки
             } else {
                 /* самый частозапрашиваемый URL сайта: вечный flock здесь выкашивает пул
@@ -201,10 +220,8 @@ switch ($path) {
    можно только финальный адрес, иначе ответ-редирект «приклеился» бы к нему. is_admin()
    здесь сознательно не вызываем: владельца с кукой ptsid отсеивает pagecache_requestable(),
    а сам is_admin() при наличии куки поднимал бы сессию на каждый хит. */
-$pcacheHit = pagecache_lookup($path);
-/* Ключ и имена файлов фиксируем ДО рендера: если контент изменится параллельным запросом,
-   этот HTML останется под ключом прежнего состояния, а не попадёт в кэш нового. */
-$pcacheFiles = $pcacheHit === null && pagecache_requestable() ? pagecache_files($path) : null;
+$pcacheFiles = pagecache_requestable() ? pagecache_files($path) : null;
+$pcacheHit = pagecache_lookup($path, $pcacheFiles);
 
 // Заметки: /{раздел} — список, /{раздел}/{slug} — заметка (разделы настраиваются в админке)
 /* при хите кэша роутинг и рендер пропускаем целиком: $html уже готов, а заголовки/304

@@ -55,12 +55,9 @@ function img_html(array $img, string $sizes, string $alt = '', bool $eager = fal
     return $html . '</picture>';
 }
 
-/** Семейство темы: «Плёночная» (1.9.86) построена на яблочной — вся яблочная логика
-   (липкая планка меню, ширина контента, системный шрифт тела) работает и в ней. */
 function theme_is_apple_family(): bool
 {
-    $t = (string)setting('theme');
-    return $t === 'apple' || $t === 'print';
+    return (string)setting('theme') === 'apple';
 }
 
 /** Ширина контентной колонки на десктопе — для sizes у srcset (ревизия 1.9.35, п.3).
@@ -114,7 +111,7 @@ function gallery_sizes(string $layout, int $cols, int $colsM, ?array $img = null
 
 function safe_color(string $c, string $fallback = '#cccccc'): string
 {
-    return preg_match('/^#[0-9a-fA-F]{3,8}$/', $c) ? $c : $fallback;
+    return preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $c) ? $c : $fallback;
 }
 
 /** rgba() из #rgb/#rrggbb — для производных оттенков темы (--muted, --line). */
@@ -361,14 +358,12 @@ function fx_grain_mode(): string
     return in_array($v, ['paper', 'film'], true) ? 'paper' : 'off';
 }
 
-/** Стабильные «случайные» числа карточки из её ID: страница всегда выглядит одинаково,
-   и нет повторяющегося шаблона nth-child, который глаз считывает как алгоритм.
-   Диапазоны регулируются настройками fx_tilt / fx_shift / fx_fields (1.9.84). */
+/** Стабильные варианты полей отпечатков из ID карточки. */
 function fx_vars(int $id): string
 {
     $n = static fn(int $k): float => (abs(crc32($id . ':' . $k)) % 10000) / 10000; // 0…1
-    $tilt = max(0, min(30, (int)setting('fx_tilt'))) / 10;    // ±°, по умолчанию 0.4°
-    $shift = max(0, min(40, (int)setting('fx_shift')));       // px, по умолчанию 22
+    $tilt = 0.0;
+    $shift = 0;
     switch ((string)setting('fx_fields')) {
         case 'even': $lo = 8; $hi = 8; $blo = 32; $bhi = 32; break;
         case 'wild': $lo = 5; $hi = 18; $blo = 26; $bhi = 44; break;
@@ -694,6 +689,21 @@ function sections_first_media(array $sections, array $page): ?array
     return $cache[$key] = null;
 }
 
+function page_preload_image(array $img, array $widths, int $width, string $sizes): array
+{
+    $canWebp = img_engine() === 'imagick' ? imagick_webp_supported() : webp_supported();
+    $format = avif_enabled() ? 'avif' : ($canWebp ? 'webp' : 'jpg');
+    $out = [
+        'src' => image_url($img, image_pick_width($widths, $width), $format),
+        'srcset' => image_srcset($img, $format, $widths),
+        'sizes' => $sizes,
+    ];
+    if ($format !== 'jpg') {
+        $out['type'] = 'image/' . $format;
+    }
+    return $out;
+}
+
 /** sizes/srcset обязаны совпадать с разметкой первой найденной медиа-секции. */
 function page_first_media_preload(array $page): ?array
 {
@@ -703,75 +713,30 @@ function page_first_media_preload(array $page): ?array
     }
     $sec = $found['section'];
     $d = $sec['data'];
-    $cw = content_width_expr(); // выражение ширины контента на десктопе — единое с шаблонами
+    $cw = content_width_expr();
     if ($sec['type'] === 'photo') {
         $img = $found['image'];
         $size = array_key_exists((string)($d['size'] ?? ''), photo_size_presets()) ? (string)$d['size'] : 'wide';
-        $w = photo_size_width($size, 1100); // base=1100 — как в templates/sections/photo.php
-        $widths = image_widths($img);
-        /* AVIF (1.9.48): preload переключаем на avif — иначе браузер с AVIF выберет avif-source
-           из <picture>, а preloaded jpg скачается впустую (двойная загрузка LCP-кадра);
-           браузеры без AVIF (Safari ≤ 15) такой preload пропустят и возьмут кадр из разметки */
-        if (avif_enabled()) {
-            return [
-                'src' => image_url($img, image_pick_width($widths, $w), 'avif'),
-                'srcset' => image_srcset($img, 'avif', $widths),
-                'sizes' => '(max-width: 700px) 100vw, ' . $w . 'px',
-                'type' => 'image/avif',
-            ];
-        }
-        return [
-            'src' => image_url($img, image_pick_width($widths, $w), 'jpg'),
-            'srcset' => image_srcset($img, 'jpg', $widths),
-            'sizes' => '(max-width: 700px) 100vw, ' . $w . 'px',
-        ];
+        $w = photo_size_width($size, 1100);
+        return page_preload_image($img, image_widths($img), $w, '(max-width: 700px) 100vw, ' . $w . 'px');
     }
     if ($sec['type'] === 'gallery') {
         $img = $found['image'];
         $cols = (int)($d['columns'] ?? 0) > 0 ? (int)$d['columns'] : (int)setting('gallery_columns');
         $layout = in_array($d['layout'] ?? '', ['masonry', 'grid', 'lineup', 'strip', 'slides', 'contactsheet'], true) ? $d['layout'] : 'masonry';
-        /* sizes — из единой точки gallery_sizes(): гарантированно совпадает с шаблоном
-           gallery.php (ревизия 1.9.35, п.3; аудит 1.9.40, п.9) */
         $colsM = (int)setting('gallery_columns_mobile');
         if ($layout === 'contactsheet') {
             $cols = max(3, min(8, $cols + 2));
             $colsM = max(2, min(3, $colsM + 1));
             $layout = 'grid';
         }
-        $sizes = gallery_sizes($layout, $cols, $colsM, $img);
-        $widths = image_widths($img);
-        if (avif_enabled()) { // preload на avif — см. комментарий в ветке photo выше (1.9.48)
-            return [
-                'src' => image_url($img, image_pick_width($widths, 1240), 'avif'),
-                'srcset' => image_srcset($img, 'avif', $widths),
-                'sizes' => $sizes,
-                'type' => 'image/avif',
-            ];
-        }
-        return [
-            'src' => image_url($img, image_pick_width($widths, 1240), 'jpg'),
-            'srcset' => image_srcset($img, 'jpg', $widths),
-            'sizes' => $sizes,
-        ];
+        return page_preload_image($img, image_widths($img), 1240, gallery_sizes($layout, $cols, $colsM, $img));
     }
     if ($sec['type'] === 'listing') {
-        /* первая карточка списка — тот же кадр, который listing_html() помечает fetchpriority="high" */
         $cover = $found['image'];
         $cols = max(1, min(5, (int)($d['columns'] ?? 3)));
-        $widths = image_widths($cover, 1240); // maxW=1240 — как у img_html() в listing_html()
-        if (avif_enabled()) { // preload на avif — см. комментарий в ветке photo выше (1.9.48)
-            return [
-                'src' => image_url($cover, image_pick_width($widths, 1240), 'avif'),
-                'srcset' => image_srcset($cover, 'avif', $widths),
-                'sizes' => '(max-width: 480px) 100vw, (max-width: 900px) 50vw, calc((' . $cw . ') / ' . $cols . ')',
-                'type' => 'image/avif',
-            ];
-        }
-        return [
-            'src' => image_url($cover, image_pick_width($widths, 1240), 'jpg'),
-            'srcset' => image_srcset($cover, 'jpg', $widths),
-            'sizes' => '(max-width: 480px) 100vw, (max-width: 900px) 50vw, calc((' . $cw . ') / ' . $cols . ')',
-        ];
+        return page_preload_image($cover, image_widths($cover, 1240), 1240,
+            '(max-width: 480px) 100vw, (max-width: 900px) 50vw, calc((' . $cw . ') / ' . $cols . ')');
     }
     return null;
 }
@@ -827,19 +792,7 @@ function render_page(array $page): string
             } else {
                 $albumSizes = gallery_sizes($albumLayout, $cols, $colsM);
             }
-            $meta['preload_image'] = [
-                'src' => image_url($first, image_pick_width($widths, 1240), 'jpg'),
-                'srcset' => image_srcset($first, 'jpg', $widths),
-                'sizes' => $albumSizes,
-            ];
-            if (avif_enabled()) { // preload на avif — см. комментарий в page_first_media_preload (1.9.48)
-                $meta['preload_image'] = [
-                    'src' => image_url($first, image_pick_width($widths, 1240), 'avif'),
-                    'srcset' => image_srcset($first, 'avif', $widths),
-                    'sizes' => $albumSizes,
-                    'type' => 'image/avif',
-                ];
-            }
+            $meta['preload_image'] = page_preload_image($first, $widths, 1240, $albumSizes);
         }
     } else {
         /* секционная страница: preload первой реально отображаемой медиа-секции */

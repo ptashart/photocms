@@ -235,35 +235,19 @@ function page_cover(array $p): ?array
     return $covers[(int)$p['id']] ?? null;
 }
 
-/**
- * Обложки сразу для списка страниц (логика та же, что у page_cover(),
- * но в три запроса на весь список вместо 1–3 запросов на каждую страницу).
- * Возвращает map: id страницы => ?image.
- */
+/** Обложки списка: загружаются только выбранные и первые кадры, а не все фото альбомов. */
 function pages_covers(array $pages): array
 {
     $result = [];
-    $ids = [];
     foreach ($pages as $p) {
-        $pid = (int)$p['id'];
-        $ids[] = $pid;
-        $result[$pid] = null;
+        $result[(int)$p['id']] = null;
     }
-    $ids = array_values(array_unique($ids));
-    if (!$ids) {
+    if (!$pages) {
         return $result;
     }
-
-    /* 1. Вручную выбранные обложки — одним запросом */
-    $coverIds = [];
-    foreach ($pages as $p) {
-        if (!empty($p['cover_image_id'])) {
-            $coverIds[] = (int)$p['cover_image_id'];
-        }
-    }
     $images = [];
+    $coverIds = array_values(array_unique(array_filter(array_map(static fn($p): int => (int)($p['cover_image_id'] ?? 0), $pages))));
     if ($coverIds) {
-        $coverIds = array_values(array_unique($coverIds));
         foreach (db_all_in('SELECT * FROM images WHERE id IN ({IN})', $coverIds) as $img) {
             $images[(int)$img['id']] = $img;
         }
@@ -278,49 +262,52 @@ function pages_covers(array $pages): array
             $rest[] = $pid;
         }
     }
-
-    /* 2. Первое фото из галереи страницы (owner_type='page') */
-    if ($rest) {
-        $rows = db_all_in(
-            "SELECT gi.owner_id, i.* FROM gallery_items gi JOIN images i ON i.id = gi.image_id
-             WHERE gi.owner_type = 'page' AND gi.owner_id IN ({IN})
-             ORDER BY gi.position, gi.id",
-            $rest
-        );
-        $left = [];
-        foreach ($rest as $pid) {
-            $left[$pid] = true;
+    if (!$rest) {
+        return $result;
+    }
+    $links = db_all_in("SELECT gi.owner_id, gi.image_id FROM gallery_items gi
+        WHERE gi.owner_type = 'page' AND gi.owner_id IN ({IN})
+          AND gi.id = (SELECT gi2.id FROM gallery_items gi2
+              WHERE gi2.owner_type = 'page' AND gi2.owner_id = gi.owner_id
+              ORDER BY gi2.position, gi2.id LIMIT 1)", $rest);
+    $need = array_values(array_unique(array_map(static fn($r): int => (int)$r['image_id'], $links)));
+    if ($need) {
+        foreach (db_all_in('SELECT * FROM images WHERE id IN ({IN})', $need) as $img) {
+            $images[(int)$img['id']] = $img;
         }
-        foreach ($rows as $r) {
-            $pid = (int)$r['owner_id'];
-            if (isset($left[$pid])) {
-                $result[$pid] = $r;
-                unset($left[$pid]);
-            }
+    }
+    $left = array_fill_keys($rest, true);
+    foreach ($links as $link) {
+        $pid = (int)$link['owner_id'];
+        $iid = (int)$link['image_id'];
+        if (isset($left[$pid], $images[$iid])) {
+            $result[$pid] = $images[$iid];
+            unset($left[$pid]);
         }
-
-        /* 3. Первое фото из секции-галереи страницы (owner_type='page': у заметок блога
-           свои секции с 1.9.54, и page_id у них может совпасть с id чужой страницы) */
-        $rest = array_keys($left);
-        if ($rest) {
-            $rows = db_all_in(
-                "SELECT s.page_id, i.* FROM sections s
-                 JOIN gallery_items gi ON gi.owner_type = 'section' AND gi.owner_id = s.id
-                 JOIN images i ON i.id = gi.image_id
-                 WHERE s.owner_type = 'page' AND s.page_id IN ({IN}) AND s.type = 'gallery'
-                 ORDER BY s.position, gi.position, gi.id",
-                $rest
-            );
-            foreach ($rest as $pid) {
-                $left[$pid] = true;
-            }
-            foreach ($rows as $r) {
-                $pid = (int)$r['page_id'];
-                if (isset($left[$pid])) {
-                    $result[$pid] = $r;
-                    unset($left[$pid]);
-                }
-            }
+    }
+    $rest = array_keys($left);
+    if (!$rest) {
+        return $result;
+    }
+    $links = db_all_in("SELECT s.page_id, gi.image_id FROM sections s
+        JOIN gallery_items gi ON gi.owner_type = 'section' AND gi.owner_id = s.id
+        WHERE s.owner_type = 'page' AND s.page_id IN ({IN}) AND s.type = 'gallery'
+          AND gi.id = (SELECT gi2.id FROM gallery_items gi2
+              WHERE gi2.owner_type = 'section' AND gi2.owner_id = s.id
+              ORDER BY gi2.position, gi2.id LIMIT 1)
+        ORDER BY s.position, s.id", $rest);
+    $need = array_values(array_unique(array_diff(array_map(static fn($r): int => (int)$r['image_id'], $links), array_keys($images))));
+    if ($need) {
+        foreach (db_all_in('SELECT * FROM images WHERE id IN ({IN})', $need) as $img) {
+            $images[(int)$img['id']] = $img;
+        }
+    }
+    foreach ($links as $link) {
+        $pid = (int)$link['page_id'];
+        $iid = (int)$link['image_id'];
+        if (isset($left[$pid], $images[$iid])) {
+            $result[$pid] = $images[$iid];
+            unset($left[$pid]);
         }
     }
     return $result;
