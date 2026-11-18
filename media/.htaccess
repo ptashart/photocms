@@ -1,0 +1,20 @@
+# PhotoCMS — photographer portfolio CMS.
+# Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
+# SPDX-License-Identifier: GPL-3.0-only
+# Full license: LICENSE · Additional attribution terms: NOTICE.md.
+<FilesMatch "\.(php|phtml|phar)$">
+  Require all denied
+</FilesMatch>
+
+# Служебные маркеры генерации (.fail) и временные файлы (.tmp*) из веба не отдаём
+<FilesMatch "\.(fail|tmp.*)$">
+  Require all denied
+</FilesMatch>
+
+# Готовые webp-варианты отдаёт Apache напрямую, мимо img.php (корневой .htaccess
+# пускает в img.php только отсутствующие файлы). На части хостингов в mime.types
+# нет webp — тогда ответ уходит без Content-Type: браузеры картинку ещё показывают,
+# но валидаторы/Lighthouse ругаются, а строгие клиенты ответ отбрасывают.
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+</IfModule>

@@ -1,0 +1,333 @@
+/* PhotoCMS — photographer portfolio CMS.
+ * Copyright (C) 2025–2026 Sergei Kolesnikov · https://www.ptash.art
+ * SPDX-License-Identifier: GPL-3.0-only
+ * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
+/* ==========================================================================
+   Тема «Яблочная» (Настройки → Оформление → Тема оформления), с 1.9.19.
+   Характер в духе apple.com: липкая полупрозрачная планка меню сверху,
+   крупная тесная типографика системным шрифтом, округлые карточки и фото,
+   кнопки-пилюли, много воздуха, подвал серой лентой.
+
+   Файл подключается ПОСЛЕ site.css и только при theme = apple; всё ниже —
+   переопределения под классом body.theme-apple. HTML, логика и логика
+   настроек общие с классической темой: тексты, цвета, шрифты, ширины,
+   галереи и блог работают одинаково.
+   ========================================================================== */
+
+body.theme-apple{
+  --accent:#0066cc;          /* фирменный синий ссылок и кнопок */
+  --band:#f5f5f7;            /* серая лента-подложка, как у apple */
+  --radius:18px;             /* базовый радиус карточек */
+  font-size:17px;
+  line-height:1.58;
+  letter-spacing:-.011em;    /* тесная посадка системного шрифта */
+}
+body.theme-apple ::selection{background:var(--accent);color:#fff}
+body.theme-apple :focus-visible{outline-color:var(--accent)}
+
+/* ---------- типографика: крупно, тесно, полужирным ---------- */
+body.theme-apple h1,body.theme-apple h2,body.theme-apple h3,body.theme-apple h4{
+  font-weight:600;letter-spacing:-.022em;line-height:1.12;
+}
+/* размер h1 задаётся ниже, в редакционном блоке 1.9.33 */
+body.theme-apple h2{font-size:calc(clamp(26px,3vw,36px) * var(--h-scale))}
+body.theme-apple h3{font-size:calc(clamp(21px,2.2vw,26px) * var(--h-scale))}
+body.theme-apple .page-title{text-align:center;margin-bottom:14px}
+body.theme-apple .crumbs{text-align:center;text-transform:none;letter-spacing:.02em;font-size:13px}
+body.theme-apple .crumbs a{border-bottom:0}
+body.theme-apple .crumbs a:hover{color:var(--accent)}
+body.theme-apple .album-count{text-align:center;text-transform:none;letter-spacing:0;font-size:14px}
+body.theme-apple .wysiwyg blockquote{border-left:3px solid var(--accent);color:var(--text)}
+
+/* ---------- кнопки-пилюли: монохром вместо синего акцента (1.9.66).
+   Синий #0066cc на монохромном serif-сайте выглядел чужеродной iOS-кнопкой;
+   форма-пилюля (почерк темы) сохраняется, цвет — из текста, как в классической теме ---------- */
+body.theme-apple .btn{
+  height:auto;min-height:46px;padding:10px 28px;border-radius:980px;border-color:var(--text);color:var(--text);
+  font-size:15px;letter-spacing:0;text-transform:none;transition:background .2s,color .2s,box-shadow .2s;
+}
+body.theme-apple .btn-outline:hover{background:var(--text);color:var(--bg)}
+body.theme-apple .btn-solid{background:var(--text);border-color:var(--text);color:var(--bg)}
+body.theme-apple .btn-solid:hover{background:transparent;color:var(--text)}
+
+/* ---------- фото и галереи: округлые углы ---------- */
+body.theme-apple .ph,
+body.theme-apple .li-media,
+body.theme-apple .bp-thumb,
+body.theme-apple .rel-media{border-radius:var(--radius)}
+body.theme-apple .post-body .pp--left,
+body.theme-apple .post-body .pp--right{border-radius:12px}
+/* «Углы у фотографий» → «Прямые» (1.9.70): радиус всей темы в ноль;
+   рамки убраны в 1.9.71 — без них чище и на фото, и на пакетах */
+body.theme-apple.corners-square{--radius:0}
+body.theme-apple.corners-square .post-body .pp--left,
+body.theme-apple.corners-square .post-body .pp--right{border-radius:0}
+/* Пакеты и цены (1.9.71): карточки как остальные блоки темы — на серой подложке,
+   без рамки, с общим радиусом; в «прямом» режиме --radius:0 сработает сам */
+body.theme-apple .price-card{border:0;border-radius:var(--radius);background:var(--band)}
+body.theme-apple .price-img{border-radius:var(--radius) var(--radius) 0 0}
+body.theme-apple .price-card{transition:box-shadow .3s ease}
+body.theme-apple a.price-card:hover{box-shadow:0 14px 34px rgba(0,0,0,.12)}
+body.theme-apple .li-media{transition:box-shadow .3s ease}
+body.theme-apple .li:hover .li-media{box-shadow:0 18px 42px rgba(0,0,0,.16)}
+body.theme-apple .li-title{
+  font-family:var(--font-head);font-weight:600;letter-spacing:-.01em;
+  /* та же усиленная подложка, что и в классической теме (1.9.28): читается на светлых фото */
+  background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.42) 55%,rgba(0,0,0,0) 100%);
+}
+/* карточка без обложки: тёмный текст на заглушке, градиент не нужен */
+body.theme-apple .li-empty .li-title{background:none}
+body.theme-apple .li-count,body.theme-apple .li-badge{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* ---------- «Другие работы», содержание, ссылки ---------- */
+body.theme-apple .related{border-top:0}
+body.theme-apple .related-title{font-size:clamp(22px,2.6vw,30px);font-weight:600}
+body.theme-apple .toc,body.theme-apple .backlinks{
+  border:0;border-radius:var(--radius);background:var(--band);
+}
+body.theme-apple .post-body code{border-radius:6px;background:var(--band)}
+body.theme-apple .pn{border-radius:var(--radius);border-color:var(--line)}
+body.theme-apple .pn:hover{border-color:var(--accent)}
+body.theme-apple .pager a{border-radius:980px;border-color:var(--accent);color:var(--accent);text-transform:none;letter-spacing:0}
+body.theme-apple .pager a:hover{background:var(--accent);color:#fff}
+/* border-color — --line-ui, как в site.css (1.9.78): иначе тема возвращала номерам страниц малоконтрастную --line */
+body.theme-apple .pager-nums a{border-radius:10px;border-color:var(--line-ui);color:var(--text)}
+body.theme-apple .pager-nums a:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- блог: карточки заметок на серой подложке ---------- */
+body.theme-apple .bp{
+  border-bottom:0;background:var(--band);border-radius:24px;padding:26px 28px;
+}
+body.theme-apple .bp.has-thumb{gap:22px}
+body.theme-apple .bp-title{letter-spacing:-.018em}
+body.theme-apple .post-meta{text-transform:none;letter-spacing:.02em;font-size:13px}
+body.theme-apple .post-back a{border-bottom:0;color:var(--accent)}
+body.theme-apple .wiki-new{color:#b23b2e}
+
+/* ---------- служебные элементы ---------- */
+body.theme-apple .to-top{
+  border:0;border-radius:50%;box-shadow:0 6px 20px rgba(0,0,0,.16);
+}
+body.theme-apple .admin-link{border-radius:8px}
+
+/* ==========================================================================
+   ДЕСКТОП (>900 px): меню из колонки слева превращается в липкую
+   полупрозрачную планку сверху — визитная черта apple.com.
+   ========================================================================== */
+@media (min-width:901px){
+  body.theme-apple .layout{display:block;max-width:none}
+  body.theme-apple .sidebar{
+    position:sticky;top:0;z-index:40;width:auto;max-height:none;overflow:visible;
+    display:flex;align-items:center;justify-content:space-between;gap:28px;
+    /* высота резиновая: меню с flex-wrap в 2 строки на 901–1100 px раньше вылезало
+       за фиксированные 56 px без фона (ревизия 1.9.35, п.9) */
+    height:auto;min-height:56px;flex-wrap:wrap;
+    padding:6px max(24px,calc((100vw - 1180px)/2));
+    background:rgba(255,255,255,.78); /* запасной вариант без color-mix */
+    background:color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter:saturate(180%) blur(20px);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid var(--line);
+  }
+  body.theme-apple .sb-bar{display:flex;align-items:center}
+  /* .nav — промежуточная обёртка меню: растягиваем её на высоту планки, чтобы
+     пункты меню (align-items:stretch ниже) тянулись следом, и подменю с top:100%
+     открывалось под планкой, а не внутри неё (ревизия 1.9.35, п.2) */
+  body.theme-apple .nav{align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+  body.theme-apple .brand{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+  body.theme-apple .brand-logo{max-height:var(--logo-height, 48px)}
+  body.theme-apple .brand-both{align-items:center;gap:10px}
+  body.theme-apple .brand-both .brand-logo{margin-bottom:0}
+  /* якоря (содержание заметки) не прячутся под планкой */
+  body.theme-apple [id]{scroll-margin-top:76px}
+
+  /* меню — в одну строку, маленькие спокойные пункты.
+     Только корень (.lvl-0): menu_html() даёт вложенному списку тот же класс .menu, и flex
+     раньше раскладывал пункты подменю В СТРОКУ (ревизия 1.9.35, п.2) */
+  body.theme-apple .menu.lvl-0{display:flex;flex-wrap:wrap;align-items:stretch;flex:1 0 auto;gap:2px 26px}
+  /* пункты тянутся на всю высоту планки: top:100% у подменю — это низ ПЛАНКИ,
+     а не середина 56-пиксельной строки */
+  body.theme-apple .menu.lvl-0>li{display:flex;align-items:center}
+  body.theme-apple .menu a,body.theme-apple .menu .cat{
+    padding:4px 0;font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--muted);
+    white-space:nowrap; /* переносимся между пунктами, не внутри названия (ревизия 1.9.35, п.9) */
+  }
+  body.theme-apple .menu a:hover{opacity:1;color:var(--text)}
+  body.theme-apple .menu li.is-active>a{font-weight:600;color:var(--text)}
+  body.theme-apple .menu .cat{margin-top:0}
+  /* вложенные пункты («Портфолио» → альбомы) — аккуратный выпадающий список */
+  body.theme-apple .menu li.has-sub{position:relative}
+  /* невидимый «мостик» через 6px-зазор между планкой и подменю: курсор не срывает :hover на спуске */
+  body.theme-apple .menu li.has-sub::before{content:'';position:absolute;left:0;right:0;top:100%;height:8px}
+  body.theme-apple .menu .lvl-1{
+    display:block; /* вертикальный список, не flex-строка (ревизия 1.9.35, п.2) */
+    position:absolute;top:100%;left:50%;transform:translateX(-50%) translateY(6px);
+    min-width:200px;margin:0;padding:10px;
+    background:var(--bg);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.14);
+    opacity:0;visibility:hidden;transition:opacity .18s ease,transform .18s ease,visibility .18s;
+  }
+  body.theme-apple .menu li.has-sub:hover .lvl-1,
+  body.theme-apple .menu li.has-sub:focus-within .lvl-1{
+    opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);
+  }
+  body.theme-apple .menu .lvl-1 a{display:block;padding:9px 12px;font-size:14px;border-radius:9px}
+  body.theme-apple .menu .lvl-1 a:hover{background:var(--band)}
+
+  /* контент — по центру широкой колонкой, подвал — серая лента во всю ширину */
+  body.theme-apple .main{display:flex;flex-direction:column;min-height:100vh;padding:0}
+  body.theme-apple main#main{
+    width:100%;max-width:1180px;margin:0 auto;padding:72px 28px 0;
+  }
+  body.theme-apple .footer{
+    margin-top:112px;background:var(--band);padding:56px 28px;font-size:12.5px;
+  }
+  body.theme-apple .footer-cols{border-top:0;padding-top:0;max-width:1024px;margin-left:auto;margin-right:auto}
+  /* строка копирайта — той же ширины, что колонки: левый край совпадает с первой колонкой (1.9.44) */
+  body.theme-apple .footer-links.has-copy{max-width:1024px;margin-left:auto;margin-right:auto}
+  body.theme-apple .footer-links a{border-bottom:0;color:var(--muted)}
+  body.theme-apple .footer-links a:hover{color:var(--accent);border-color:transparent}
+  /* колонка блога в яблочной теме снова по центру — как статьи на apple.com/newsroom */
+  body.theme-apple .post,body.theme-apple .blog-list,body.theme-apple .backlinks,
+  body.theme-apple .post-nav,body.theme-apple .post-back,body.theme-apple .pager,
+  body.theme-apple .type-blog .crumbs,body.theme-apple .type-post .crumbs,
+  body.theme-apple .type-blog .page-title,body.theme-apple .blog-desc,
+  body.theme-apple .crumbs.t-axis,body.theme-apple .page-title.t-axis,body.theme-apple .album-count.t-axis{
+    margin-left:auto;margin-right:auto;
+  }
+  /* мета-строка и кнопки «Поделиться» — по центру, как заголовки и крошки темы (1.9.78);
+     на ≤900 px они и так прижаты влево, там не трогаем */
+  body.theme-apple .post-meta-top,body.theme-apple .share{justify-content:center}
+}
+
+/* ==========================================================================
+   МОБИЛЬНЫЙ (≤900 px): классическая липкая шапка с бургером уже работает —
+   добавляем только полупрозрачность, размытие и яблочную типографику.
+   ========================================================================== */
+@media (max-width:900px){
+  body.theme-apple .sidebar{
+    background:rgba(255,255,255,.82);
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter:saturate(180%) blur(20px);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+  }
+  body.theme-apple .brand{font-weight:600}
+  /* открытое меню — округлая «яблочная» карточка с мягкой тенью (1.9.23);
+     селектор без пробела: .nav-open вешается на тот же <body>, что и .theme-apple */
+  body.theme-apple.nav-open .nav{border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.16);border-color:transparent}
+  body.theme-apple .menu a,body.theme-apple .menu .cat{
+    font-size:17px;text-transform:none;letter-spacing:0;padding:13px 0;
+  }
+  body.theme-apple .menu .lvl-1{padding-left:16px}
+  body.theme-apple main#main{padding-top:20px}
+  body.theme-apple .footer{
+    margin-top:72px;background:var(--band);padding:44px 20px;font-size:12.5px;
+  }
+  body.theme-apple .footer-cols{border-top:0;padding-top:0}
+  body.theme-apple .bp{padding:20px;border-radius:18px}
+  body.theme-apple .page-title{text-align:left}  /* на телефоне длинные заголовки по центру читаются хуже */
+  body.theme-apple .crumbs{text-align:left}
+}
+
+/* ==========================================================================
+   Редакционное обновление 1.9.33. Вдохновение — портфолио свадебных
+   фотографов уровня maximkravchenko.com: огромная тонкая антиква заголовков,
+   крошечные разряженные надзаголовки-«оверлайны» капсом, курсивные акценты
+   внутри фраз, тёплая кремовая подложка секций, много воздуха. Фирменные
+   черты темы (липкая полупрозрачная планка, пилюли, округлые фото) сохранены.
+   Важно: с этой версии заголовки в теме — снова Tenor Sans (см. theme_css()),
+   поэтому вес везде 400: у Tenor одно начертание, синтетический жирный
+   портил тонкие штрихи.
+   ========================================================================== */
+
+/* ---------- типографика: тонко, крупно, с курсивными акцентами ---------- */
+body.theme-apple h1,body.theme-apple h2,body.theme-apple h3,body.theme-apple h4{
+  font-weight:400;letter-spacing:-.006em;line-height:1.1;
+}
+body.theme-apple h1{font-size:calc(clamp(30px,4.2vw,48px) * var(--h-scale))}
+body.theme-apple h2{font-size:calc(clamp(27px,3.4vw,42px) * var(--h-scale))}
+body.theme-apple h3{font-size:calc(clamp(22px,2.4vw,30px) * var(--h-scale))}
+body.theme-apple .page-title{margin-bottom:clamp(22px,3.4vw,44px)}
+/* курсивные слова внутри заголовков — антиквенный акцент, как у эталона.
+   У Tenor Sans нет курсива, синтетический наклон выглядит грубо, поэтому
+   акцент отдаём Georgia italic (Win/macOS) с откатом на ближайший serif */
+body.theme-apple h1 em,body.theme-apple h2 em,body.theme-apple h3 em,
+body.theme-apple .page-title em{
+  font-family:Georgia,'Times New Roman',serif;font-style:italic;letter-spacing:0;
+}
+body.theme-apple .brand{font-weight:400}
+body.theme-apple .li-title,
+body.theme-apple .bp-title,
+body.theme-apple .related-title{font-weight:400}
+
+/* ---------- оверлайны: крошки, счётчики, мета — капсом с разрядкой ---------- */
+body.theme-apple .crumbs{
+  text-transform:uppercase;letter-spacing:.16em;font-size:var(--fs-label);line-height:1.7;
+}
+body.theme-apple .album-count,body.theme-apple .post-meta{
+  text-transform:uppercase;letter-spacing:.14em;font-size:var(--fs-label);
+}
+body.theme-apple .blog-desc{
+  font-size:15px;max-width:620px;
+}
+
+/* ---------- кнопки-пилюли: капсовая редакционная подача ---------- */
+body.theme-apple .btn{
+  height:auto;min-height:44px;padding:10px 26px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+}
+body.theme-apple .pager a{font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+
+/* ---------- тёплая кремовая подложка вместо холодной серой ---------- */
+body.theme-apple{--band:#f6f4f0}
+
+/* ---------- десктоп: меню капсом на липкой планке, воздух вокруг контента ---------- */
+@media (min-width:901px){
+  body.theme-apple .menu a,body.theme-apple .menu .cat{
+    font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;
+  }
+  /* активный пункт — 500, а не 600: Golos Text имеет 400/500, синтеза не будет */
+  body.theme-apple .menu li.is-active>a{font-weight:500}
+  /* выпадающий список — обычная строка: длинные названия альбомов капсом читаются хуже */
+  body.theme-apple .menu .lvl-1 a{text-transform:none;font-size:13px;letter-spacing:.02em}
+  body.theme-apple main#main{padding-top:40px}
+  body.theme-apple .footer-links a{
+    text-transform:uppercase;font-size:var(--fs-label);letter-spacing:.12em;
+  }
+  /* планка фиксированной высоты 56 px: логотип с настройкой высоты больше планки
+     вылезал за её край (виден на тесте 1.9.33 при logo_height 70) — ограничиваем,
+     меньшее значение из настройки уважаем */
+  body.theme-apple .brand-logo{max-height:min(40px,var(--logo-height,48px))}
+}
+
+/* ---------- мобильный: оверлайны мельче, заголовки по-прежнему слева ---------- */
+@media (max-width:900px){
+  body.theme-apple .crumbs{letter-spacing:.12em;font-size:var(--fs-label)}
+  body.theme-apple .blog-desc{text-align:left}
+  body.theme-apple .brand-logo{max-height:min(32px,var(--logo-height,48px))}
+}
+
+/* ---------- 1.9.48: форма связи, вопросы и ответы, видео ---------- */
+body.theme-apple .cform input,body.theme-apple .cform textarea{border-color:transparent;border-radius:12px;background:var(--band)}
+body.theme-apple .cf-note{border-radius:14px}
+body.theme-apple .faq-q{font-size:21px}
+body.theme-apple .sec-video video{border-radius:var(--radius)}
+
+/* ---------- 1.9.100: хлебные крошки блога — по центру КОНТЕНТНОЙ ширины,
+   как на страницах портфолио, а не по колонке статьи 700px.
+   Без этого текст крошек центрировался только внутри узкой колонки и уезжал влево. */
+@media (min-width:901px){
+  body.theme-apple.type-post .crumbs,
+  body.theme-apple.type-blog .crumbs{
+    width:min(1124px, 100vw - 56px);
+    max-width:none;
+  }
+}
+
+/* ---------- 1.9.102: overflow, портфолио и плотность главной ---------- */
+@media (min-width:901px){
+  body.theme-apple .menu li.has-sub:last-child .lvl-1{
+    left:auto;right:0;transform:translateY(6px);
+  }
+  body.theme-apple .menu li.has-sub:last-child:hover .lvl-1,
+  body.theme-apple .menu li.has-sub:last-child:focus-within .lvl-1{transform:translateY(0)}
+  body.theme-apple .slides{width:100%;margin-left:0}
+}
