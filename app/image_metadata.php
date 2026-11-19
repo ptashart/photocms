@@ -120,9 +120,6 @@ function image_metadata_embed(string $path, string $ext): bool
         $blob = photo_metadata_png($blob, $xmp);
     } elseif ($ext === 'webp') {
         $blob = photo_metadata_webp($blob, $path, $xmp);
-    } elseif ($ext === 'avif') {
-        $uuid = hex2bin('be7acfcb97a942e89c71999491e3afac');
-        $blob .= pack('N', 24 + strlen($xmp)) . 'uuid' . $uuid . $xmp;
     } else {
         return true;
     }
