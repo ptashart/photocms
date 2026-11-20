@@ -230,3 +230,18 @@ body.anav-open .anav-btn span:nth-child(3){transform:translateY(-6px) rotate(-45
   .fx-box{max-width:100%}
   .fx-stage img{max-height:56vh}
 }
+
+.component-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:16px 0}
+.component-card{border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.component-card h3{margin:0;font-size:17px}
+.component-card>a{font-size:13px}
+.component-status{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;white-space:nowrap;background:#ececec;color:#555}
+.component-status.is-current{background:#e5f5e9;color:#21653b}
+.component-status.is-update{background:#fff0cf;color:#8a5200}
+.component-status.is-missing{background:#fde9e7;color:#9b2921}
+.component-status.is-unknown{background:#ececec;color:#666}
+.component-versions{margin:12px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.component-versions div{min-width:0}
+.component-versions dt{font-size:11px;color:#777}
+.component-versions dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
+@media (max-width:768px){.component-grid{grid-template-columns:1fr}.component-versions{grid-template-columns:1fr 1fr}}
