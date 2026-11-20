@@ -12,6 +12,7 @@ require __DIR__ . '/videos.php';
 require __DIR__ . '/settings.php';
 require __DIR__ . '/blog.php';
 require __DIR__ . '/misc.php';
+require __DIR__ . '/server.php';
 
 if (!is_installed()) {
     redirect('/install.php');
@@ -90,6 +91,7 @@ switch ($p) {
     case 'image_delete': admin_image_delete(); break;
     case 'warm_thumbs': admin_thumbs_warm(); break;
     case 'menu': admin_menu(); break;
+    case 'server': admin_server(); break;
     case 'settings': admin_settings(); break;
     case 'redirects': admin_redirects(); break;
     case 'account': admin_account(); break;

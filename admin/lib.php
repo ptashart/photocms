@@ -158,7 +158,7 @@ function admin_header(string $title, string $active = ''): void
 {
     $nav = [
         'dashboard' => 'Панель', 'pages' => 'Страницы', 'posts' => 'Блог', 'sections' => 'Разделы', 'media' => 'Медиа', 'videos' => 'Видео', 'messages' => 'Заявки', 'menu' => 'Меню',
-        'settings' => 'Настройки', 'redirects' => 'Редиректы', 'account' => 'Аккаунт',
+        'server' => 'Сервер', 'settings' => 'Настройки', 'redirects' => 'Редиректы', 'account' => 'Аккаунт',
     ];
     ?>
 <!doctype html>

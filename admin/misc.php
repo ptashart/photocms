@@ -409,6 +409,11 @@ function admin_dashboard(): void
     <?php endif; ?>
 </div>
 <div class="card">
+  <h2>Состояние сервера</h2>
+  <p>Нагрузка CPU, память, диск, версии PHP, SQLite, GD/ImageMagick, лимиты загрузки и предупреждения об обновлениях.</p>
+  <p><a class="btn" href="<?= e(a_url('server')) ?>">Проверить сервер</a></p>
+</div>
+<div class="card">
   <h2>Кэш</h2>
   <p>Движок обработки фото: <b><?= img_engine() === 'imagick' ? 'Imagick' : 'GD' ?></b><?php if (img_engine() === 'imagick'): ?>
      (<?= e((string)(\Imagick::getVersion()['versionString'] ?? '')) ?>)<?php endif; ?>.
