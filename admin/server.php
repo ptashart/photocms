@@ -109,16 +109,16 @@ function server_collect(): array
         $warnings[] = 'upload_max_filesize больше post_max_size: загрузки будут ограничены POST-лимитом.';
     }
     $cores = 0;
-    if (is_readable('/proc/cpuinfo')) {
+    if (@is_readable('/proc/cpuinfo')) {
         $cores = preg_match_all('/^processor\s*:/m', (string)file_get_contents('/proc/cpuinfo'));
     }
-    $load = sys_getloadavg();
+    $load = function_exists('sys_getloadavg') ? sys_getloadavg() : [];
     $load = is_array($load) ? $load : [];
     if ($cores > 0 && isset($load[0]) && $load[0] > $cores * 2) {
         $warnings[] = 'Средняя загрузка CPU за минуту превышает удвоенное число ядер.';
     }
     $memory = [];
-    if (is_readable('/proc/meminfo')) {
+    if (@is_readable('/proc/meminfo')) {
         foreach (preg_split('/\R/', (string)file_get_contents('/proc/meminfo')) as $line) {
             if (preg_match('/^(MemTotal|MemAvailable):\s+(\d+)\s+kB/', $line, $m)) {
                 $memory[$m[1]] = (int)$m[2] * 1024;
@@ -128,8 +128,8 @@ function server_collect(): array
             $warnings[] = 'Доступной памяти сервера меньше 10%.';
         }
     }
-    $diskFree = disk_free_space(ROOT);
-    $diskTotal = disk_total_space(ROOT);
+    $diskFree = function_exists('disk_free_space') ? disk_free_space(ROOT) : false;
+    $diskTotal = function_exists('disk_total_space') ? disk_total_space(ROOT) : false;
     if ($diskFree !== false && $diskTotal > 0 && ($diskFree < 524288000 || $diskFree < $diskTotal * .1)) {
         $warnings[] = 'Свободного места на диске мало. Удалите старые копии и ненужные файлы.';
     }
@@ -173,7 +173,7 @@ function admin_server(): void
         $v = Imagick::getVersion();
         $imagick = 'ImageMagick ' . (string)($v['versionString'] ?? '') . ' · PHP Imagick ' . (string)phpversion('imagick');
     }
-    $uptime = is_readable('/proc/uptime') ? (float)explode(' ', (string)file_get_contents('/proc/uptime'))[0] : 0;
+    $uptime = @is_readable('/proc/uptime') ? (float)explode(' ', (string)file_get_contents('/proc/uptime'))[0] : 0;
     $dbSize = is_file(db_path()) ? (int)filesize(db_path()) : 0;
     $opcache = function_exists('opcache_get_status') ? opcache_get_status(false) : false;
     admin_header('Сервер', 'server');
@@ -223,7 +223,7 @@ function admin_server(): void
     <tr><td>GD</td><td><?= $gd ? e((string)($gd['GD Version'] ?? 'установлена')) : 'не установлена' ?></td></tr>
     <tr><td>ImageMagick</td><td><?= e($imagick) ?></td></tr>
     <tr><td>Веб-сервер</td><td><?= e($web) ?></td></tr>
-    <tr><td>ОС</td><td><?= e(PHP_OS_FAMILY) ?> · <?= e(php_uname('s') . ' ' . php_uname('r')) ?></td></tr>
+    <tr><td>ОС</td><td><?= e(PHP_OS_FAMILY) ?> · <?= e(function_exists('php_uname') ? php_uname('s') . ' ' . php_uname('r') : 'версия ОС не сообщается') ?></td></tr>
     <tr><td>OPcache</td><td><?= $opcache ? 'включён · использовано ' . e(server_format_bytes((float)($opcache['memory_usage']['used_memory'] ?? 0))) : 'не сообщается или выключен' ?></td></tr>
     <tr><td>cURL / OpenSSL</td><td><?= function_exists('curl_init') ? 'cURL да' : 'cURL нет' ?> · <?= extension_loaded('openssl') ? 'OpenSSL да' : 'OpenSSL нет' ?></td></tr>
     <tr><td>mbstring / DOM / EXIF / fileinfo / ZIP</td><td><?= e(implode(' / ', array_map(static fn($e) => $e . ': ' . (extension_loaded($e) ? 'да' : 'нет'), ['mbstring', 'dom', 'exif', 'fileinfo', 'zip']))) ?></td></tr>

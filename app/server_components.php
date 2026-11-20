@@ -80,7 +80,7 @@ function component_current_versions(string $appVersion): array
             'source' => 'https://www.sqlite.org/download.html', 'note' => 'Версия библиотеки, с которой работает PHP.',
         ],
         'kernel' => [
-            'name' => 'Ядро Linux', 'current' => PHP_OS_FAMILY === 'Linux' ? php_uname('r') : null,
+            'name' => 'Ядро Linux', 'current' => PHP_OS_FAMILY === 'Linux' && function_exists('php_uname') ? php_uname('r') : null,
             'source' => 'https://www.kernel.org/', 'note' => 'Обновления ОС устанавливает хостер или системный менеджер обновлений.',
         ],
     ];
@@ -107,7 +107,7 @@ function component_cache_is_fresh(array $cache): bool
 
 function component_http_gets(array $urls): array
 {
-    if (!function_exists('curl_multi_init')) {
+    if (!function_exists('curl_multi_init') || !function_exists('curl_multi_exec') || !function_exists('curl_multi_select')) {
         return array_fill_keys(array_keys($urls), ['status' => 0, 'error' => 'cURL недоступен', 'body' => '']);
     }
     $multi = curl_multi_init();
