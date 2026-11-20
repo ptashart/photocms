@@ -222,6 +222,9 @@ function component_assemble(array $current, array $cache): array
 
 function component_versions(string $appVersion, bool $refresh = false): array
 {
+    if ($refresh) {
+        @unlink(ROOT . '/storage/cache/update-check.json');
+    }
     $current = component_current_versions($appVersion);
     $cache = component_read_cache();
     if (!$refresh && component_cache_is_fresh($cache)) {
