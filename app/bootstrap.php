@@ -226,7 +226,7 @@ define('ROOT', dirname(__DIR__));
 
 
 
-define('APP_VERSION', '1.9.112');
+define('APP_VERSION', '1.9.113');
 
 
 

@@ -88,7 +88,7 @@ foreach ($sections as $s) {
   <?php  ?>
   <?php if (count($heads) >= 3): ?><?= toc_html($heads) ?><?php endif; ?>
   <?php $firstMedia = sections_first_media($sections, $pageCtx); ?>
-  <?php $firstMediaId = (int)($firstMedia['section']['id'] ?? 0); ?>
+  <?php $firstMediaId = $firstMedia && $sections && (int)$sections[0]['id'] === (int)$firstMedia['section']['id'] ? (int)$firstMedia['section']['id'] : 0; ?>
   <div class="post-body">
   <?php foreach ($sections as $s): ?>
     <?php $s['is_first'] = (int)$s['id'] === $firstMediaId; ?>

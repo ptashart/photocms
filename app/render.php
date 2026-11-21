@@ -402,8 +402,8 @@ function listing_html(array $pages, string $format, int $cols, bool $firstSectio
             $ar = max(1, (int)$cover['w']) . ' / ' . max(1, (int)$cover['h']);
         }
 
-        $eager = $firstSection && $i === 0;
-
+        $eager = $firstSection && $i < $cols + 1;
+        $highPriority = $firstSection && $i === 0;
 
 
 
@@ -415,7 +415,7 @@ function listing_html(array $pages, string $format, int $cols, bool $firstSectio
 
             $sizes = '(max-width: 480px) 100vw, (max-width: 900px) 50vw'
                 . ', calc((' . content_width_expr() . ') / ' . $cols . ')';
-            $html .= img_html($cover, $sizes, (string)$p['title'], $eager, 1240, $eager);
+            $html .= img_html($cover, $sizes, (string)$p['title'], $eager, 1240, $highPriority);
         }
 
         $badge = trim((string)($p['badge'] ?? ''));

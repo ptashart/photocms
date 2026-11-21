@@ -58,8 +58,6 @@ body.theme-apple .li-media{transition:box-shadow .3s ease}
 body.theme-apple .li:hover .li-media{box-shadow:0 18px 42px rgba(0,0,0,.16)}
 body.theme-apple .li-title{
   font-family:var(--font-head);font-weight:600;letter-spacing:-.01em;
-
-  background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.42) 55%,rgba(0,0,0,0) 100%);
 }
 
 body.theme-apple .li-empty .li-title{background:none}
@@ -85,7 +83,7 @@ body.theme-apple .bp{
   border-bottom:0;background:var(--band);border-radius:24px;padding:26px 28px;
 }
 body.theme-apple .bp.has-thumb{gap:22px}
-body.theme-apple .bp-title{letter-spacing:-.018em}
+body.theme-apple .bp-title{font-size:clamp(24px,2.6vw,32px);letter-spacing:-.018em}
 body.theme-apple .post-meta{text-transform:none;letter-spacing:.02em;font-size:13px}
 body.theme-apple .post-back a{border-bottom:0;color:var(--accent)}
 body.theme-apple .wiki-new{color:#b23b2e}
@@ -98,9 +96,9 @@ body.theme-apple .admin-link{border-radius:8px}
 
 
 @media (min-width:901px){
-  body.theme-apple .layout{display:block;max-width:none}
+  body.theme-apple .layout{display:flex;flex-direction:column;max-width:none}
   body.theme-apple .sidebar{
-    position:sticky;top:0;z-index:40;width:auto;max-height:none;overflow:visible;
+    position:sticky;top:0;z-index:40;flex:none;align-self:stretch;width:auto;max-height:none;overflow:visible;
     display:flex;align-items:center;justify-content:space-between;gap:28px;
 
     height:auto;min-height:56px;flex-wrap:wrap;
@@ -151,12 +149,12 @@ body.theme-apple .admin-link{border-radius:8px}
   body.theme-apple .menu .lvl-1 a:hover{background:var(--band)}
 
 
-  body.theme-apple .main{display:flex;flex-direction:column;min-height:100vh;padding:0}
+  body.theme-apple .main{display:flex;flex:1;flex-direction:column;min-height:0;padding:0}
   body.theme-apple main#main{
-    width:100%;max-width:1180px;margin:0 auto;padding:72px 28px 0;
+    width:100%;max-width:1180px;margin:0 auto;padding:72px 28px 112px;
   }
   body.theme-apple .footer{
-    margin-top:112px;background:var(--band);padding:56px 28px;font-size:12.5px;
+    margin-top:auto;background:var(--band);padding:56px 28px;font-size:12.5px;
   }
   body.theme-apple .footer-cols{border-top:0;padding-top:0;max-width:1024px;margin-left:auto;margin-right:auto}
 
@@ -233,7 +231,7 @@ body.theme-apple .blog-desc{
 
 
 body.theme-apple .btn{
-  height:auto;min-height:44px;padding:10px 26px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  height:auto;min-height:44px;padding:10px 26px;font-size:15px;letter-spacing:.12em;text-transform:uppercase;
 }
 body.theme-apple .pager a{font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 

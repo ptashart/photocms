@@ -302,7 +302,7 @@ function blog_render_body(string $body, string $postTitle = '', bool $toc = fals
             $opts = block_opts_parse($parts);
             if (empty($opts['eager'])) {
 
-                $opts['eager'] = $firstMedia ? '1' : null;
+                $opts['eager'] = $firstMedia && trim(strip_tags($html)) === '' ? '1' : null;
                 $firstMedia = false;
             }
 

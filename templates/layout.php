@@ -100,6 +100,7 @@ if (theme_is_apple_family()): ?>
 <link rel="stylesheet" href="<?= e(asset('assets/css/theme-apple.css')) ?>">
 <?php endif; ?>
 <style><?= theme_css() ?></style>
+<noscript><style>@media(max-width:900px){.burger{display:none!important}.nav{display:block!important}}</style></noscript>
 <?php foreach ($meta['jsonld'] as $block): ?>
 <script type="application/ld+json"><?= json_encode($block, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?></script>
 <?php endforeach; ?>
