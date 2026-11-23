@@ -12,10 +12,14 @@ return [
     // 'debug'    => true,   // показывать ошибки PHP (только на время отладки!)
 
     // Сайт стоит за прокси / Cloudflare? Перечислите IP или IPv4/IPv6 CIDR ПРОКСИ (REMOTE_ADDR).
-    // Тогда настоящий IP посетителя берётся из CF-Connecting-IP / X-Forwarded-For, и лимит попыток входа
+    // Тогда настоящий IP посетителя берётся из X-Forwarded-For, и лимит попыток входа
     // считается по людям, а не по одному адресу прокси. Без этой настройки заголовкам не верим.
-    // Актуальные диапазоны Cloudflare: https://www.cloudflare.com/ips/
     // 'trusted_proxies' => ['127.0.0.1', '173.245.48.0/20', '2400:cb00::/32'],
+
+    // CF-Connecting-IP принимается только отдельно перечисленным диапазонам Cloudflare,
+    // которые также должны входить в trusted_proxies. Не включайте сюда обычный reverse proxy.
+    // Актуальные диапазоны Cloudflare: https://www.cloudflare.com/ips/
+    // 'cloudflare_proxies' => ['173.245.48.0/20', '2400:cb00::/32'],
 
     // Дополнительные HTTPS-адреса для fetch/XHR из владельческого кода (CSP connect-src).
     // Метрика и Google Analytics распознаются автоматически.
