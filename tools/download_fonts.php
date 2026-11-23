@@ -18,15 +18,15 @@ $specs = array_slice($argv, 1) ?: ['Tenor Sans:400', 'Golos Text:400,500,600'];
 $dir = dirname(__DIR__) . '/assets/fonts';
 @mkdir($dir, 0755, true);
 
-function fetch(string $url): ?string
+function fetch(string $url, int $max): ?string
 {
     $ctx = stream_context_create(['http' => [
         'timeout' => 60,
 
         'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36\r\n",
     ]]);
-    $b = @file_get_contents($url, false, $ctx);
-    return $b === false ? null : $b;
+    $b = @file_get_contents($url, false, $ctx, 0, $max + 1);
+    return $b === false || strlen($b) > $max ? null : $b;
 }
 
 
@@ -45,10 +45,10 @@ if ($existing !== '' && preg_match_all('~/\*\s*([a-z\-]+)\s+(\d+)\s*\*/\s*(@font
 foreach ($specs as $spec) {
     [$family, $weights] = array_pad(explode(':', $spec, 2), 2, '400');
     $url = 'https://fonts.googleapis.com/css2?family=' . str_replace(' ', '+', $family) . ':wght@' . str_replace(',', ';', $weights) . '&display=swap&subset=cyrillic,latin';
-    $src = fetch($url);
+    $src = fetch($url, 1048576);
     if ($src === null) {
         $errors++;
-        fwrite(STDERR, "Не удалось получить CSS для $family (нет интернета или неверное имя).\n");
+        fwrite(STDERR, "Не удалось получить CSS для $family (нет интернета, неверное имя или ответ больше 1 МБ).\n");
         continue;
     }
 
@@ -67,10 +67,15 @@ foreach ($specs as $spec) {
         preg_match('~font-weight:\s*(\d+)~', $block, $wm);
         $weight = $wm[1] ?? '400';
         $file = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $family)) . "-$weight-$subset.woff2";
-        $bin = fetch($um[1]);
+        $bin = fetch($um[1], 8388608);
         if ($bin === null) {
             $errors++;
-            fwrite(STDERR, "Не скачался $file\n");
+            fwrite(STDERR, "Не скачался $file или размер ответа больше 8 МБ\n");
+            continue;
+        }
+        if (strlen($bin) < 48 || substr($bin, 0, 4) !== 'wOF2') {
+            $errors++;
+            fwrite(STDERR, "Ответ для $file не является WOFF2\n");
             continue;
         }
         $written = @file_put_contents("$dir/$file", $bin);
