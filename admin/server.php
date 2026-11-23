@@ -42,36 +42,54 @@ function server_format_bytes(float $bytes): string
     return (string)$bytes;
 }
 
+function server_cms_release_version(string $tag): string
+{
+    return preg_match('/^[vV]?(\d+\.\d+\.\d+)$/D', trim($tag), $match) === 1 ? $match[1] : '';
+}
+
+
 function server_cms_update(): array
 {
+    $result = ['checked_at' => time(), 'latest' => '', 'url' => 'https://github.com/ptashart/photocms/releases'];
     $file = ROOT . '/storage/cache/update-check.json';
     $cached = is_file($file) ? json_decode((string)@file_get_contents($file), true) : null;
     if (is_array($cached) && time() - (int)($cached['checked_at'] ?? 0) < 43200) {
-        return $cached;
-    }
-    $result = ['checked_at' => time(), 'latest' => '', 'url' => 'https://github.com/ptashart/photocms/releases'];
-    $raw = false;
-    if (function_exists('curl_init')) {
-        $ch = curl_init('https://api.github.com/repos/ptashart/photocms/releases/latest');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 4,
-            CURLOPT_CONNECTTIMEOUT => 2,
-            CURLOPT_USERAGENT => 'PhotoCMS/' . APP_VERSION,
-            CURLOPT_HTTPHEADER => ['Accept: application/vnd.github+json'],
-        ]);
-        $raw = curl_exec($ch);
-        if (PHP_VERSION_ID < 80500) {
-            curl_close($ch);
+        $cachedLatest = $cached['latest'] ?? '';
+        if ($cachedLatest === '' || (is_string($cachedLatest) && server_cms_release_version($cachedLatest) === $cachedLatest)) {
+            $cached['latest'] = $cachedLatest;
+            $cached['url'] = $result['url'];
+            return $cached;
         }
-    } elseif (ini_get('allow_url_fopen')) {
-        $raw = @file_get_contents('https://api.github.com/repos/ptashart/photocms/releases/latest', false, stream_context_create(['http' => ['timeout' => 4, 'user_agent' => 'PhotoCMS/' . APP_VERSION]]));
+    }
+    $response = component_http_gets(['cms' => 'https://api.github.com/repos/ptashart/photocms/releases/latest'])['cms']
+        ?? ['status' => 0, 'error' => 'Недоступен HTTP-клиент', 'body' => ''];
+    $raw = $response['status'] === 200 && $response['error'] === '' ? $response['body'] : false;
+    $canMulti = function_exists('curl_multi_init') && function_exists('curl_multi_exec') && function_exists('curl_multi_select');
+    if ($raw === false && !$canMulti && ini_get('allow_url_fopen')) {
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 4,
+                'user_agent' => 'PhotoCMS/' . APP_VERSION,
+                'follow_location' => 0,
+                'max_redirects' => 0,
+                'header' => "Accept: application/vnd.github+json\r\n",
+            ],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'allow_self_signed' => false],
+        ]);
+        unset($http_response_header);
+        $body = @file_get_contents('https://api.github.com/repos/ptashart/photocms/releases/latest', false, $context, 0, 1048577);
+        $status = 0;
+        foreach ($http_response_header ?? [] as $line) {
+            if (preg_match('~^HTTP/\S+\s+(\d{3})~i', $line, $match)) {
+                $status = (int)$match[1];
+            }
+        }
+        $raw = $status === 200 && is_string($body) && strlen($body) <= 1048576 ? $body : false;
     }
     if (is_string($raw) && $raw !== '') {
         $json = json_decode($raw, true);
         if (is_array($json) && is_string($json['tag_name'] ?? null)) {
-            $result['latest'] = ltrim($json['tag_name'], 'vV');
-            $result['url'] = (string)($json['html_url'] ?? $result['url']);
+            $result['latest'] = server_cms_release_version($json['tag_name']);
         }
     }
     @file_put_contents($file, json_db($result), LOCK_EX);

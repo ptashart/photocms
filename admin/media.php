@@ -158,20 +158,37 @@ function admin_image_focus(): void
     $fy = (float)str_replace(',', '.', (string)($_POST['fy'] ?? '0.5'));
     $fx = max(0.0, min(1.0, $fx));
     $fy = max(0.0, min(1.0, $fy));
-    db_run('UPDATE images SET focus_x = ?, focus_y = ? WHERE id = ?', [$fx, $fy, $id]);
-
-
-
-
-    foreach (glob(media_dir() . '/' . $id . '/og-*.jpg') ?: [] as $ogf) {
-        @unlink($ogf);
+    $lock = image_lock($id, true);
+    if ($lock === null || $lock === false) {
+        json_out(['ok' => false, 'error' => 'Не удалось заблокировать фото. Повторите после завершения обработки.'], 503);
     }
-    image_cache_flush();
-
-
-
-    site_touch();
-    json_out(['ok' => true, 'fx' => $fx, 'fy' => $fy]);
+    $response = ['ok' => true, 'fx' => $fx, 'fy' => $fy];
+    try {
+        if (!db_one('SELECT id FROM images WHERE id = ?', [$id])) {
+            $response = ['ok' => false, 'error' => 'Фото не найдено.'];
+        } else {
+            db_run('UPDATE images SET focus_x = ?, focus_y = ? WHERE id = ?', [$fx, $fy, $id]);
+            $failed = [];
+            $files = array_merge(glob(media_dir() . '/' . $id . '/og-*.jpg') ?: [], glob(media_dir() . '/' . $id . '/og-*.jpg.fail') ?: []);
+            foreach ($files as $ogf) {
+                if (is_file($ogf) && !@unlink($ogf)) {
+                    clearstatcache(true, $ogf);
+                    if (is_file($ogf)) {
+                        $failed[] = basename($ogf);
+                    }
+                }
+            }
+            if ($failed) {
+                app_log_error('image_focus: не удалось удалить OG-файлы для фото #' . $id . ': ' . implode(', ', $failed));
+                $response['warning'] = 'Точка кадра сохранена, но старые OG-файлы или маркеры ошибок остались. Подробности в storage/error.log.';
+            }
+            image_cache_flush();
+            site_touch();
+        }
+    } finally {
+        image_unlock($lock);
+    }
+    json_out($response, !empty($response['ok']) ? 200 : 404);
 }
 
 function admin_image_delete(): void

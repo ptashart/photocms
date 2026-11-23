@@ -88,7 +88,15 @@ function admin_cache_clear_media(): int
     $idDirs = scandir($media) ?: [];
     foreach ($idDirs as $idDir) {
         if (preg_match('~^\d+$~', $idDir) && is_dir($media . '/' . $idDir)) {
-            rrmdir($media . '/' . $idDir);
+            $lock = image_lock((int)$idDir, true);
+            if ($lock === null || $lock === false) {
+                throw new RuntimeException('Не удалось заблокировать очистку миниатюр фото #' . $idDir);
+            }
+            try {
+                rrmdir($media . '/' . $idDir);
+            } finally {
+                image_unlock($lock);
+            }
         }
     }
 
@@ -118,7 +126,18 @@ function admin_thumbs_warm(): void
     $canAvif = avif_enabled();
     $errors = 0;
     foreach ($rows as $img) {
+        $lock = image_lock_wait((int)$img['id'], IMG_LOCK_WAIT);
+        if ($lock === false || $lock === null) {
+            $errors++;
+            app_log_error('thumbs_warm image #' . (int)$img['id'] . ': не удалось получить блокировку');
+            continue;
+        }
         try {
+            $current = db_one('SELECT * FROM images WHERE id = ?', [(int)$img['id']]);
+            if (!is_array($current)) {
+                continue;
+            }
+            $img = $current;
             foreach ([1240, 440] as $w) {
 
 
@@ -138,6 +157,8 @@ function admin_thumbs_warm(): void
         } catch (Throwable $e) {
             $errors++;
             app_log_error('thumbs_warm image #' . (int)$img['id'] . ': ' . $e->getMessage());
+        } finally {
+            image_unlock($lock);
         }
     }
     $processed = $offset + count($rows);
@@ -202,9 +223,14 @@ function admin_dashboard(): void
         if ($what === 'xml') {
             flash('Кэш страниц очищен (' . admin_cache_clear_xml() . ' файлов). sitemap.xml, feed.xml и готовый HTML пересоберутся при следующем обращении.');
         } elseif ($what === 'media') {
-            $n = admin_cache_clear_media();
-            site_touch();
-            flash('Миниатюры сброшены (' . $n . ' файлов). Нажмите «Прогреть миниатюры» — CMS создаст основные размеры заранее; иначе первые просмотры страниц будут медленными, а у большого альбома часть кадров упиралась бы в лимит генераций (аудит 1.9.40, п.20).');
+            try {
+                $n = admin_cache_clear_media();
+                site_touch();
+                flash('Миниатюры сброшены (' . $n . ' файлов). Нажмите «Прогреть миниатюры» — CMS создаст основные размеры заранее; иначе первые просмотры страниц будут медленными, а у большого альбома часть кадров упиралась бы в лимит генераций (аудит 1.9.40, п.20).');
+            } catch (Throwable $e) {
+                app_log_error('cache_clear_media: ' . $e->getMessage());
+                flash('Не удалось завершить сброс миниатюр: фото обрабатывается или недоступна блокировка. Повторите позже; подробности в storage/error.log.', 'err');
+            }
         } else {
             flash('Не указано, что очищать.', 'err');
         }

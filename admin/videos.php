@@ -156,11 +156,24 @@ function video_delete(int $id): void
     });
 
     $f = basename((string)$v['file']);
+    $fileRemains = false;
     if ($f !== '') {
-        @unlink(media_dir() . '/video/' . $f);
+        $path = media_dir() . '/video/' . $f;
+        if (is_file($path)) {
+            @unlink($path);
+            clearstatcache(true, $path);
+            $fileRemains = is_file($path);
+        }
+        if ($fileRemains) {
+            app_log_error('video_delete: не удалось удалить файл ' . $path);
+        }
     }
     page_sections_cache_flush();
     site_touch();
+    if ($fileRemains) {
+        flash('Видео удалено из базы, но файл MP4 остался в media/video/. Удалите его вручную; подробности в storage/error.log.', 'err');
+        return;
+    }
     flash('Видео удалено.');
 }
 
