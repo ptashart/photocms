@@ -876,12 +876,7 @@ function post_meta(array $p): array
 {
 
 
-    $canonical = trim((string)($p['canonical'] ?? ''));
-    if ($canonical === '' || str_starts_with($canonical, '//')) {
-        $canonical = abs_url(post_url($p));
-    } elseif ($canonical[0] === '/') {
-        $canonical = abs_url($canonical);
-    }
+    $canonical = canonical_url((string)($p['canonical'] ?? ''), post_url($p));
     $og = null;
     $img = !empty($p['og_image_id']) ? image_get((int)$p['og_image_id']) : null;
     if (!$img) {
@@ -909,13 +904,20 @@ function post_meta(array $p): array
     $base = base_url();
     $sec = post_section($p);
     $secBase = section_base($sec);
-    $author = trim(setting('person_name')) !== '' ? trim(setting('person_name')) : setting('site_name');
+    $personName = trim(setting('person_name'));
+    $organizationName = trim(setting('business_name')) !== '' ? trim(setting('business_name')) : setting('site_name');
+    $author = [
+        '@type' => $personName !== '' ? 'Person' : 'Organization',
+        '@id' => $base . ($personName !== '' ? '/#person' : '/#business'),
+        'name' => $personName !== '' ? $personName : $organizationName,
+        'url' => $base . '/',
+    ];
     $type = trim((string)($p['schema_type'] ?? ''));
     if (!in_array($type, ['BlogPosting', 'Article', 'NewsArticle'], true)) {
         $type = 'BlogPosting';
     }
 
-    $publisher = ['@type' => 'Organization', 'name' => trim(setting('business_name')) !== '' ? trim(setting('business_name')) : setting('site_name')];
+    $publisher = ['@type' => 'Organization', '@id' => $base . '/#business', 'name' => $organizationName];
     $logo = jsonld_logo();
     if ($logo) {
         $publisher['logo'] = $logo;
@@ -929,7 +931,7 @@ function post_meta(array $p): array
         'datePublished' => iso_date(post_pub_ts($p)),
         'dateModified' => iso_date((int)$p['updated_at']),
         'inLanguage' => setting('lang'),
-        'author' => ['@type' => 'Person', 'name' => $author, 'url' => $base . '/'],
+        'author' => $author,
         'publisher' => $publisher,
         'articleSection' => section_title($sec),
         'wordCount' => post_words($p),

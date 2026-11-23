@@ -60,14 +60,39 @@ function page_breadcrumbs(array $page): array
     if (!empty($page['is_home'])) {
         return $crumbs;
     }
-    if (!empty($page['parent_id'])) {
-        $par = page_get((int)$page['parent_id']);
-        if ($par && (int)$par['is_published']) {
-            $crumbs[] = ['name' => (string)$par['title'], 'url' => page_url($par)];
+    $ancestors = [];
+    $seen = [(int)$page['id'] => true];
+    $parentId = (int)($page['parent_id'] ?? 0);
+    while ($parentId > 0 && !isset($seen[$parentId])) {
+        $seen[$parentId] = true;
+        $parent = page_get($parentId);
+        if (!$parent || !(int)$parent['is_published']) {
+            break;
         }
+        if (!empty($parent['is_home'])) {
+            break;
+        }
+        $ancestors[] = ['name' => (string)$parent['title'], 'url' => page_url($parent)];
+        $parentId = (int)($parent['parent_id'] ?? 0);
+    }
+    foreach (array_reverse($ancestors) as $ancestor) {
+        $crumbs[] = $ancestor;
     }
     $crumbs[] = ['name' => (string)$page['title'], 'url' => page_url($page)];
     return $crumbs;
+}
+
+function canonical_url(string $canonical, string $ownPath): string
+{
+    $canonical = trim($canonical);
+    $own = abs_url($ownPath);
+    if ($canonical === '' || str_starts_with($canonical, '//')) {
+        return $own;
+    }
+    if ($canonical[0] === '/') {
+        $canonical = abs_url($canonical);
+    }
+    return rtrim($canonical, '/') === rtrim($own, '/') ? $own : $canonical;
 }
 
 
@@ -170,14 +195,7 @@ function footer_columns(): array
 function page_meta(array $page): array
 {
     $noindex = !empty($page['noindex']) || !(int)$page['is_published'];
-    $canonical = trim((string)$page['canonical']);
-    if ($canonical === '' || str_starts_with($canonical, '//')) {
-
-
-        $canonical = abs_url(page_url($page));
-    } elseif ($canonical[0] === '/') {
-        $canonical = abs_url($canonical);
-    }
+    $canonical = canonical_url((string)$page['canonical'], page_url($page));
     $meta = [
         'title' => seo_title($page),
         'description' => seo_description($page),
@@ -193,23 +211,25 @@ function page_meta(array $page): array
 
 function jsonld_logo(): ?array
 {
-    $img = null;
-    if (setting('default_og_image_id') !== '') {
-        $img = image_get((int)setting('default_og_image_id'));
+    foreach (['logo_image_id', 'favicon_image_id'] as $key) {
+        $id = (int)setting($key);
+        $img = $id > 0 ? image_get($id) : null;
+        if (!$img) {
+            continue;
+        }
+        $w = (int)image_pick_width(image_widths($img), 600);
+        $h = (int)$img['w'] > 0 ? (int)round((int)$img['h'] * $w / (int)$img['w']) : 0;
+        if ($w < 112 || $h < 112) {
+            continue;
+        }
+        return array_merge([
+            '@type' => 'ImageObject',
+            'url' => abs_url(image_url($img, $w, 'jpg')),
+            'width' => $w,
+            'height' => $h,
+        ], image_metadata_schema());
     }
-    if (!$img && (int)setting('favicon_image_id') > 0) {
-        $img = image_get((int)setting('favicon_image_id'));
-    }
-    if (!$img) {
-        return null;
-    }
-    $w = (int)image_pick_width(image_widths($img), 600);
-    return array_merge([
-        '@type' => 'ImageObject',
-        'url' => abs_url(image_url($img, $w, 'jpg')),
-        'width' => $w,
-        'height' => (int)$img['w'] > 0 ? (int)round((int)$img['h'] * $w / (int)$img['w']) : 0,
-    ], image_metadata_schema());
+    return null;
 }
 
 
@@ -253,6 +273,46 @@ function opening_hours_schema(string $raw): array
     return $out;
 }
 
+function opening_hours_specification_schema(string $raw): array
+{
+    static $days = [
+        'пн' => 'Monday', 'вт' => 'Tuesday', 'ср' => 'Wednesday', 'чт' => 'Thursday',
+        'пт' => 'Friday', 'сб' => 'Saturday', 'вс' => 'Sunday',
+        'mo' => 'Monday', 'tu' => 'Tuesday', 'we' => 'Wednesday', 'th' => 'Thursday',
+        'fr' => 'Friday', 'sa' => 'Saturday', 'su' => 'Sunday',
+    ];
+    static $week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    $day = 'пн|вт|ср|чт|пт|сб|вс|mo|tu|we|th|fr|sa|su';
+    $pattern = '~(?<!\p{L})(' . $day . ')(?:\s*[-–—]\s*(' . $day . '))?\s+'
+        . '([01]?\d|2[0-3]):([0-5]\d)\s*[-–—]\s*([01]?\d|2[0-3]):([0-5]\d)(?!\d)~ui';
+    if (!preg_match_all($pattern, $raw, $matches, PREG_SET_ORDER)) {
+        return [];
+    }
+    $out = [];
+    foreach ($matches as $match) {
+        $first = $days[mb_strtolower($match[1])];
+        $last = isset($match[2]) && $match[2] !== '' ? $days[mb_strtolower($match[2])] : $first;
+        $start = array_search($first, $week, true);
+        $end = array_search($last, $week, true);
+        $range = [];
+        $i = $start;
+        while (true) {
+            $range[] = 'https://schema.org/' . $week[$i];
+            if ($i === $end) {
+                break;
+            }
+            $i = ($i + 1) % 7;
+        }
+        $out[] = [
+            '@type' => 'OpeningHoursSpecification',
+            'dayOfWeek' => count($range) === 1 ? $range[0] : $range,
+            'opens' => sprintf('%02d:%s', (int)$match[3], $match[4]),
+            'closes' => sprintf('%02d:%s', (int)$match[5], $match[6]),
+        ];
+    }
+    return $out;
+}
+
 
 
 
@@ -270,21 +330,21 @@ function jsonld_section_blocks(array $page, array $meta, ?array $sections = null
         if (!$v || trim((string)$v['file']) === '') {
             continue;
         }
+        $poster = (int)($v['poster_image_id'] ?? 0) > 0 ? image_get((int)$v['poster_image_id']) : null;
+        if (!$poster) {
+            continue;
+        }
+        $thumbnail = abs_url(image_url($poster, (int)image_pick_width(image_widths($poster), 1240), 'jpg'));
         $vo = [
             '@context' => 'https://schema.org',
             '@type' => 'VideoObject',
             'name' => trim((string)$v['title']) !== '' ? trim((string)$v['title']) : $meta['title'],
             'uploadDate' => (string)$v['created_at'],
             'contentUrl' => abs_url(video_url($v)),
+            'thumbnailUrl' => $thumbnail,
         ];
         if (trim((string)$v['description']) !== '') {
             $vo['description'] = trim((string)$v['description']);
-        }
-        $poster = (int)($v['poster_image_id'] ?? 0) > 0 ? image_get((int)$v['poster_image_id']) : null;
-        if ($poster) {
-            $vo['thumbnailUrl'] = abs_url(image_url($poster, (int)image_pick_width(image_widths($poster), 1240), 'jpg'));
-        } elseif (!empty($meta['og_image']['url'])) {
-            $vo['thumbnailUrl'] = $meta['og_image']['url'];
         }
         $dur = video_duration_iso($v['duration'] ?? 0);
         if ($dur !== '') {
@@ -321,6 +381,10 @@ function jsonld_blocks(array $page, array $meta): array
         if ($isPhotog) {
             $schemaType = 'LocalBusiness';
         }
+        $hasAddress = trim(setting('street_address')) !== '' || trim(setting('city')) !== '' || trim(setting('postal_code')) !== '';
+        if (!$hasAddress && in_array($schemaType, ['LocalBusiness', 'ProfessionalService'], true)) {
+            $schemaType = 'Organization';
+        }
         $biz = [
             '@context' => 'https://schema.org',
             '@type' => $schemaType,
@@ -341,7 +405,7 @@ function jsonld_blocks(array $page, array $meta): array
         if ($meta['description'] !== '') {
             $biz['description'] = $meta['description'];
         }
-        $isLocal = in_array($schemaType, ['LocalBusiness', 'ProfessionalService'], true);
+        $isLocal = $hasAddress && in_array($schemaType, ['LocalBusiness', 'ProfessionalService'], true);
         foreach (['telephone' => 'phone', 'email' => 'email'] as $prop => $key) {
             if (trim(setting($key)) !== '') {
                 $biz[$prop] = trim(setting($key));
@@ -401,6 +465,10 @@ function jsonld_blocks(array $page, array $meta): array
         if ($hours) {
             $biz['openingHours'] = $hours;
         }
+        $hourSpecifications = $isLocal ? opening_hours_specification_schema(setting('opening_hours')) : [];
+        if ($hourSpecifications) {
+            $biz['openingHoursSpecification'] = $hourSpecifications;
+        }
         $same = array_column(social_links(), 'url');
         if ($same) {
             $biz['sameAs'] = $same;
@@ -412,13 +480,12 @@ function jsonld_blocks(array $page, array $meta): array
             $awards = array_values(array_filter(array_map('trim', explode(',', setting('person_awards')))));
             $biz['founder'] = array_filter([
                 '@type' => 'Person',
+                '@id' => $base . '/#person',
                 'name' => trim(setting('person_name')),
                 'jobTitle' => trim(setting('person_job')),
                 'url' => $base . '/',
                 'knowsAbout' => $knows ?: null,
                 'award' => $awards ?: null,
-
-                'sameAs' => array_column(social_links(), 'url') ?: null,
             ]);
         }
 
@@ -458,6 +525,28 @@ function jsonld_blocks(array $page, array $meta): array
 
     if ($type === 'ContactPage') {
         $wp['mainEntity'] = ['@id' => $base . '/#business'];
+    }
+    if ($type === 'ProfilePage') {
+        $personName = trim(setting('person_name'));
+        if ($personName !== '') {
+            $entity = [
+                '@type' => 'Person',
+                '@id' => $base . '/#person',
+                'name' => $personName,
+                'url' => $meta['canonical'],
+            ];
+            if (trim(setting('person_job')) !== '') {
+                $entity['jobTitle'] = trim(setting('person_job'));
+            }
+        } else {
+            $entity = [
+                '@type' => 'Organization',
+                '@id' => $base . '/#business',
+                'name' => trim(setting('business_name')) !== '' ? trim(setting('business_name')) : $siteName,
+                'url' => $base . '/',
+            ];
+        }
+        $wp['mainEntity'] = $entity;
     }
     if ($page['type'] === 'album') {
         $imgs = [];
@@ -1031,14 +1120,17 @@ function robots_txt(): string
 
 
 
-    $t = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
-    $t .= "\nUser-agent: Yandex\nAllow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
-    $t .= 'Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&gbraid&wbraid&fbclid&mc_cid&mc_eid&igshid&from /' . "\n";
-
-
+    $rules = "Allow: /\nDisallow: /admin/\nDisallow: /img.php\nDisallow: /dl.php\n";
     $extra = trim(setting('robots_extra'));
+    $sharedExtra = $extra !== '' && !preg_match('~^[ \t]*User-agent[ \t]*:~mi', $extra);
+    $t = "User-agent: *\n" . $rules;
+    if ($sharedExtra) {
+        $t .= $extra . "\n";
+    }
+    $t .= "\nUser-agent: Yandex\n" . $rules;
+    $t .= 'Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&gbraid&wbraid&fbclid&mc_cid&mc_eid&igshid&from /' . "\n";
     if ($extra !== '') {
-        $t .= $extra . "\n\n";
+        $t .= $extra . "\n";
     }
     return $t . 'Sitemap: ' . base_url() . "/sitemap.xml\n";
 }

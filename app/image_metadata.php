@@ -17,6 +17,13 @@ function photo_metadata_values(): array
     return $values;
 }
 
+function photo_license_url(string $license): string
+{
+    return filter_var($license, FILTER_VALIDATE_URL) !== false
+        && preg_match('~^https?://~i', $license)
+        && parse_url($license, PHP_URL_HOST) ? $license : '';
+}
+
 function photo_metadata_xmp(array $values): string
 {
     $xml = static fn(string $value): string => htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
@@ -32,6 +39,10 @@ function photo_metadata_xmp(array $values): string
     }
     if ($values['license'] !== '') {
         $items .= '<xmpRights:UsageTerms><rdf:Alt><rdf:li xml:lang="x-default">' . $xml($values['license']) . '</rdf:li></rdf:Alt></xmpRights:UsageTerms>';
+        $licenseUrl = photo_license_url($values['license']);
+        if ($licenseUrl !== '') {
+            $items .= '<xmpRights:WebStatement>' . $xml($licenseUrl) . '</xmpRights:WebStatement>';
+        }
     }
     return '<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>'
         . '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
@@ -139,8 +150,9 @@ function image_metadata_schema(): array
     if ($values['credit'] !== '') {
         $out['creditText'] = $values['credit'];
     }
-    if ($values['license'] !== '') {
-        $out['license'] = $values['license'];
+    $license = photo_license_url($values['license']);
+    if ($license !== '') {
+        $out['license'] = $license;
     }
     return $out;
 }

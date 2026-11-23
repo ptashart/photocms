@@ -107,10 +107,13 @@ function image_max_pixels(): int
 
 function image_width_allowed(array $img, int $w): bool
 {
+    $ow = (int)$img['w'];
+    if ($ow > 0 && $ow < 280 && $w === $ow) {
+        return true;
+    }
     if (!in_array($w, IMG_WIDTHS, true)) {
         return false;
     }
-    $ow = (int)$img['w'];
     if ($w <= $ow || in_array($w, [48, 180, 440], true)) {
         return true;
     }
@@ -178,6 +181,10 @@ function image_lock_wait(int $id, float $seconds)
 function image_existing_variant(array $img, string $fmt, int $wantW): ?string
 {
     $widths = array_values(array_filter(IMG_WIDTHS, static fn($w) => $w >= 280));
+    $ow = (int)$img['w'];
+    if ($ow > 0 && $ow < 280) {
+        $widths[] = $ow;
+    }
     usort($widths, static fn($a, $b) => abs($a - $wantW) <=> abs($b - $wantW));
     foreach (array_unique([$fmt, 'jpg']) as $f) {
         foreach ($widths as $w) {
@@ -499,6 +506,9 @@ function image_variant_path(array $img, int $w, string $ext): string
 function image_widths(array $img, int $max = 2520): array
 {
     $ow = (int)$img['w'];
+    if ($ow > 0 && $ow < 280) {
+        return [$ow];
+    }
     $list = array_values(array_filter(IMG_WIDTHS, static fn($w) => $w >= 280 && $w <= $max && $w <= $ow));
     if ($list) {
         return $list;
@@ -853,7 +863,9 @@ function image_icc_wide_gamut(string $path): bool
 
 function imagick_make_variant(array $img, int $w, string $ext): bool
 {
-    if (!in_array($w, IMG_WIDTHS, true) || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
+    $ow = (int)$img['w'];
+    $validWidth = in_array($w, IMG_WIDTHS, true) || ($ow > 0 && $ow < 280 && $w === $ow);
+    if (!$validWidth || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
         return false;
     }
     if ($ext === 'webp' && !imagick_webp_supported()) {
@@ -991,7 +1003,9 @@ function imagick_make_variant(array $img, int $w, string $ext): bool
 
 function image_make_variant(array $img, int $w, string $ext, $loaded = null): bool
 {
-    if (!in_array($w, IMG_WIDTHS, true) || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
+    $ow = (int)$img['w'];
+    $validWidth = in_array($w, IMG_WIDTHS, true) || ($ow > 0 && $ow < 280 && $w === $ow);
+    if (!$validWidth || !in_array($ext, ['jpg', 'webp', 'avif', 'png'], true)) {
         return false;
     }
 
