@@ -335,9 +335,9 @@ $check(component_status('8.5.13', null)['state'] === 'unknown', 'Unknown release
 $check(component_imagick_library_version('ImageMagick 7.1.2-36 Q16-HDRI') === '7.1.2-36', 'ImageMagick version parsing failed');
 $check(component_sqlite_latest('PRODUCT,3.54.1,') === '3.54.1', 'SQLite release parsing failed');
 $check(component_kernel_latest('The latest stable version of the Linux kernel is: 7.3.5') === '7.3.5', 'Kernel release parsing failed');
-$check(server_cms_release_version('v1.9.114') === '1.9.114', 'CMS release tag parsing failed');
-$check(server_cms_release_version('1.9.114') === '1.9.114', 'Numeric CMS release rejected');
-$check(server_cms_release_version('1.9.114.1') === '', 'Nonstandard CMS release accepted');
+$check(server_cms_release_version('v1.9.115') === '1.9.115', 'CMS release tag parsing failed');
+$check(server_cms_release_version('1.9.115') === '1.9.115', 'Numeric CMS release rejected');
+$check(server_cms_release_version('1.9.115.1') === '', 'Nonstandard CMS release accepted');
 $check(server_cms_release_version('javascript:alert(1)') === '', 'Unsafe CMS release accepted');
 } catch (Throwable $e) {
     $failure = $e;
