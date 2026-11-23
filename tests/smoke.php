@@ -29,13 +29,19 @@ $copy = static function (string $dir) use (&$copy, $source, $temp): void {
     }
 };
 $copy($source);
+file_put_contents($temp . '/config.php', '<?php return ' . var_export([
+    'db' => $temp . '/storage/test.sqlite',
+    'trusted_proxies' => ['127.0.0.1', '10.0.0.1'],
+    'cloudflare_proxies' => ['10.0.0.1'],
+], true) . ';');
 define('PTS_DB_CREATE', true);
 require $temp . '/app/bootstrap.php';
+$failure = null;
+try {
 install_schema();
 
 $fail = static function (string $message): void {
-    fwrite(STDERR, $message . "\n");
-    exit(1);
+    throw new RuntimeException($message);
 };
 $check = static function (bool $condition, string $message) use ($fail): void {
     if (!$condition) {
@@ -55,6 +61,58 @@ $check(is_tracking_param('utm_source') && is_tracking_param('yclid') && is_track
 $sourceJson = contact_attribution(json_encode(['params' => ['yclid' => 'abc123', 'unsafe' => 'x'], 'landing' => '/?yclid=abc123']));
 $sourceData = json_decode($sourceJson, true);
 $check(($sourceData['params']['yclid'] ?? '') === 'abc123' && !isset($sourceData['params']['unsafe']), 'Attribution validation failed');
+
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+try {
+    foreach (['script' => 'src', 'link' => 'href', 'iframe' => 'src', 'video' => 'src', 'audio' => 'src', 'source' => 'src', 'form' => 'action'] as $tag => $attr) {
+        foreach (['""', "''", ''] as $value) {
+            $html = '<' . $tag . ' ' . $attr . '=' . $value . '>';
+            $check(public_csp_origins($html, $tag, $attr) === [], 'Empty CSP attribute failed: ' . $tag . '/' . $attr . '=' . $value);
+        }
+    }
+    $check(public_csp_origins('<script src="https://cdn.example/app.js"></script>', 'script', 'src') === ['https://cdn.example'], 'CSP origin regression');
+} finally {
+    restore_error_handler();
+}
+$check(contact_origin_matches('https://www.example.ru/path?q=1', 'https://example.ru'), 'Compatible contact origin rejected');
+$check(contact_origin_matches('https://example.ru:443', 'https://example.ru'), 'Default HTTPS port mismatch');
+$check(!contact_origin_matches('http://example.ru', 'https://example.ru'), 'Cross-scheme contact origin accepted');
+$check(!contact_origin_matches('https://example.ru:444', 'https://example.ru'), 'Cross-port contact origin accepted');
+$check(!contact_origin_matches('https://user@example.ru', 'https://example.ru'), 'Origin userinfo accepted');
+
+$serverBefore = $_SERVER;
+try {
+    $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+    $_SERVER['HTTP_CF_CONNECTING_IP'] = '198.51.100.7';
+    $_SERVER['HTTP_X_FORWARDED_FOR'] = '203.0.113.9';
+    $check(client_ip() === '203.0.113.9', 'Generic proxy accepted CF header');
+    $_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+    $check(client_ip() === '198.51.100.7', 'Configured Cloudflare proxy rejected');
+    $_SERVER['REMOTE_ADDR'] = '192.0.2.1';
+    $check(client_ip() === '192.0.2.1', 'Untrusted proxy headers accepted');
+
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_SERVER['HTTP_HOST'] = 'example.test';
+    $_SERVER['SERVER_PORT'] = 80;
+    $_SERVER['HTTPS'] = 'off';
+    $_GET = [];
+    $_COOKIE = [];
+    $httpCacheKey = pagecache_fresh_key();
+    $_SERVER['HTTPS'] = 'on';
+    $_SERVER['SERVER_PORT'] = 443;
+    $check($httpCacheKey !== pagecache_fresh_key(), 'Cache key ignores scheme');
+    $_GET = ['page' => '2'];
+    $check(!pagecache_requestable('/blog'), 'Out-of-range blog page can be cached');
+    $check(!pagecache_requestable('/'), 'Pagination is cached on a non-blog route');
+    $_GET = ['page' => '1'];
+    $check(!pagecache_requestable('/blog'), 'Canonical first blog page can be cached');
+} finally {
+    $_SERVER = $serverBefore;
+    $_GET = [];
+    $_COOKIE = [];
+}
 
 set_setting('photo_author', 'Sergei Kolesnikov');
 set_setting('photo_copyright', '© Sergei Kolesnikov');
@@ -110,5 +168,17 @@ $check(component_status('8.5.13', null)['state'] === 'unknown', 'Unknown release
 $check(component_imagick_library_version('ImageMagick 7.1.2-36 Q16-HDRI') === '7.1.2-36', 'ImageMagick version parsing failed');
 $check(component_sqlite_latest('PRODUCT,3.54.1,') === '3.54.1', 'SQLite release parsing failed');
 $check(component_kernel_latest('The latest stable version of the Linux kernel is: 7.3.5') === '7.3.5', 'Kernel release parsing failed');
-rrmdir($temp);
+$check(server_cms_release_version('v1.9.114') === '1.9.114', 'CMS release tag parsing failed');
+$check(server_cms_release_version('1.9.114') === '1.9.114', 'Numeric CMS release rejected');
+$check(server_cms_release_version('1.9.114.1') === '', 'Nonstandard CMS release accepted');
+$check(server_cms_release_version('javascript:alert(1)') === '', 'Unsafe CMS release accepted');
+} catch (Throwable $e) {
+    $failure = $e;
+} finally {
+    rrmdir($temp);
+}
+if ($failure !== null) {
+    fwrite(STDERR, $failure->getMessage() . "\n");
+    exit(1);
+}
 echo "PhotoCMS smoke tests passed\n";
