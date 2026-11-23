@@ -20,7 +20,7 @@ declare(strict_types=1);
 
 
 
-function pagecache_requestable(): bool
+function pagecache_requestable(?string $path = null): bool
 {
     $m = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
     if ($m !== 'GET' && $m !== 'HEAD') {
@@ -38,6 +38,24 @@ function pagecache_requestable(): bool
         }
         return false;
     }
+    if (isset($_GET['page'])) {
+        $segments = explode('/', trim($path ?? request_path(), '/'));
+        if (count($segments) !== 1 || $segments[0] === '' || section_get($segments[0]) === null) {
+            return false;
+        }
+        $page = (int)$_GET['page'];
+        if ($page === 1) {
+            return false;
+        }
+        static $pageCounts = [];
+        if (!array_key_exists($segments[0], $pageCounts)) {
+            $pageCounts[$segments[0]] = posts_count($segments[0]);
+        }
+        $lastPage = max(1, (int)ceil($pageCounts[$segments[0]] / POSTS_PER_PAGE));
+        if ($page > $lastPage) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -50,7 +68,7 @@ function pagecache_rev(): string
 
 function pagecache_fresh_key(): string
 {
-    return pagecache_rev() . '|' . request_host() . '|' . APP_VERSION;
+    return pagecache_rev() . '|' . request_host() . '|' . (is_https() ? 'https' : 'http') . '|' . APP_VERSION;
 }
 
 

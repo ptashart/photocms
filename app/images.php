@@ -1076,6 +1076,19 @@ function og_image_variant(array $img): ?array
             return null;
         }
         try {
+            $fresh = db_one('SELECT * FROM images WHERE id = ?', [(int)$img['id']]);
+            if (!is_array($fresh)) {
+                return null;
+            }
+            $img = $fresh;
+            $dims = og_image_dims($img);
+            if ($dims === null) {
+                return null;
+            }
+            [$w, $h] = $dims;
+            $dest = og_variant_path($img, $w, $h);
+            $src = image_original_path($img);
+            $failMark = $dest . '.fail';
             clearstatcache(true, $dest);
             if (is_file($dest) && (int)@filemtime($dest) >= (int)@filemtime($src)) {
                 return ['url' => '/media/' . (int)$img['id'] . '/og-' . $w . 'x' . $h . '.jpg?v=' . (int)@filemtime($dest), 'w' => $w, 'h' => $h];

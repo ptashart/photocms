@@ -242,6 +242,7 @@ function public_csp_origins(string $html, string $tag, string $attr): array
     $origins = [];
     if (preg_match_all('~<' . $tag . '\\b[^>]*?\\b' . $attr . '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))~i', $html, $m, PREG_SET_ORDER)) {
         foreach ($m as $match) {
+            $match += [1 => '', 2 => '', 3 => ''];
             $url = html_entity_decode($match[1] !== '' ? $match[1] : ($match[2] !== '' ? $match[2] : $match[3]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             if (str_starts_with($url, '//')) {
                 $url = 'https:' . $url;
@@ -477,18 +478,23 @@ function ip_in_cidr(string $ip, string $network): bool
 }
 
 
-function is_trusted_proxy(string $ip): bool
+function ip_matches_networks(string $ip, $networks): bool
 {
-    $list = cfg('trusted_proxies', []);
-    if (!is_array($list)) {
+    if (!is_array($networks)) {
         return false;
     }
-    foreach ($list as $network) {
+    foreach ($networks as $network) {
         if (is_string($network) && ip_in_cidr($ip, trim($network))) {
             return true;
         }
     }
     return false;
+}
+
+
+function is_trusted_proxy(string $ip): bool
+{
+    return ip_matches_networks($ip, cfg('trusted_proxies', []));
 }
 
 
@@ -500,7 +506,7 @@ function client_ip(): string
     $remote = (string)($_SERVER['REMOTE_ADDR'] ?? '');
     if ($remote !== '' && is_trusted_proxy($remote)) {
         $cf = (string)($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '');
-        if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
+        if (ip_matches_networks($remote, cfg('cloudflare_proxies', [])) && $cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
             return $cf;
         }
         $xff = array_reverse(array_map('trim', explode(',', (string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''))));

@@ -298,6 +298,34 @@ function contact_send_telegram(array $m): bool
 
 
 
+function contact_origin_matches(string $source, string $expected): bool
+{
+    $sourceParts = parse_url($source);
+    $expectedParts = parse_url($expected);
+    if (!is_array($sourceParts) || !is_array($expectedParts)) {
+        return false;
+    }
+    $sourceScheme = strtolower((string)($sourceParts['scheme'] ?? ''));
+    $expectedScheme = strtolower((string)($expectedParts['scheme'] ?? ''));
+    if (!in_array($sourceScheme, ['http', 'https'], true) || $sourceScheme !== $expectedScheme) {
+        return false;
+    }
+    if (isset($sourceParts['user']) || isset($sourceParts['pass'])) {
+        return false;
+    }
+    $sourceHost = strtolower((string)($sourceParts['host'] ?? ''));
+    $expectedHost = strtolower((string)($expectedParts['host'] ?? ''));
+    $sourceHost = (string)preg_replace('/^www\./', '', $sourceHost);
+    $expectedHost = (string)preg_replace('/^www\./', '', $expectedHost);
+    if ($sourceHost === '' || $sourceHost !== $expectedHost) {
+        return false;
+    }
+    $sourcePort = (int)($sourceParts['port'] ?? ($sourceScheme === 'https' ? 443 : 80));
+    $expectedPort = (int)($expectedParts['port'] ?? ($expectedScheme === 'https' ? 443 : 80));
+    return $sourcePort === $expectedPort;
+}
+
+
 function contact_handle(): void
 {
     header('Cache-Control: no-store');
@@ -322,13 +350,8 @@ function contact_handle(): void
     }
     $sourceOk = true;
     if ($source !== '') {
-        $hostNorm = static function (string $host): string {
-            $host = strtolower((string)preg_replace('/:\d+$/', '', $host));
-            return (string)preg_replace('/^www\./', '', $host);
-        };
-        $sourceHost = parse_url($source, PHP_URL_HOST);
-        $ownHosts = array_map($hostNorm, [request_host(), (string)parse_url(base_url(), PHP_URL_HOST)]);
-        $sourceOk = is_string($sourceHost) && in_array($hostNorm($sourceHost), $ownHosts, true);
+        $requestOrigin = (is_https() ? 'https' : 'http') . '://' . request_host();
+        $sourceOk = contact_origin_matches($source, $requestOrigin) || contact_origin_matches($source, base_url());
     }
     if (!$sourceOk || $pagePath === '' || !contact_token_ok($token, $pagePath)) {
         contact_log_throttled('token', 'contact: POST с недействительным токеном (ip ' . client_ip() . ')');
