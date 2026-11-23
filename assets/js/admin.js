@@ -625,6 +625,7 @@
         if (force) d.force = '1';
         post(A.delUrl, d).then(function (r) {
           if (r.ok) {
+            if (r.warning) { window.alert(r.warning); }
             var hadAlt = $('.mi-alt', mi) && $('.mi-alt', mi).value.trim() !== '';
             mi.remove();
 
@@ -679,6 +680,7 @@
         post(A.focusUrl, { id: mi.dataset.id, fx: fx.toFixed(3), fy: fy.toFixed(3) }).then(function (r) {
           if (r.ok) {
             status.textContent = 'Сохранено: ' + Math.round(fx * 100) + '%, ' + Math.round(fy * 100) + '%';
+            if (r.warning) { status.textContent += ' ' + r.warning; }
             mi.dataset.fx = fx; mi.dataset.fy = fy;
 
             var th = $('img', mi);
@@ -894,7 +896,7 @@
         var used = boxes.filter(function (b) { return parseInt(b.closest('.mi').dataset.uses, 10) > 0; }).length;
         var msg = 'Удалить выбранные фото: ' + boxes.length + '? Это нельзя отменить.';
         if (used) msg += '\n\n' + used + ' из них используются на сайте (галереи, страницы, заметки) — после удаления они пропадут отовсюду.';
-        msg += '\nВнешние ссылки на файлы дадут 404.';
+        msg += '\nПосле успешного удаления файлов внешние ссылки дадут 404.';
         if (!window.confirm(msg)) return;
         delSelBtn.disabled = true;
         var okN = 0, errs = [];
@@ -911,7 +913,7 @@
           }
           var mi = boxes[i].closest('.mi'), id = mi.dataset.id;
           post(A.delUrl, { id: id, force: '1' }).then(function (r) {
-            if (r.ok) { okN++; mi.remove(); }
+            if (r.ok) { okN++; mi.remove(); if (r.warning) { errs.push('фото #' + id + ' — ' + r.warning); } }
             else { errs.push('фото #' + id + ' — ' + (r.error || 'ошибка')); boxes[i].checked = false; }
           }).catch(function () { errs.push('фото #' + id + ' — сбой сети'); boxes[i].checked = false; })
             .then(function () { next(i + 1); });
