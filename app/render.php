@@ -175,7 +175,7 @@ function photo_html(array $img, int $index, string $sizes, bool $lightbox, strin
     }
 
     $customStamp = fx_stamp_text();
-    if ($customStamp !== '') {
+    if ($customStamp !== '' && ($index === 0 || setting('fx_stamp_once') !== '1')) {
         $stamp = '<span class="ph-date" aria-hidden="true">' . e($customStamp) . '</span>';
     }
     $pic = img_html($img, $sizes, $alt, $eager, 2520, $highPriority);

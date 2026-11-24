@@ -92,7 +92,7 @@ function setting_defaults(): array
         'sidebar_width' => '240',
         'gallery_gap' => '6',
         'gallery_columns' => '3',
-        'gallery_columns_mobile' => '2',
+        'gallery_columns_mobile' => '1',
         'photo_corners' => 'rounded',
         'related_title' => 'Другие работы',
         'related_limit' => '3',
@@ -128,6 +128,7 @@ function setting_defaults(): array
         'fx_datestamp_format' => 'dmy_short',
         'fx_datestamp_size' => 'normal',
         'fx_datestamp_color' => 'orange',
+        'fx_stamp_once' => '1',
         'fx_text_drift' => 'off',
         'post_sections' => '[{"slug":"blog","title":"","description":""}]',
 
