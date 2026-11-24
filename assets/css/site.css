@@ -4,7 +4,7 @@
  * Full license: LICENSE · Additional attribution terms: NOTICE.md. */
 
 
-:root{--bg:#fff;--text:#252525;--muted:rgba(37,37,37,.65);--line:rgba(37,37,37,.18);--line-ui:rgba(37,37,37,.45);--font-head:"Tenor Sans","Helvetica Neue",Arial,sans-serif;--font-body:"Golos Text",system-ui,sans-serif;--sidebar:240px;--gap:6px;--fs-label:12px;--h-scale:1;--t-scale:1}
+:root{--bg:#fff;--text:#252525;--muted:rgba(37,37,37,.67);--line:rgba(37,37,37,.18);--line-ui:rgba(37,37,37,.45);--font-head:"Tenor Sans","Helvetica Neue",Arial,sans-serif;--font-body:"Golos Text",system-ui,sans-serif;--sidebar:240px;--gap:6px;--fs-label:12px;--h-scale:1;--t-scale:1}
 *,*::before,*::after{box-sizing:border-box}
 
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scrollbar-gutter:stable;overflow-x:clip}
