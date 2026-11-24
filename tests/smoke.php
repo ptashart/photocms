@@ -219,6 +219,17 @@ foreach ([[200, 160], [600, 400]] as [$uploadWidth, $uploadHeight]) {
     $check($uploadSize !== false && $uploadSize[0] === $uploadWidth && $uploadSize[1] === $uploadHeight, 'Upload preview dimensions failed: ' . $uploadWidth);
 }
 
+$siteCss = (string)file_get_contents(ROOT . '/assets/css/site.css');
+$check(str_contains($siteCss, '--muted:rgba(37,37,37,.67)'), 'Muted text contrast token regressed');
+$check(setting('gallery_columns_mobile') === '1', 'Mobile gallery default is too dense');
+fx_stamp_text('V&M WEDDING');
+$stampOnce = masonry_html([$small, $logo], 2, 1, 'Тест', false, true);
+$check(substr_count($stampOnce, 'class="ph-date"') === 1, 'Custom stamp is repeated despite first-frame mode');
+set_setting('fx_stamp_once', '0');
+$stampEvery = masonry_html([$small, $logo], 2, 1, 'Тест', false, true);
+$check(substr_count($stampEvery, 'class="ph-date"') === 2, 'Custom stamp repeat option was not preserved');
+fx_stamp_text('');
+
 set_setting('default_og_image_id', (string)$small['id']);
 set_setting('logo_image_id', (string)$logo['id']);
 set_setting('favicon_image_id', (string)$favicon['id']);
@@ -335,9 +346,9 @@ $check(component_status('8.5.13', null)['state'] === 'unknown', 'Unknown release
 $check(component_imagick_library_version('ImageMagick 7.1.2-36 Q16-HDRI') === '7.1.2-36', 'ImageMagick version parsing failed');
 $check(component_sqlite_latest('PRODUCT,3.54.1,') === '3.54.1', 'SQLite release parsing failed');
 $check(component_kernel_latest('The latest stable version of the Linux kernel is: 7.3.5') === '7.3.5', 'Kernel release parsing failed');
-$check(server_cms_release_version('v1.9.115') === '1.9.115', 'CMS release tag parsing failed');
-$check(server_cms_release_version('1.9.115') === '1.9.115', 'Numeric CMS release rejected');
-$check(server_cms_release_version('1.9.115.1') === '', 'Nonstandard CMS release accepted');
+$check(server_cms_release_version('v1.9.116') === '1.9.116', 'CMS release tag parsing failed');
+$check(server_cms_release_version('1.9.116') === '1.9.116', 'Numeric CMS release rejected');
+$check(server_cms_release_version('1.9.116.1') === '', 'Nonstandard CMS release accepted');
 $check(server_cms_release_version('javascript:alert(1)') === '', 'Unsafe CMS release accepted');
 } catch (Throwable $e) {
     $failure = $e;
