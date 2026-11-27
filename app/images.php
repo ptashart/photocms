@@ -523,6 +523,16 @@ function image_widths(array $img, int $max = 2520): array
     return [280];
 }
 
+function image_prewarm_widths(array $img): array
+{
+    $widths = [1240, 440];
+    $original = (int)($img['w'] ?? 0);
+    if ($original > 0 && $original < 280) {
+        $widths[] = $original;
+    }
+    return $widths;
+}
+
 function image_pick_width(array $widths, int $target): int
 {
     foreach ($widths as $w) {
@@ -1508,7 +1518,7 @@ function image_add_from_file(string $tmpPath, string $origName, string $alt = ''
     if ($canAvif) {
         $formats[] = 'avif';
     }
-    foreach ([1240, 440] as $vw) {
+    foreach (image_prewarm_widths($img) as $vw) {
         foreach ($formats as $format) {
             if (!image_make_variant($img, $vw, $format, $im)) {
                 image_unlock($slot);
@@ -1568,7 +1578,7 @@ function image_usage_map(bool $fresh = false): array
     }
 
 
-    foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id'] as $k) {
+    foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id', 'person_image_id'] as $k) {
         $add((int)setting($k));
     }
     foreach (db_all("SELECT data FROM sections WHERE type = 'photo'") as $r) {
@@ -1641,7 +1651,7 @@ function image_delete(int $id): string
         db_run('UPDATE pages SET og_image_id = NULL WHERE og_image_id = ?', [$id]);
         db_run('UPDATE posts SET og_image_id = NULL WHERE og_image_id = ?', [$id]);
         db_run('UPDATE videos SET poster_image_id = NULL WHERE poster_image_id = ?', [$id]);
-        foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id'] as $k) {
+        foreach (['default_og_image_id', 'favicon_image_id', 'logo_image_id', 'person_image_id'] as $k) {
             if ((int)setting($k) === $id) {
                 set_setting($k, '');
             }

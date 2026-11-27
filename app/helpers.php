@@ -322,7 +322,20 @@ function public_csp_send(string $html): string
         $trustedParts[] = $m[1];
         return str_replace('__PHOTOCMS_CSP_CUSTOM_NONCE__', $nonce, $m[1]);
     }, $html) ?? $html;
-    $html = str_replace('__PHOTOCMS_CSP_CORE_NONCE__', $nonce, $html);
+    $html = preg_replace_callback('~<script\b([^>]*)>~i', static function (array $m) use ($nonce): string {
+        $attrs = $m[1];
+        if (!str_contains($attrs, '__PHOTOCMS_CSP_CORE_NONCE__')
+            || !preg_match('~(?:^|\s)src\s*=\s*([\"\'])(.*?)\1~is', $attrs, $src)) {
+            return $m[0];
+        }
+        $url = html_entity_decode($src[2], ENT_QUOTES, 'UTF-8');
+        $parts = parse_url($url);
+        if (!is_array($parts) || isset($parts['scheme']) || isset($parts['host']) || isset($parts['user']) || isset($parts['pass'])
+            || ($parts['path'] ?? '') !== '/assets/js/site.js') {
+            return $m[0];
+        }
+        return '<script' . str_replace('__PHOTOCMS_CSP_CORE_NONCE__', $nonce, $attrs) . '>';
+    }, $html) ?? $html;
     header(public_csp(implode("\n", $trustedParts), $nonce));
     return $html;
 }

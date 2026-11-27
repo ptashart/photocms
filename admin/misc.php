@@ -138,7 +138,7 @@ function admin_thumbs_warm(): void
                 continue;
             }
             $img = $current;
-            foreach ([1240, 440] as $w) {
+            foreach (image_prewarm_widths($img) as $w) {
 
 
                 if (!image_make_variant($img, $w, 'jpg')) {

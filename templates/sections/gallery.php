@@ -49,6 +49,9 @@ fx_stamp_text(trim((string)($page['stamp_text'] ?? '')));
  ?>
       <button class="strip-btn strip-prev" type="button" data-strip-prev aria-label="Предыдущее фото" disabled><?= icon('prev', 20) ?></button>
       <button class="strip-btn strip-next" type="button" data-strip-next aria-label="Следующее фото"><?= icon('next', 20) ?></button>
+      <?php if ($apAttr !== ''): ?>
+        <button class="strip-btn strip-toggle" type="button" data-strip-toggle aria-label="Приостановить автопрокрутку"><?= icon('pause', 20) ?></button>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 <?php elseif ($layout === 'slides'): ?>

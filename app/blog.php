@@ -904,12 +904,18 @@ function post_meta(array $p): array
     $base = base_url();
     $sec = post_section($p);
     $secBase = section_base($sec);
-    $personName = trim(setting('person_name'));
-    $organizationName = trim(setting('business_name')) !== '' ? trim(setting('business_name')) : setting('site_name');
-    $author = [
-        '@type' => $personName !== '' ? 'Person' : 'Organization',
-        '@id' => $base . ($personName !== '' ? '/#person' : '/#business'),
-        'name' => $personName !== '' ? $personName : $organizationName,
+    $person = jsonld_person();
+    $businessNames = jsonld_business_names();
+    $organizationName = $businessNames['name'];
+    $author = $person ? [
+        '@type' => 'Person',
+        '@id' => $person['@id'],
+        'name' => $person['name'],
+        'url' => $person['url'],
+    ] : [
+        '@type' => 'Organization',
+        '@id' => $base . '/#business',
+        'name' => $organizationName,
         'url' => $base . '/',
     ];
     $type = trim((string)($p['schema_type'] ?? ''));
@@ -918,6 +924,9 @@ function post_meta(array $p): array
     }
 
     $publisher = ['@type' => 'Organization', '@id' => $base . '/#business', 'name' => $organizationName];
+    if ($businessNames['alternateName'] !== '') {
+        $publisher['alternateName'] = $businessNames['alternateName'];
+    }
     $logo = jsonld_logo();
     if ($logo) {
         $publisher['logo'] = $logo;

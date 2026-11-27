@@ -51,7 +51,7 @@ function section_defaults(string $type): array
         case 'contact':
             return ['kicker' => '', 'heading' => '', 'intro' => '', 'button' => '', 'space' => 'md'];
         case 'faq':
-            return ['kicker' => '', 'heading' => '', 'items' => [], 'space' => 'md'];
+            return ['kicker' => '', 'heading' => '', 'items' => [], 'schema' => '0', 'space' => 'md'];
         case 'pricing':
 
 

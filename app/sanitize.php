@@ -20,7 +20,7 @@ function sanitize_html(string $html): string
         'ul' => [], 'ol' => [], 'li' => [], 'blockquote' => [], 'hr' => [],
         'a' => ['href', 'target', 'rel', 'title'], 'span' => [], 'div' => [],
     ];
-    $dropWithContent = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'noscript', 'template', 'link', 'meta'];
+    $dropWithContent = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'noscript', 'template', 'link', 'meta', 'xmp', 'plaintext', 'noembed', 'noframes'];
 
     $dom = new DOMDocument('1.0', 'UTF-8');
 
@@ -84,6 +84,10 @@ function sanitize_html(string $html): string
     foreach ($root->childNodes as $n) {
         $out .= $dom->saveHTML($n);
     }
+    $out = str_replace([
+        '__PHOTOCMS_CSP_CORE_NONCE__', '__PHOTOCMS_CSP_CUSTOM_NONCE__',
+        '<!--PHOTOCMS_CSP_BEGIN-->', '<!--PHOTOCMS_CSP_END-->',
+    ], '', $out);
     return trim($out);
 }
 

@@ -315,6 +315,7 @@ function section_collect(string $type, array $f): array
                 }
             }
             $d['items'] = $items;
+            $d['schema'] = !empty($f['schema']) ? '1' : '0';
             break;
         case 'video':
 
@@ -1078,7 +1079,8 @@ function section_editor(array $sec, int $n, string $draftNs, int $pageUpdated = 
                 echo faq_row($pfx, (string)$i, is_array($it) ? $it : []);
             }
             echo '</div><button type="button" class="btn" data-add-faq>+ Вопрос</button>';
-            echo '<p class="muted">На сайте ответы раскрываются по щелчку. Секция нужна для удобства посетителей и не создаёт автоматическую разметку FAQPage.</p>';
+            echo f_check($pfx . '[schema]', 'Добавить микроразметку FAQPage', !empty($d['schema']), 'Вопросы и ответы будут автоматически скопированы из этой секции в JSON-LD.');
+            echo '<p class="muted">На сайте ответы раскрываются по щелчку. Включайте разметку только для вопросов, которые действительно видны посетителям.</p>';
             break;
         case 'pricing':
             echo f_input($pfx . '[kicker]', 'Надзаголовок (необязательно)', (string)($d['kicker'] ?? ''), ['maxlength' => 80]);

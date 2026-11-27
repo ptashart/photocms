@@ -10,6 +10,7 @@ function setting_defaults(): array
     return [
 
         'site_name' => 'Мой сайт',
+        'site_alternate_name' => '',
         'title_template' => '%title% | %site%',
         'home_title' => '',
         'default_description' => '',
@@ -31,6 +32,9 @@ function setting_defaults(): array
         'business_ogrnip' => '',
         'person_name' => '',
         'person_job' => '',
+        'person_url' => '',
+        'person_image_id' => '',
+        'person_same_as' => '',
         'photo_author' => '',
         'photo_copyright' => '',
         'photo_credit' => '',

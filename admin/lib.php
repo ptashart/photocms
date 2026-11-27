@@ -53,7 +53,8 @@ function login_attempt_reserve(string $ip, string $loginKey, string $login): boo
         db_run('DELETE FROM login_log WHERE ts < ?', [now() - LOGIN_WINDOW]);
         $byIp = (int)db_val('SELECT COUNT(*) FROM login_log WHERE ip = ?', [$ip]);
         $byLogin = $login === '' ? 0 : (int)db_val('SELECT COUNT(*) FROM login_log WHERE login = ? OR login = ?', [$loginKey, $login]);
-        if ($byIp >= LOGIN_MAX_PER_IP || $byLogin >= LOGIN_MAX_PER_LOGIN) {
+        $byLoginIp = $login === '' ? 0 : (int)db_val('SELECT COUNT(*) FROM login_log WHERE (login = ? OR login = ?) AND ip = ?', [$loginKey, $login, $ip]);
+        if ($byIp >= LOGIN_MAX_PER_IP || ($byLogin >= LOGIN_MAX_PER_LOGIN && $byLoginIp > 0)) {
             $pdo->exec('ROLLBACK');
             return false;
         }

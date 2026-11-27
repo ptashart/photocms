@@ -236,6 +236,146 @@ function jsonld_logo(): ?array
 
 
 
+function jsonld_person(): ?array
+{
+    $name = trim(setting('person_name'));
+    if ($name === '') {
+        return null;
+    }
+    $base = base_url();
+    $knows = array_values(array_filter(array_map('trim', explode(',', setting('person_knows_about')))));
+    $awards = array_values(array_filter(array_map('trim', explode(',', setting('person_awards')))));
+    $url = normalize_url(setting('person_url'));
+    $same = [];
+    foreach (preg_split('~\R~', setting('person_same_as')) ?: [] as $profile) {
+        $profile = normalize_url($profile);
+        if (preg_match('~^https?://~i', $profile)) {
+            $same[$profile] = true;
+        }
+    }
+    $person = array_filter([
+        '@type' => 'Person',
+        '@id' => $base . '/#person',
+        'name' => $name,
+        'jobTitle' => trim(setting('person_job')),
+        'url' => $url !== '' ? (preg_match('~^https?://~i', $url) ? $url : abs_url($url)) : $base . '/',
+        'knowsAbout' => $knows ?: null,
+        'award' => $awards ?: null,
+        'sameAs' => array_keys($same) ?: null,
+        'worksFor' => ['@id' => $base . '/#business'],
+    ]);
+    $imageId = (int)setting('person_image_id');
+    $image = $imageId > 0 ? image_get($imageId) : null;
+    if ($image) {
+        $w = (int)image_pick_width(image_widths($image), 600);
+        $imageUrl = abs_url(image_url($image, $w, 'jpg'));
+        $person['image'] = [
+            '@type' => 'ImageObject',
+            'url' => $imageUrl,
+            'contentUrl' => $imageUrl,
+            'width' => $w,
+            'height' => (int)$image['w'] > 0 ? (int)round((int)$image['h'] * $w / (int)$image['w']) : 0,
+            'caption' => $name,
+        ];
+    }
+    return $person;
+}
+
+function jsonld_business_names(): array
+{
+    $name = trim(setting('business_name'));
+    $job = trim(setting('person_job'));
+    $alternateName = '';
+    if ($name !== '' && $job !== '' && mb_strtolower($name) === mb_strtolower($job)) {
+        $alternateName = trim(setting('site_alternate_name')) !== '' ? trim(setting('site_alternate_name')) : $name;
+        $name = trim(setting('person_name'));
+    }
+    if ($name === '') {
+        $name = trim(setting('site_name'));
+    }
+    return ['name' => $name, 'alternateName' => $alternateName];
+}
+
+function jsonld_home_primary_image(array $page, ?array $sections = null): ?array
+{
+    foreach (($sections ?? page_sections((int)$page['id'])) as $sec) {
+        $images = [];
+        if ($sec['type'] === 'photo' && (int)($sec['data']['image_id'] ?? 0) > 0) {
+            $image = image_get((int)$sec['data']['image_id']);
+            $images = $image ? [$image] : [];
+        } elseif ($sec['type'] === 'gallery') {
+            $images = array_slice(gallery_images('section', (int)$sec['id']), 0, 1);
+        }
+        foreach ($images as $image) {
+            if ((int)$image['w'] <= 0 || (int)$image['h'] <= 0) {
+                continue;
+            }
+            $w = (int)max(image_widths($image, 2520));
+            $url = abs_url(image_url($image, $w, 'jpg'));
+            return [
+                '@type' => 'ImageObject',
+                '@id' => base_url() . '/#primaryimage',
+                'url' => $url,
+                'contentUrl' => $url,
+                'width' => $w,
+                'height' => (int)round((int)$image['h'] * $w / (int)$image['w']),
+                'caption' => trim((string)$image['alt']) !== '' ? trim((string)$image['alt']) : (string)$page['title'],
+            ];
+        }
+    }
+    return null;
+}
+
+function jsonld_home_image_urls(array $page, array $meta, ?array $sections = null): array
+{
+    $candidates = [];
+    $ogUrl = '';
+    if (!empty($meta['og_image']) && (int)$meta['og_image']['w'] > 0 && (int)$meta['og_image']['h'] > 0) {
+        $og = $meta['og_image'];
+        $ogUrl = $og['url'];
+        $candidates[$ogUrl] = ['url' => $ogUrl, 'ratio' => $og['w'] / $og['h']];
+    }
+    foreach (($sections ?? page_sections((int)$page['id'])) as $sec) {
+        $images = [];
+        if ($sec['type'] === 'photo' && (int)($sec['data']['image_id'] ?? 0) > 0) {
+            $image = image_get((int)$sec['data']['image_id']);
+            $images = $image ? [$image] : [];
+        } elseif ($sec['type'] === 'gallery') {
+            $images = array_slice(gallery_images('section', (int)$sec['id']), 0, 20);
+        }
+        foreach ($images as $image) {
+            if ((int)$image['w'] <= 0 || (int)$image['h'] <= 0) {
+                continue;
+            }
+            $w = (int)image_pick_width(image_widths($image), 1240);
+            $url = abs_url(image_url($image, $w, 'jpg'));
+            $candidates[$url] = ['url' => $url, 'ratio' => (int)$image['w'] / (int)$image['h']];
+        }
+    }
+    $remaining = $candidates;
+    $selected = [];
+    foreach ([16 / 9, 4 / 3, 1] as $target) {
+        $best = null;
+        $bestScore = PHP_FLOAT_MAX;
+        foreach ($remaining as $key => $candidate) {
+            $score = abs($candidate['ratio'] - $target);
+            if ($score < $bestScore) {
+                $best = $key;
+                $bestScore = $score;
+            }
+        }
+        if ($best === null) {
+            break;
+        }
+        $selected[$best] = $remaining[$best];
+        unset($remaining[$best]);
+    }
+    if ($ogUrl !== '' && !isset($selected[$ogUrl])) {
+        $selected = [$ogUrl => $candidates[$ogUrl]] + $selected;
+    }
+    return array_column(array_slice($selected, 0, 3), 'url');
+}
+
 function jsonld_website_short(): array
 {
     $base = base_url();
@@ -321,8 +461,30 @@ function opening_hours_specification_schema(string $raw): array
 function jsonld_section_blocks(array $page, array $meta, ?array $sections = null): array
 {
     $blocks = [];
+    $faq = [];
     foreach (($sections ?? page_sections((int)$page['id'])) as $sec) {
         $d = (array)$sec['data'];
+        if ($sec['type'] === 'faq') {
+            if (empty($d['schema'])) {
+                continue;
+            }
+            foreach ((array)($d['items'] ?? []) as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $question = trim((string)($item['q'] ?? ''));
+                $answer = trim((string)($item['a'] ?? ''));
+                if ($question === '' || $answer === '') {
+                    continue;
+                }
+                $faq[] = [
+                    '@type' => 'Question',
+                    'name' => $question,
+                    'acceptedAnswer' => ['@type' => 'Answer', 'text' => $answer],
+                ];
+            }
+            continue;
+        }
         if ($sec['type'] !== 'video') {
             continue;
         }
@@ -352,6 +514,22 @@ function jsonld_section_blocks(array $page, array $meta, ?array $sections = null
         }
         $blocks[] = $vo;
     }
+    if ($faq) {
+        $faqBlock = [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'inLanguage' => setting('lang'),
+            'mainEntity' => $faq,
+        ];
+        $canonical = trim((string)($meta['canonical'] ?? ''));
+        if ($canonical === '') {
+            $canonical = abs_url(page_url($page));
+        }
+        $faqBlock['@id'] = explode('#', $canonical, 2)[0] . '#faq';
+        $faqBlock['url'] = $canonical;
+        $faqBlock['isPartOf'] = ['@id' => !empty($page['is_home']) ? base_url() . '/#webpage' : explode('#', $canonical, 2)[0] . '#page'];
+        $blocks[] = $faqBlock;
+    }
     return $blocks;
 }
 
@@ -362,14 +540,20 @@ function jsonld_blocks(array $page, array $meta): array
     $siteName = setting('site_name');
 
     if (!empty($page['is_home'])) {
-        $blocks[] = [
+        $person = jsonld_person();
+        $website = [
             '@context' => 'https://schema.org',
             '@type' => 'WebSite',
             '@id' => $base . '/#website',
             'url' => $base . '/',
             'name' => $siteName,
             'inLanguage' => setting('lang'),
+            'publisher' => ['@id' => $base . '/#business'],
         ];
+        if (trim(setting('site_alternate_name')) !== '') {
+            $website['alternateName'] = trim(setting('site_alternate_name'));
+        }
+        $blocks[] = $website;
 
 
 
@@ -385,18 +569,24 @@ function jsonld_blocks(array $page, array $meta): array
         if (!$hasAddress && in_array($schemaType, ['LocalBusiness', 'ProfessionalService'], true)) {
             $schemaType = 'Organization';
         }
+        $businessNames = jsonld_business_names();
         $biz = [
             '@context' => 'https://schema.org',
             '@type' => $schemaType,
             '@id' => $base . '/#business',
-            'name' => setting('business_name') !== '' ? setting('business_name') : $siteName,
+            'name' => $businessNames['name'],
             'url' => $base . '/',
         ];
+        if ($businessNames['alternateName'] !== '') {
+            $biz['alternateName'] = $businessNames['alternateName'];
+        }
         if ($isPhotog) {
             $biz['additionalType'] = 'https://en.wikipedia.org/wiki/Photographer';
         }
-        if ($meta['og_image']) {
-            $biz['image'] = $meta['og_image']['url'];
+        $homeSections = page_sections((int)$page['id']);
+        $homeImages = jsonld_home_image_urls($page, $meta, $homeSections);
+        if ($homeImages) {
+            $biz['image'] = count($homeImages) === 1 ? $homeImages[0] : $homeImages;
         }
         $logo = jsonld_logo();
         if ($logo) {
@@ -473,20 +663,8 @@ function jsonld_blocks(array $page, array $meta): array
         if ($same) {
             $biz['sameAs'] = $same;
         }
-        if (trim(setting('person_name')) !== '') {
-
-
-            $knows = array_values(array_filter(array_map('trim', explode(',', setting('person_knows_about')))));
-            $awards = array_values(array_filter(array_map('trim', explode(',', setting('person_awards')))));
-            $biz['founder'] = array_filter([
-                '@type' => 'Person',
-                '@id' => $base . '/#person',
-                'name' => trim(setting('person_name')),
-                'jobTitle' => trim(setting('person_job')),
-                'url' => $base . '/',
-                'knowsAbout' => $knows ?: null,
-                'award' => $awards ?: null,
-            ]);
+        if ($person) {
+            $biz['founder'] = ['@id' => $base . '/#person'];
         }
 
 
@@ -495,7 +673,30 @@ function jsonld_blocks(array $page, array $meta): array
             $biz['hasOfferCatalog'] = ['@type' => 'OfferCatalog', 'itemListElement' => $homeOffers];
         }
         $blocks[] = $biz;
-        $blocks = array_merge($blocks, jsonld_section_blocks($page, $meta));
+
+        $homeWeb = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            '@id' => $base . '/#webpage',
+            'url' => $base . '/',
+            'name' => $meta['title'],
+            'inLanguage' => setting('lang'),
+            'isPartOf' => ['@id' => $base . '/#website'],
+            'about' => ['@id' => $base . ($person ? '/#person' : '/#business')],
+        ];
+        if ($meta['description'] !== '') {
+            $homeWeb['description'] = $meta['description'];
+        }
+        $primaryImage = jsonld_home_primary_image($page, $homeSections);
+        if ($primaryImage) {
+            $homeWeb['primaryImageOfPage'] = $primaryImage;
+            $homeWeb['image'] = ['@id' => $base . '/#primaryimage'];
+        }
+        $blocks[] = $homeWeb;
+        if ($person) {
+            $blocks[] = ['@context' => 'https://schema.org'] + $person;
+        }
+        $blocks = array_merge($blocks, jsonld_section_blocks($page, $meta, $homeSections));
         $extra = jsonld_extra_blocks((string)($page['jsonld_extra'] ?? ''));
         if ($extra) {
             $blocks = array_merge($blocks, $extra);
@@ -827,10 +1028,19 @@ function jsonld_pricing_offers(array $page): array
                 continue;
             }
             $to = preg_replace('~\D~', '', (string)($it['price_to'] ?? ''));
-            $o = ['@type' => 'Offer', 'name' => $name];
+            $o = [
+                '@type' => 'Offer',
+                'name' => $name,
+                'itemOffered' => [
+                    '@type' => 'Service',
+                    'name' => $name,
+                    'provider' => ['@id' => base_url() . '/#business'],
+                ],
+            ];
             $desc = trim((string)preg_replace('/\s+/u', ' ', strip_tags((string)($it['desc'] ?? ''))));
             if ($desc !== '') {
                 $o['description'] = $desc;
+                $o['itemOffered']['description'] = $desc;
             }
 
             $iid = (int)($it['image_id'] ?? 0);

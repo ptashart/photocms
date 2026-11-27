@@ -356,13 +356,17 @@
 
 
     var apDir = wrap.getAttribute('data-autoplay');
+    var apToggle = wrap.querySelector('[data-strip-toggle]');
+    if (apToggle && reduced) apToggle.hidden = true;
     if (apDir && !reduced) {
       var apMs = Math.max(3, parseInt(wrap.getAttribute('data-autoplay-speed'), 10) || 5) * 1000;
       var apTimer = null, apResume = null, apInView = false, apHold = false;
+      var apPaused = false, apHover = false, apFocus = false;
       var apBack = apDir === 'back';
       function apMax() { return track.scrollWidth - track.clientWidth - 2; }
+      function apFocusHold() { return apFocus && doc.activeElement !== apToggle; }
       function apTick() {
-        if (apHold || !apInView || document.hidden || apMax() <= 2) return;
+        if (apPaused || apHover || apFocusHold() || apHold || !apInView || document.hidden || apMax() <= 2) return;
         if (!apBack && track.scrollLeft >= apMax()) { track.scrollTo({ left: 0, behavior: 'auto' }); return; }
         if (apBack && track.scrollLeft <= 2) { track.scrollTo({ left: track.scrollWidth, behavior: 'auto' }); return; }
         goStep(apBack ? -1 : 1);
@@ -373,10 +377,27 @@
         clearTimeout(apResume);
         apResume = setTimeout(function () { apHold = false; }, 4000);
       }
+      function apSyncToggle() {
+        if (!apToggle) return;
+        apToggle.setAttribute('aria-label', apPaused ? 'Возобновить автопрокрутку' : 'Приостановить автопрокрутку');
+        apToggle.innerHTML = svg(apPaused ? 'm9 18 6-6-6-6' : 'M9 6v12M15 6v12');
+      }
+      if (apToggle) {
+        apToggle.addEventListener('click', function () {
+          apPaused = !apPaused;
+          apHold = false;
+          clearTimeout(apResume);
+          apSyncToggle();
+        });
+      }
       wrap.addEventListener('pointerdown', hold);
       wrap.addEventListener('wheel', hold, { passive: true });
-      wrap.addEventListener('focusin', hold);
-      wrap.addEventListener('mouseenter', hold);
+      wrap.addEventListener('mouseenter', function () { apHover = true; });
+      wrap.addEventListener('mouseleave', function () { apHover = false; });
+      wrap.addEventListener('focusin', function () { apFocus = true; });
+      wrap.addEventListener('focusout', function (e) {
+        if (!wrap.contains(e.relatedTarget)) apFocus = false;
+      });
       if (window.IntersectionObserver) {
         new IntersectionObserver(function (entries) {
           apInView = entries[0].isIntersecting;
